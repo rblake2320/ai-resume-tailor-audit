@@ -5,60 +5,103 @@ on:
     branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  detect:
     runs-on: ubuntu-latest
-
+    outputs:
+      languages: ${{ steps.detect.outputs.languages }}
     steps:
       - uses: actions/checkout@v4
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          LANGS='[]'
+          if [[ -f package.json ]]; then LANGS=$(jq '. += ["node"]' <<<"$LANGS"); fi
+          if [[ -f go.mod ]]; then LANGS=$(jq '. += ["go"]' <<<"$LANGS"); fi
+          if [[ -f Cargo.toml ]]; then LANGS=$(jq '. += ["rust"]' <<<"$LANGS"); fi
+          if [[ -f pyproject.toml ]]; then LANGS=$(jq '. += ["python"]' <<<"$LANGS"); fi
+          if compgen -G '*.csproj' > /dev/null; then LANGS=$(jq '. += ["csharp"]' <<<"$LANGS"); fi
+          echo "languages=$LANGS" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Node.js
-        if: hashFiles('package.json') != ''
-        uses: actions/setup-node@v4
+  node:
+    needs: detect
+    if: contains(needs.detect.outputs.languages, 'node')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm audit --audit-level=high
 
-      - name: Setup Python
-        if: hashFiles('requirements.txt', 'pyproject.toml', 'setup.py') != ''
-        uses: actions/setup-python@v5
+  python:
+    needs: detect
+    if: contains(needs.detect.outputs.languages, 'python')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e .[dev]
+      - run: pytest
 
-      - name: Setup Go
-        if: hashFiles('go.mod') != ''
-        uses: actions/setup-go@v5
+  go:
+    needs: detect
+    if: contains(needs.detect.outputs.languages, 'go')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - run: go mod download
+      - run: go vet ./...
+      - run: go test -v ./...
 
-      - name: Setup Rust
-        if: hashFiles('Cargo.toml') != ''
-        uses: dtolnay/rust-toolchain@stable
+  rust:
+    needs: detect
+    if: contains(needs.detect.outputs.languages, 'rust')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo test
 
-      - name: Install dependencies
-        run: |
-          [[ -f package.json ]] && npm ci
-          [[ -f requirements.txt ]] && pip install -r requirements.txt
-          [[ -f go.mod ]] && go mod download
-          [[ -f Cargo.toml ]] && cargo fetch
-
-      - name: Lint
-        run: |
-          [[ -f package.json ]] && npm run lint || true
-          [[ -f requirements.txt ]] && pip install ruff && ruff check . || true
-          [[ -f go.mod ]] && go vet ./... || true
-          [[ -f Cargo.toml ]] && cargo clippy -- -D warnings || true
-
-      - name: Test
-        run: |
-          [[ -f package.json ]] && npm test || true
-          [[ -f requirements.txt ]] && pip install pytest && pytest || true
-          [[ -f go.mod ]] && go test ./... || true
-          [[ -f Cargo.toml ]] && cargo test || true
-
-      - name: Security Audit
-        run: |
-          [[ -f package.json ]] && npm audit || true
-          [[ -f requirements.txt ]] && pip install safety && safety check || true
+  csharp:
+    needs: detect
+    if: contains(needs.detect.outputs.languages, 'csharp')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release
