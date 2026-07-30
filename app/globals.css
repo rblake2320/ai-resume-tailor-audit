@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@theme {
+  /* The workshop: dark ink chrome */
+  --color-ink-950: #0c0e11;
+  --color-ink-900: #12151a;
+  --color-ink-800: #191e25;
+  --color-ink-700: #262e39;
+  --color-ink-400: #5d6b7c;
+  --color-ink-300: #8494a6;
+  --color-ink-100: #dde4eb;
+  /* The paper: documents render as physical sheets */
+  --color-paper: #f4efe6;
+  --color-paper-edge: #e4dccb;
+  --color-paper-ink: #1f2229;
+  --color-paper-soft: #6b6455;
+  /* Brass fittings */
+  --color-brass-300: #ffd9a0;
+  --color-brass-400: #f0b45c;
+  --color-brass-500: #d9962f;
+  --color-good: #74cf9d;
+  --color-warn: #e6b04e;
+  --color-bad: #e07856;
+
+  --font-display: "Fraunces Variable", Georgia, serif;
+  --font-sans: "Instrument Sans Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  background-image:
+    radial-gradient(1100px 520px at 88% -8%, rgba(240, 180, 92, 0.08), transparent 62%),
+    radial-gradient(900px 520px at -12% 108%, rgba(93, 107, 124, 0.12), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Pressed-paper grain over everything, very faint */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: rgba(240, 180, 92, 0.35);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Staggered page-load reveal */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.pulse-dot {
+  animation: pulse-dot 1.1s ease-in-out infinite;
+}
+
+/* ————— Documents: rendered as paper sheets ————— */
+.sheet {
+  background:
+    linear-gradient(178deg, rgba(255, 255, 255, 0.55), transparent 40%),
+    var(--color-paper);
+  color: var(--color-paper-ink);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 var(--color-paper-edge) inset,
+    0 14px 40px rgba(0, 0, 0, 0.5),
+    0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+.md {
+  color: var(--color-paper-ink);
+  line-height: 1.55;
+  font-size: 0.925rem;
+}
+.md h1 {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 40, "WONK" 0;
+  font-weight: 640;
+  font-size: 1.7rem;
+  color: #14161b;
+  text-align: center;
+  margin-bottom: 0.2rem;
+  letter-spacing: 0.005em;
+}
+.md h1 + p {
+  text-align: center;
+  font-size: 0.83rem;
+  color: var(--color-paper-soft);
+}
+.md h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a6320;
+  border-bottom: 1px solid var(--color-paper-edge);
+  padding-bottom: 0.3rem;
+  margin: 1.35rem 0 0.6rem;
+}
+.md h3 {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #14161b;
+  margin: 0.9rem 0 0.15rem;
+}
+.md p {
+  margin: 0.35rem 0;
+}
+.md ul {
+  margin: 0.3rem 0 0.6rem;
+  padding-left: 1.15rem;
+  list-style: disc;
+}
+.md li {
+  margin: 0.22rem 0;
+}
+.md li::marker {
+  color: #8a6320;
+}
+.md hr {
+  border-color: var(--color-paper-edge);
+  margin: 1rem 0;
+}
+.md strong {
+  color: #14161b;
+}
+
+/* Print: only the document sheet, clean black-on-white */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  body::before {
+    display: none;
+  }
+  body * {
+    visibility: hidden;
+  }
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+  [data-print-area] {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    background: #fff;
+    box-shadow: none !important;
+  }
+  [data-print-area] .md,
+  [data-print-area] .md * {
+    color: #111 !important;
+    border-color: #bbb !important;
+  }
+}

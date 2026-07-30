@@ -1,16 +1,17 @@
 # Dependencies
 node_modules/
-venv/
-__pycache__/
-target/
-vendor/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
 
 # Build outputs
 dist/
 build/
-*.exe
-*.dll
-*.so
+
+# Tests
+coverage/
 
 # IDE
 .vscode/
@@ -21,6 +22,11 @@ build/
 .DS_Store
 Thumbs.db
 
-# Env
+# Env — never commit secrets
 .env
 .env.local
+.env*.local
+
+# Misc
+*.log
+*.tsbuildinfo
