@@ -98,6 +98,8 @@ export function classifyOccupationTrend(snapshot: LaborMarketSnapshot, now = new
 type Fetcher = typeof fetch;
 
 async function boundedJson(response: Response, limitBytes = PROVIDER_RESPONSE_LIMIT_BYTES): Promise<unknown> {
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+  if (contentType !== "application/json") throw new Error("Labor-market provider returned an unsupported content type.");
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > limitBytes) throw new Error("Labor-market provider response exceeded the size limit.");
   if (!response.body) throw new Error("Labor-market provider returned an empty response.");

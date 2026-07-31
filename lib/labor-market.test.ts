@@ -12,18 +12,18 @@ describe("labor-market path intelligence", () => {
     expect(classifyOccupationTrend(snapshot(8, { asOfDate: "1999-01-01" }), now)).toMatchObject({ trend: "insufficient_data" });
   });
   it("preserves BLS series provenance, geography warning, as-of date, and observations", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "REQUEST_SUCCEEDED", Results: { series: [{ seriesID: "TEST", data: [{ year: "2026", period: "M01", value: "12.5", footnotes: [] }] }] } }), { status: 200 }));
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "REQUEST_SUCCEEDED", Results: { series: [{ seriesID: "TEST", data: [{ year: "2026", period: "M01", value: "12.5", footnotes: [] }] }] } }), { status: 200, headers: { "content-type": "application/json" } }));
     const result = await fetchBlsSeries(["TEST"], { startYear: 2026, endYear: 2026, fetcher, retrievedAt: new Date("2026-02-01T00:00:00Z") });
     expect(result[0]).toMatchObject({ kind: "observational_series", source: "BLS", seriesId: "TEST", asOfPeriod: "2026-M01", geography: "As defined by the BLS series metadata; verify before use.", retrievedAt: "2026-02-01T00:00:00.000Z" });
   });
   it("authenticates O*NET requests server-side and preserves provenance", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15" }), { status: 200 }));
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15" }), { status: 200, headers: { "content-type": "application/json" } }));
     const result = await fetchOnetOccupation("15-1252.00", { username: "user", password: "secret" }, fetcher);
     expect(result).toMatchObject({ source: "ONET", occupationCode: "15-1252.00", asOfDate: "2026-01-15" });
     expect(JSON.stringify(result)).not.toContain("secret"); expect((fetcher.mock.calls[0][1] as RequestInit).headers).toHaveProperty("authorization");
-    const missingDate = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer" }), { status: 200 }));
+    const missingDate = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer" }), { status: 200, headers: { "content-type": "application/json" } }));
     await expect(fetchOnetOccupation("15-1252.00", { username: "user", password: "secret" }, missingDate)).rejects.toThrow(/update date/);
-    const oversized = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15", padding: "x".repeat(600_000) }), { status: 200 }));
+    const oversized = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15", padding: "x".repeat(600_000) }), { status: 200, headers: { "content-type": "application/json" } }));
     await expect(fetchOnetOccupation("15-1252.00", { username: "user", password: "secret" }, oversized)).rejects.toThrow(/size limit/);
     expect((fetcher.mock.calls[0][1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });

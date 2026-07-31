@@ -119,6 +119,7 @@ export function CareerPathPlanner() {
       </div>
     </div>
     <div className="mt-2"><ToolButton disabled={!profile || !projectionJson.trim()} onClick={savePath}>Validate and save path</ToolButton></div>
+    <p className="mt-1 text-[10px] text-amber-300">Saved path records are browser-local but not passphrase-encrypted yet. Keep sensitive evidence in the encrypted Career Ledger.</p>
 
     {records.length > 0 && <ol className="mt-4 space-y-2" aria-label="Saved career paths">{records.map((record) => <li key={record.id} className="rounded border border-ink-700 bg-ink-950 p-3 text-xs text-ink-300">
       <div className="flex flex-wrap items-start justify-between gap-2"><div><strong className="text-paper">{record.profile.occupationTitle}</strong> · <span className="text-brass-300">{record.trend.trend}</span></div><button type="button" className="text-[10px] text-red-300 underline" onClick={() => setRecords(deleteCareerPathRecord(record.id))}>Delete path</button></div>

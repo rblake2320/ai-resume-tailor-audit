@@ -12,6 +12,7 @@ describe("career-path planner UI boundary", () => {
     expect(html).toContain("Authoritative projection snapshot (JSON)");
     expect(html).toContain("Explicit evidence gaps");
     expect(html).toContain("Training resource catalog");
+    expect(html).toContain("not passphrase-encrypted yet");
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("BLS predicts");
   });
