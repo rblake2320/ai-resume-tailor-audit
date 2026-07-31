@@ -41,7 +41,7 @@ const normalize = (s: string) => s.toLowerCase().normalize("NFKD");
 // mean the resume is DISCLAIMING the skill ("no Kubernetes", "not familiar with
 // Terraform", "without Go experience") rather than claiming it.
 const NEGATION =
-  /\b(no|not|never|without|lacks?|lacking|zero|none|unfamiliar|excluding|dont|doesnt|didnt|havent|hasnt|hadnt|isnt|arent|wasnt|werent|cant|cannot)\b[^.;:!?\n]*$/;
+  /\b(no|not|never|without|lacks?|lacking|zero|none|unfamiliar|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot)\b[^.;:!?\n]*$/;
 
 /**
  * True only if `keyword` appears in `resume` at least once WITHOUT a preceding
@@ -49,13 +49,25 @@ const NEGATION =
  * experience" from counting Kubernetes as a matched skill.
  */
 export function affirmativelyPresent(resume: string, keyword: string): boolean {
-  const kw = keyword.replace(/[.*+?^${}()|[\]\\]/g, "");
+  const haystack = normalize(resume);
+  const kw = normalize(keyword).replace(/[.*+?^${}()|[\]\\]/g, "");
   if (!kw) return false;
-  let idx = resume.indexOf(kw);
+  let idx = haystack.indexOf(kw);
   while (idx !== -1) {
-    const before = resume.slice(Math.max(0, idx - 48), idx);
+    // Inspect the full clause, not an arbitrary character window. A long but
+    // unbroken disclaimer must not become affirmative merely through padding.
+    const prefix = haystack.slice(0, idx);
+    const clauseStart = Math.max(
+      prefix.lastIndexOf("."),
+      prefix.lastIndexOf(";"),
+      prefix.lastIndexOf(":"),
+      prefix.lastIndexOf("!"),
+      prefix.lastIndexOf("?"),
+      prefix.lastIndexOf("\n"),
+    ) + 1;
+    const before = prefix.slice(clauseStart);
     if (!NEGATION.test(before)) return true; // an affirmative mention exists
-    idx = resume.indexOf(kw, idx + kw.length);
+    idx = haystack.indexOf(kw, idx + kw.length);
   }
   return false;
 }
