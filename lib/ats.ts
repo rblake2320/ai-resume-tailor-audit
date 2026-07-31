@@ -61,9 +61,10 @@ export function affirmativelyPresent(resume: string, keyword: string, rejectQual
   let idx = haystack.indexOf(kw);
   while (idx !== -1) {
     const before = haystack.slice(Math.max(0, idx - 160), idx);
+    const after = haystack.slice(idx + kw.length, idx + kw.length + 80);
     const qualifiedByDegree = rejectQualified
-      && /\b(?:minimal|limited)\s*$/iu.test(before)
-      && /\b(?:experience|proficiency|knowledge|familiarity|exposure)\b/iu.test(kw);
+      && /\b(?:minimal|limited)(?:\s+[\p{L}\p{N}'’+/#.-]+){0,3}\s*$/iu.test(before)
+      && /\b(?:experience|proficiency|knowledge|familiarity|exposure|expertise|skills?|background)\b/iu.test(`${before.slice(-80)} ${kw} ${after}`);
     const negated = NONE_OF.test(before)
       || (!FALSE_NEGATION.test(before) && DIRECT_NEGATION.test(before))
       || (rejectQualified && (DIRECT_QUALIFIER.test(before) || qualifiedByDegree));

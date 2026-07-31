@@ -180,6 +180,18 @@ describe("deterministic evidence boundary", () => {
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
   });
   it.each([
+    ["Led the AWS migration in 2021\nand mentored four engineers", "2021 and mentored four engineers"],
+    ["Built CI pipelines;\nreduced deploy time 40%", "CI pipelines; reduced deploy time"],
+    ["Delivered three programs:\nplatform, payments and identity", "programs: platform, payments"],
+  ])("accepts lowercase continuation after a record-like ending: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
+  });
+  it("does not weld a bullet achievement to a following employer record", () => {
+    const resume = "- Led the migration of 200 services to containerized infrastructure\nInitech Corp Staff Engineer 2015-2019\nEDUCATION\nState University";
+    const evidence = "containerized infrastructure Initech Corp Staff Engineer 2015-2019";
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+  });
+  it.each([
     "Node.js at Acme",
     "3.5 years of Python",
     "AWS Solutions Architect (2024)",
@@ -240,6 +252,14 @@ describe("deterministic evidence boundary", () => {
     ["Minimal Kubernetes experience", "Kubernetes experience"],
     ["Limited Kubernetes experience", "Kubernetes experience"],
   ])("does not let a degree qualifier prove an unqualified claim: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence, "partially_supported"), resume)).not.toThrow();
+  });
+  it.each([
+    ["Minimal Kubernetes experience", "Kubernetes"],
+    ["Minimal Kubernetes experience", "experience"],
+    ["Limited hands-on Kubernetes background", "Kubernetes"],
+  ])("does not evade a degree qualifier by shortening the citation: %s", (resume, evidence) => {
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence, "partially_supported"), resume)).not.toThrow();
   });

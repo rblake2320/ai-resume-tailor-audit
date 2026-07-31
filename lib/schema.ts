@@ -174,12 +174,10 @@ const ABBREVIATION_END = /\b(?:inc|ltd|llc|corp|u\.s|ph\.d)\.$/iu;
 const sourceEvidenceSegments = (source: string): string[] => {
   const segments: string[] = [];
   let current = "";
-  let bullet = false;
   const flush = () => {
     const normalized = comparableSource(current);
     if (normalized) segments.push(normalized);
     current = "";
-    bullet = false;
   };
 
   for (const raw of source.replace(/[\v\f\u2028\u2029]/gu, "\n\n").split(/\r?\n/u)) {
@@ -196,7 +194,6 @@ const sourceEvidenceSegments = (source: string): string[] => {
       // marker-free logical record for ordinary model citations and wraps.
       segments.push(comparableSource(line));
       current = bulletMatch[1];
-      bullet = true;
       continue;
     }
     if (!current) {
@@ -205,8 +202,8 @@ const sourceEvidenceSegments = (source: string): string[] => {
     }
     const hardRecordEnd = /\p{L}/u.test(current) && current === current.toLocaleUpperCase("en-US")
       || (RECORD_END.test(current) && !ABBREVIATION_END.test(current));
-    const isContinuation = bullet
-      || (!hardRecordEnd && (CONTINUATION_END.test(current) || /^[\p{Ll}\p{N},.;:)]/u.test(line)));
+    const isContinuation = /^[\p{Ll}\p{N},.;:)]/u.test(line)
+      || (!hardRecordEnd && CONTINUATION_END.test(current));
     if (isContinuation) current += ` ${line}`;
     else {
       flush();
