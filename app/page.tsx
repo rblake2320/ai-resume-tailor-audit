@@ -25,6 +25,7 @@ import { DictationButton } from "@/components/SpeechControls";
 import { JobInbox } from "@/components/JobInbox";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { CareerLedger } from "@/components/CareerLedger";
+import { Connections } from "@/components/Connections";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -704,6 +705,8 @@ export default function Home() {
         </div>
 
         <CareerLedger />
+
+        <Connections />
 
         <ApplicationTracker
           result={result}
