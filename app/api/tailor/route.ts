@@ -4,6 +4,7 @@ import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
 import { assertTailorResultEvidence, HonestyValidationError, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
+import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -23,6 +24,8 @@ type StreamEvent =
   | { type: "error"; message: string };
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const limited = enforcePublicRateLimit("tailor", { limit: 10, windowMs: 60_000 });
+  if (limited) return limited;
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: "ANTHROPIC_API_KEY is not set. Copy .env.example to .env.local and add your key." },

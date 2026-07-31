@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
-import { configuredPublicRateLimiter, createDurableFixedWindowLimiter } from "./durable-rate-limit";
+import { configuredPublicRateLimiter, createDurableFixedWindowLimiter, enforcePublicRateLimit } from "./durable-rate-limit";
 
 const run = promisify(execFile);
 const roots: string[] = [];
@@ -63,6 +63,27 @@ describe("durable fixed-window rate limit", () => {
       Object.assign(process.env, { NODE_ENV: priorNodeEnv });
       if (priorDirectory === undefined) delete process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR;
       else process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = priorDirectory;
+    }
+  });
+
+  it("returns 429 with Retry-After and fails closed on bad production configuration", async () => {
+    const directory = await root();
+    const prior = { directory: process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR, limit: process.env.RESUME_FOUNDRY_TAILOR_LIMIT, node: process.env.NODE_ENV };
+    try {
+      process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = directory;
+      process.env.RESUME_FOUNDRY_TAILOR_LIMIT = "1";
+      expect(enforcePublicRateLimit("tailor", { limit: 5, windowMs: 60_000 })).toBeNull();
+      const limited = enforcePublicRateLimit("tailor", { limit: 5, windowMs: 60_000 })!;
+      expect(limited.status).toBe(429); expect(limited.headers.get("retry-after")).toMatch(/^\d+$/u);
+      expect(await limited.json()).toMatchObject({ code: "RATE_LIMITED" });
+      delete process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR;
+      Object.assign(process.env, { NODE_ENV: "production" });
+      const unavailable = enforcePublicRateLimit("different", { limit: 1, windowMs: 60_000 })!;
+      expect(unavailable.status).toBe(503); expect(await unavailable.json()).toMatchObject({ code: "RATE_LIMIT_UNAVAILABLE" });
+    } finally {
+      if (prior.directory === undefined) delete process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR; else process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = prior.directory;
+      if (prior.limit === undefined) delete process.env.RESUME_FOUNDRY_TAILOR_LIMIT; else process.env.RESUME_FOUNDRY_TAILOR_LIMIT = prior.limit;
+      Object.assign(process.env, { NODE_ENV: prior.node });
     }
   });
 });

@@ -56,12 +56,32 @@ export function configuredPublicRateLimiter(scope: string, defaults: { limit: nu
   const rawWindow = process.env[`${prefix}_WINDOW_MS`];
   const limit = rawLimit === undefined ? defaults.limit : Number(rawLimit);
   const windowMs = rawWindow === undefined ? defaults.windowMs : Number(rawWindow);
+  const fallbackDirectory = process.env.NODE_ENV === "test"
+    ? path.join(tmpdir(), `resume-foundry-rate-limits-test-${process.pid}`)
+    : path.join(tmpdir(), "resume-foundry-rate-limits");
   return createDurableFixedWindowLimiter({
-    directory: configuredDirectory || path.join(tmpdir(), "resume-foundry-rate-limits"),
+    directory: configuredDirectory || fallbackDirectory,
     scope,
     limit,
     windowMs,
   });
+}
+
+/** Returns an HTTP rejection when the shared limiter is full or unavailable. */
+export function enforcePublicRateLimit(scope: string, defaults: { limit: number; windowMs: number }): Response | null {
+  try {
+    const decision = configuredPublicRateLimiter(scope, defaults).take();
+    if (decision.allowed) return null;
+    return Response.json(
+      { error: "Too many requests. Try again after the indicated delay.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "retry-after": String(decision.retryAfterSeconds), "cache-control": "no-store" } },
+    );
+  } catch {
+    return Response.json(
+      { error: "This operation is temporarily unavailable because its safety limit is not ready.", code: "RATE_LIMIT_UNAVAILABLE" },
+      { status: 503, headers: { "retry-after": "60", "cache-control": "no-store" } },
+    );
+  }
 }
 
 function prune(directory: string, currentWindow: number): void {

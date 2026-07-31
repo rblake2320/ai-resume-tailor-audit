@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchGreenhouse, fetchLever, fetchUsaJobs, parseForwardedJobAlert } from "@/lib/job-connectors";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
+import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 
 export const runtime = "nodejs";
 export const JOB_IMPORT_BODY_MAX_BYTES = 1_100_000;
@@ -13,6 +14,8 @@ const RequestSchema = z.discriminatedUnion("source", [
 ]);
 
 export async function POST(request: NextRequest) {
+  const limited = enforcePublicRateLimit("jobs-import", { limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
   let body: unknown;
   try { body = await readJsonBody(request, JOB_IMPORT_BODY_MAX_BYTES); }
   catch (error) {
