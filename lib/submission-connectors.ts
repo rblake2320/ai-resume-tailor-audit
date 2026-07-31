@@ -52,8 +52,8 @@ const FIELD_CATEGORIES: ReadonlyArray<{ category: string; match: RegExp }> = [
   { category: "name", match: /^(?:name|first_name|last_name|middle_name|full_name|preferred_name|legal_name)$/u },
   { category: "email", match: /^(?:email|email_address)$/u },
   { category: "phone", match: /^(?:phone|phone_number|telephone|mobile)$/u },
-  { category: "street address", match: /^(?:address|street_address|address_line_?\d*|city|region|postal_code|zip)$/u },
-  { category: "web profile", match: /^(?:website|linkedin|github|portfolio|url)$/u },
+  { category: "street address", match: /^(?:address|street_address|address_line_?\d*|city|region|postal_code|zip|location)$/u },
+  { category: "web profile", match: /^(?:website|linkedin|github|portfolio|url|urls|links?)$/u },
   { category: "resume", match: /^(?:resume|resume_text|resume_content|cv|cv_text)$/u },
   { category: "cover letter", match: /^(?:cover_letter|cover_letter_text|coverletter|letter)$/u },
   { category: "written responses", match: /^(?:question_.*|screening.*|answers?)$/u },
@@ -115,7 +115,15 @@ function classifyOutgoingFields(fields: Record<string, unknown>) {
     if (node.depth > MAX_FIELD_DEPTH) throw new SubmissionFieldsError(`Submission fields may be nested at most ${MAX_FIELD_DEPTH} levels.`);
     if (node.key.length < 1 || node.key.length > MAX_FIELD_KEY_CHARS) throw new SubmissionFieldsError(`Submission field names must be 1-${MAX_FIELD_KEY_CHARS} characters.`);
 
-    const directCategories = categoriesForKey(node.key);
+    let directCategories = categoriesForKey(node.key);
+    // Lever's native wrappers use `location.name` for the address value and
+    // `urls[].name` for the URL-question label. In those contexts `name` is
+    // not the applicant's name; inheriting the container meaning is accurate
+    // and avoids claiming a disclosure that is not present.
+    if (normaliseFieldName(node.key) === "name"
+      && node.inheritedCategories.some((category) => category === "street address" || category === "web profile")) {
+      directCategories = directCategories.filter((category) => category !== "name");
+    }
     const semanticCategories = [...new Set([...node.inheritedCategories, ...directCategories])];
     const leafCategories = semanticCategories.length ? semanticCategories : ["written responses"];
     const { value } = node;

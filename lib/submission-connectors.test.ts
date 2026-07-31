@@ -168,6 +168,30 @@ describe("authorized submission connectors", () => {
       .toThrow(/personal-data categories/);
   });
 
+  it("derives location and web-profile consent from Lever's native nested field shape", () => {
+    // Current Lever Apply-to-a-posting requests carry URL answers as an array
+    // of {name,value} objects. These values used to fall through as generic
+    // written responses; `location` was generic too. The inherited semantic
+    // category must survive the array/object wrappers.
+    const fields = {
+      location: { name: "Austin, TX" },
+      urls: [
+        { name: "LinkedIn", value: "https://www.linkedin.com/in/ada" },
+        { name: "Github", value: "https://github.com/ada" },
+      ],
+    };
+    expect(outgoingDataCategories(fields)).toEqual(["street address", "web profile"]);
+
+    const candidate = {
+      ...preview("lever"),
+      fields: { ...preview("lever").fields, ...fields },
+    };
+    candidate.personalDataCategories = outgoingDataCategories(candidate.fields, candidate.target);
+    expect(() => issueSubmissionApproval(candidate, secret)).not.toThrow();
+    expect(() => issueSubmissionApproval({ ...candidate, personalDataCategories: ["email", "name"] }, secret))
+      .toThrow(/personal-data categories/);
+  });
+
   it("names sensitive nested application categories rather than hiding them as generic text", () => {
     expect(outgoingDataCategories({
       eeoResponses: { gender: "Female", race: "Prefer not to say", veteran: "No", disability: "No" },
