@@ -4,7 +4,10 @@ export const LABOR_MARKET_STALE_AFTER_MS = 3 * 366 * 24 * 60 * 60 * 1000;
 const BLS_ENDPOINT = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
 const ONET_ENDPOINT = "https://api-v2.onetcenter.org/online/occupations";
 const PROVIDER_RESPONSE_LIMIT_BYTES = 512 * 1024;
-const HttpsUrlSchema = z.string().url().refine((value) => new URL(value).protocol === "https:", "Source URL must use HTTPS.");
+const HttpsUrlSchema = z.string().url().refine(
+  (value) => URL.canParse(value) && new URL(value).protocol === "https:",
+  "Source URL must use HTTPS.",
+);
 
 export const LaborMarketSnapshotSchema = z.strictObject({
   occupationCode: z.string().min(1),
