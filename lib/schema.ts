@@ -109,6 +109,34 @@ export const TailorResultSchema = z.strictObject({
 
 export type TailorResult = z.infer<typeof TailorResultSchema>;
 
+export class HonestyValidationError extends Error {
+  constructor(public readonly violations: readonly string[]) {
+    super(`Generated content failed evidence validation: ${violations.join(" ")}`);
+    this.name = "HonestyValidationError";
+  }
+}
+
+const comparable = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/\s+/gu, " ").trim();
+
+/** Deterministic post-generation boundary for structured evidence references. */
+export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
+  const source = comparable(originalResume);
+  const output = comparable(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
+  const violations: string[] = [];
+  for (const requirement of result.requirement_evidence) {
+    for (const evidence of requirement.evidence) {
+      if (!source.includes(comparable(evidence))) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
+    }
+    for (const text of requirement.tailoredText) {
+      if (!output.includes(comparable(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
+    }
+  }
+  for (const keyword of result.keywords.added) {
+    if (!output.includes(comparable(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
+  }
+  if (violations.length) throw new HonestyValidationError([...new Set(violations)]);
+}
+
 /**
  * JSON schema for the Claude structured-output format:
  * additionalProperties:false everywhere, and no numeric constraints

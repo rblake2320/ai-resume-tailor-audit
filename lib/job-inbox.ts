@@ -46,9 +46,11 @@ export function canonicalJobUrl(value: string): string {
   const url = new URL(value.trim());
   url.hash = "";
   for (const key of [...url.searchParams.keys()]) {
-    if (/^(utm_|ref$|source$|trk$|tracking)/i.test(key)) url.searchParams.delete(key);
+    if (/^(utm_|ref$|source$|trk$|tracking|gclid$|fbclid$)/i.test(key)) url.searchParams.delete(key);
   }
-  url.hostname = url.hostname.toLowerCase();
+  url.protocol = "https:";
+  url.hostname = url.hostname.toLowerCase().replace(/^www\./u, "");
+  if (url.port === "80" || url.port === "443") url.port = "";
   url.pathname = url.pathname.replace(/\/+$/, "") || "/";
   url.searchParams.sort();
   return url.toString();
@@ -110,7 +112,16 @@ export function addJobSnapshot(
   jobs: readonly JobPostingSnapshot[],
   candidate: JobPostingSnapshot,
 ): { jobs: JobPostingSnapshot[]; added: boolean; duplicateOf?: string } {
-  const identical = jobs.find((job) => job.contentHash === candidate.contentHash && duplicateKeys(job, candidate).length > 0);
+  const identical = jobs.find((job) => {
+    const keys = duplicateKeys(job, candidate);
+    const strongIdentity = keys.includes("sourceId") || keys.includes("canonicalUrl");
+    const descriptiveIdentity = keys.includes("companyTitleLocation") && keys.includes("descriptionHash");
+    // A deliberately created revision is retained; an independently re-imported
+    // record with the same strong identity is a duplicate even if superficial
+    // page text changed.
+    const isRevision = candidate.previousSnapshotId === job.id && candidate.revision > job.revision;
+    return !isRevision && (strongIdentity || descriptiveIdentity);
+  });
   if (identical) return { jobs: [...jobs], added: false, duplicateOf: identical.id };
   return { jobs: [candidate, ...jobs], added: true };
 }

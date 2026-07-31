@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
-import { TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
+import { assertTailorResultEvidence, HonestyValidationError, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -97,6 +97,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             .map((b) => b.text)
             .join("");
           const result = TailorResultSchema.parse(JSON.parse(text));
+          assertTailorResultEvidence(result, parsed.resume);
           send({ type: "result", data: result });
         }
       } catch (err) {
@@ -116,6 +117,9 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 function describeError(err: unknown): string {
+  if (err instanceof HonestyValidationError) {
+    return "The generated draft failed evidence validation and was withheld. No unverified draft was returned; review the source résumé and try again.";
+  }
   if (err instanceof Anthropic.AuthenticationError) {
     return "Invalid ANTHROPIC_API_KEY. Check .env.local.";
   }
