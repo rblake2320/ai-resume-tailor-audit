@@ -1,0 +1,160 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+  createLaborMarketHandlers,
+  createConfiguredLaborMarketProviders,
+  type LaborMarketProviders,
+} from "./labor-market-api";
+import {
+  createCareerPathRecord,
+  parseCurrentProjectionSnapshot,
+  type LaborMarketSnapshot,
+  type OnetOccupationProfile,
+} from "./labor-market";
+
+const onetProfile: OnetOccupationProfile = {
+  kind: "occupation_profile",
+  occupationCode: "15-1252.00",
+  occupationTitle: "Software Developers",
+  description: "Research, design, and develop software.",
+  source: "ONET",
+  sourceUrl: "https://www.onetonline.org/link/summary/15-1252.00",
+  asOfDate: "2026-01-15",
+  retrievedAt: "2026-07-31T12:00:00.000Z",
+  uncertainty: "O*NET describes occupational characteristics; it does not predict hiring outcomes.",
+  skills: ["Programming"],
+  knowledge: ["Computers and Electronics"],
+  tasks: ["Develop software systems."],
+  technologies: ["Python"],
+};
+
+const projection: LaborMarketSnapshot = {
+  occupationCode: "15-1252",
+  occupationTitle: "Software Developers",
+  geography: "United States",
+  employmentLevel: 1000,
+  medianWage: 120000,
+  projectedGrowthPercent: 8,
+  annualOpenings: 100,
+  replacementOpenings: 20,
+  projectionStartYear: 2024,
+  projectionEndYear: 2034,
+  asOfDate: "2026-01-01",
+  source: "BLS",
+  sourceUrl: "https://www.bls.gov/emp/tables/occupational-projections-and-characteristics.htm",
+  uncertainty: "Projection, not a guarantee.",
+  retrievedAt: "2026-07-31T12:00:00.000Z",
+};
+
+function providers(): LaborMarketProviders {
+  return {
+    lookupOnetOccupation: vi.fn().mockResolvedValue(onetProfile),
+    fetchBlsObservations: vi.fn().mockResolvedValue([{
+      kind: "observational_series",
+      source: "BLS",
+      sourceUrl: "https://api.bls.gov/publicAPI/v2/timeseries/data/",
+      seriesId: "CES0000000001",
+      geography: "As defined by the BLS series metadata; verify before use.",
+      asOfDate: "2026-12-31",
+      retrievedAt: "2026-07-31T12:00:00.000Z",
+      uncertainty: "Historical observations are not occupational projections.",
+      observations: [{ year: 2026, period: "M01", value: 12.5, footnotes: [] }],
+    }]),
+  };
+}
+
+describe("labor-market product API", () => {
+  it("makes O*NET reachable through a bounded, mockable server handler without returning credentials", async () => {
+    const source = providers();
+    const handlers = createLaborMarketHandlers(source);
+    const response = await handlers.onet(new Request("http://localhost/api/labor-market/onet", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ occupationCode: "15-1252.00" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ profile: onetProfile });
+    expect(source.lookupOnetOccupation).toHaveBeenCalledWith("15-1252.00");
+    expect(await response.clone().text()).not.toContain("password");
+  });
+
+  it("rejects oversized and malformed labor-market requests before provider work", async () => {
+    const source = providers();
+    const handlers = createLaborMarketHandlers(source);
+    const oversized = await handlers.onet(new Request("http://localhost/api/labor-market/onet", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ occupationCode: "15-1252.00", padding: "x".repeat(5000) }),
+    }));
+    expect(oversized.status).toBe(413);
+    const malformed = await handlers.onet(new Request("http://localhost/api/labor-market/onet", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "not-json",
+    }));
+    expect(malformed.status).toBe(400);
+    expect(source.lookupOnetOccupation).not.toHaveBeenCalled();
+  });
+
+  it("labels BLS time-series output as observations, never as occupational projections", async () => {
+    const source = providers();
+    const handlers = createLaborMarketHandlers(source);
+    const response = await handlers.bls(new Request("http://localhost/api/labor-market/bls-series", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seriesIds: ["CES0000000001"], startYear: 2026, endYear: 2026 }),
+    }));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.series[0]).toMatchObject({ kind: "observational_series", seriesId: "CES0000000001" });
+    expect(JSON.stringify(body)).not.toContain("projectedGrowthPercent");
+  });
+
+  it("fails closed when O*NET credentials are absent instead of pretending the provider is ready", async () => {
+    const configured = createConfiguredLaborMarketProviders({});
+    await expect(configured.lookupOnetOccupation("15-1252.00")).rejects.toThrow(/not configured/i);
+  });
+});
+
+describe("career-path records", () => {
+  it("preserves source, geography, dates, projection interval, retrieval time, and uncertainty", () => {
+    const parsed = parseCurrentProjectionSnapshot(projection, new Date("2026-07-31T12:00:00Z"));
+    const record = createCareerPathRecord({
+      profile: onetProfile,
+      projection: parsed,
+      evidenceGaps: ["network security"],
+      trainingResources: [{
+        id: "course-1",
+        title: "Network security",
+        provider: "Example College",
+        sourceUrl: "https://example.edu/security",
+        skills: ["network security"],
+        cost: { amount: 200, currency: "USD", note: "Published tuition" },
+        durationHours: 40,
+        prerequisites: [],
+        accessibility: ["captions"],
+        accreditation: "Regional",
+        evidenceQuality: "accredited",
+        asOfDate: "2026-01-01",
+      }],
+      now: new Date("2026-07-31T12:00:00Z"),
+      id: "path-1",
+    });
+    expect(record.projection).toEqual(projection);
+    expect(record.projection).toMatchObject({
+      geography: "United States",
+      projectionStartYear: 2024,
+      projectionEndYear: 2034,
+      sourceUrl: projection.sourceUrl,
+      asOfDate: "2026-01-01",
+      retrievedAt: "2026-07-31T12:00:00.000Z",
+      uncertainty: "Projection, not a guarantee.",
+    });
+    expect(record.trainingRecommendations).toHaveLength(1);
+    expect(record.trainingRecommendations[0].matchedGaps).toEqual(["network security"]);
+  });
+
+  it("refuses missing or stale projection evidence rather than assigning a confident trend", () => {
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, employmentLevel: null }, new Date("2026-07-31"))).toThrow(/missing required/i);
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, asOfDate: "1999-01-01" }, new Date("2026-07-31"))).toThrow(/stale/i);
+  });
+});
