@@ -23,6 +23,7 @@ import { ResultView } from "@/components/ResultView";
 import { Chip, Section, Spinner, ToolButton } from "@/components/ui";
 import { DictationButton } from "@/components/SpeechControls";
 import { JobInbox } from "@/components/JobInbox";
+import { ApplicationTracker } from "@/components/ApplicationTracker";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -700,6 +701,12 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <ApplicationTracker
+          result={result}
+          profile={{ resume, extraInfo }}
+          job={{ company, title: jobTitle, description: jobText, applicationUrl: jobUrl }}
+        />
 
         {/* History */}
         <section className="mt-10 border-t border-ink-700 pt-6">
