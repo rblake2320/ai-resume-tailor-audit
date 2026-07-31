@@ -61,6 +61,13 @@ describe("TailorResultSchema", () => {
 });
 
 describe("deterministic evidence boundary", () => {
+  const resultForEvidence = (evidence: string, state: "proven" | "partially_supported" = "proven") => TailorResultSchema.parse({
+    ...VALID_RESULT,
+    keywords: { ...VALID_RESULT.keywords, added: [] },
+    requirement_evidence: [{ id: "evidence", requirement: "Evidence", category: "mandatory", state,
+      evidence: [evidence], tailoredText: ["Supported claim"], recommendation: "" }],
+    tailored_resume_markdown: "# Jane Doe\nSupported claim",
+  });
   it("accepts source-backed evidence and output references", () => {
     const result = TailorResultSchema.parse({
       ...VALID_RESULT,
@@ -143,6 +150,52 @@ describe("deterministic evidence boundary", () => {
     });
     expect(() => assertTailorResultEvidence(result, resume)).toThrow(/failed evidence validation/);
   });
+  it.each([
+    ["blank line", "Acme Corp\n\nInitech Corp", "Acme Corp Initech Corp"],
+    ["single newline", "Acme Corp\nInitech Corp", "Acme Corp Initech Corp"],
+    ["em-dash separator", "Acme Corp\n—\nInitech Corp", "Acme Corp - Initech Corp"],
+  ])("rejects a citation fused across a %s", (_label, resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+  });
+  it.each([
+    "Node.js at Acme",
+    "3.5 years of Python",
+    "AWS Solutions Architect (2024)",
+    "C++ and Go",
+    "$1.2M in cloud spend",
+    "bash|zsh daily",
+    "Authorized to work in the U.S.",
+    "JSON {} parsers",
+    "C++/C#",
+    "$1.2M using .NET",
+    "Skills: C++ * C# * Java",
+    "Revenue up 40% * churn down 15% * NPS 62",
+  ])("keeps punctuation-bearing verbatim evidence: %s", (evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), evidence)).not.toThrow();
+  });
+  it.each([
+    ["Not only built CI pipelines but also owned releases", "built CI pipelines"],
+    ["Never missed a deadline while owning the release process", "owning the release process"],
+    ["No production experience but familiar with Rust", "familiar with Rust"],
+    ["No Kubernetes and built CI pipelines", "built CI pipelines"],
+    ["Although not certified, led the platform team", "led the platform team"],
+    ["Delivered no less than 12 releases in 2024", "12 releases in 2024"],
+    ["Migrated with zero downtime and shipped Postgres migrations", "shipped Postgres migrations"],
+  ])("accepts honest evidence beside an unrelated negator: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
+  });
+  it.each([
+    "Only evaluated Kubernetes",
+    "Beginner in Kubernetes",
+    "Exposure to Kubernetes",
+    "Aspiring to be a platform engineer",
+    "Hope to become a platform engineer",
+    "Failed to become certified",
+    "Limited Kubernetes production experience",
+  ])("does not allow qualified evidence to prove an unqualified claim: %s", (evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), evidence)).toThrow(/failed evidence validation/);
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence, "partially_supported"), evidence)).not.toThrow();
+  });
   it("matches visible text through nested Markdown emphasis", () => {
     const result = TailorResultSchema.parse({
       ...VALID_RESULT,
@@ -181,6 +234,28 @@ describe("deterministic evidence boundary", () => {
     ]);
     expect(summary).toEqual({ sourceCitationMismatch: 1, outputReferenceMismatch: 1, addedKeywordMismatch: 1 });
     expect(JSON.stringify(summary)).not.toMatch(/secret-id|other-id|private term/);
+  });
+  it("keeps worst-case evidence validation bounded", () => {
+    const evidence = "Built CI pipelines cutting deploy time 40%";
+    const requirements = Array.from({ length: 200 }, (_, index) => ({
+      id: `delivery-${index}`,
+      requirement: "Delivery",
+      category: "mandatory" as const,
+      state: "proven" as const,
+      evidence: Array(5).fill(evidence) as string[],
+      tailoredText: [evidence],
+      recommendation: "",
+    }));
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: requirements,
+      tailored_resume_markdown: `# Jane Doe\n${evidence}`,
+    });
+    const resume = `${"No Kubernetes exposure and unrelated context ".repeat(2_000)}${evidence}`;
+    const started = performance.now();
+    expect(() => assertTailorResultEvidence(result, resume)).not.toThrow();
+    expect(performance.now() - started).toBeLessThan(1_500);
   });
   it("withholds fabricated evidence, missing output references, and phantom added keywords", () => {
     const result = TailorResultSchema.parse({

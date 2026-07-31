@@ -154,15 +154,28 @@ const comparableText = (value: string) => value
 const comparableSource = (value: string) => comparableText(value);
 const comparableOutput = (value: string) => comparableText(mdToAtsText(value));
 
+const qualifiedRatherThanProven = (evidence: string): boolean => {
+  const text = comparableSource(evidence);
+  return /^(?:only evaluated|beginner in|exposure to|aspiring to(?: be)?|hope to become|failed to become)\b/u.test(text)
+    || /\b(?:minimal|limited)\b.{0,60}\b(?:experience|proficiency|knowledge|familiarity|exposure)\b/u.test(text)
+    || /\bevaluated\b.{0,40}\b(?:but\s+)?did\s+not\s+deploy\b/u.test(text);
+};
+
 /** Deterministic post-generation boundary for structured evidence references. */
 export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
-  const source = comparableSource(originalResume);
+  // A citation must fit inside one source line. Collapsing the full document
+  // would let separate bullets, headings, employers, or blank-line sections be
+  // welded into a fact that never appeared in the résumé.
+  const sourceLines = originalResume.split(/\r?\n/u).map(comparableSource).filter(Boolean);
   const output = comparableOutput(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
   const violations: string[] = [];
   for (const requirement of result.requirement_evidence) {
     for (const evidence of requirement.evidence) {
       const cited = comparableSource(evidence);
-      if (!source.includes(cited) || !affirmativelyPresent(source, cited)) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
+      const supported = sourceLines.some((line) => line.includes(cited)
+        && affirmativelyPresent(line, cited, requirement.state === "proven"));
+      const overclaimed = requirement.state === "proven" && qualifiedRatherThanProven(evidence);
+      if (!supported || overclaimed) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
     }
     for (const text of requirement.tailoredText) {
       if (!output.includes(comparableSource(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);

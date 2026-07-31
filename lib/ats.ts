@@ -37,36 +37,31 @@ const STOPWORDS = new Set(
 
 const normalize = (s: string) => s.toLowerCase().normalize("NFKD");
 
-// Negation cues that, when they sit in the same clause just before a keyword,
-// mean the resume is DISCLAIMING the skill ("no Kubernetes", "not familiar with
-// Terraform", "without Go experience") rather than claiming it.
-const NEGATION =
-  /\b(no|not|never|without|lacks?|lacking|zero|none|unfamiliar|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot)\b[^.;:!?\n]*$/;
+// This intentionally recognizes only a negator that directly governs the
+// matched span. Broad sentence/document polarity caused unrelated honest
+// evidence to be rejected (for example "No Kubernetes; built CI pipelines").
+const DIRECT_NEGATION =
+  /\b(?:no|not|never|without|lacks?|lacking|zero|none|unfamiliar(?:\s+with)?|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t)\s+(?:(?!(?:and|but|however|though|while|yet|although)\b)[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
+const FALSE_NEGATION = /\b(?:not\s+only|no\s+(?:less|fewer)\s+than)\s+(?:[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
+const NONE_OF = /\bnone\s+of\s*:\s*$/iu;
+const DIRECT_QUALIFIER = /\b(?:only\s+evaluated|beginner\s+in|exposure\s+to|aspiring\s+to(?:\s+be)?|hope\s+to\s+become|failed\s+to\s+become|minimal|limited)\s*$/iu;
 
 /**
- * True only if `keyword` appears in `resume` at least once WITHOUT a preceding
- * negation cue in the same clause. Prevents a disclaimer like "no Kubernetes
- * experience" from counting Kubernetes as a matched skill.
+ * Inputs are already normalized by the caller. True when at least one exact
+ * occurrence is not directly governed by a negator. The bounded look-behind
+ * keeps this linear and avoids assigning one disclaimer to unrelated text.
  */
-export function affirmativelyPresent(resume: string, keyword: string): boolean {
-  const haystack = normalize(resume);
-  const kw = normalize(keyword).replace(/[.*+?^${}()|[\]\\]/g, "");
+export function affirmativelyPresent(resume: string, keyword: string, rejectQualified = false): boolean {
+  const haystack = resume;
+  const kw = keyword;
   if (!kw) return false;
   let idx = haystack.indexOf(kw);
   while (idx !== -1) {
-    // Inspect the full clause, not an arbitrary character window. A long but
-    // unbroken disclaimer must not become affirmative merely through padding.
-    const prefix = haystack.slice(0, idx);
-    const clauseStart = Math.max(
-      prefix.lastIndexOf("."),
-      prefix.lastIndexOf(";"),
-      prefix.lastIndexOf(":"),
-      prefix.lastIndexOf("!"),
-      prefix.lastIndexOf("?"),
-      prefix.lastIndexOf("\n"),
-    ) + 1;
-    const before = prefix.slice(clauseStart);
-    if (!NEGATION.test(before)) return true; // an affirmative mention exists
+    const before = haystack.slice(Math.max(0, idx - 160), idx);
+    const negated = NONE_OF.test(before)
+      || (!FALSE_NEGATION.test(before) && DIRECT_NEGATION.test(before))
+      || (rejectQualified && DIRECT_QUALIFIER.test(before));
+    if (!negated) return true;
     idx = haystack.indexOf(kw, idx + kw.length);
   }
   return false;
