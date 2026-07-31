@@ -24,6 +24,7 @@ import { Chip, Section, Spinner, ToolButton } from "@/components/ui";
 import { DictationButton } from "@/components/SpeechControls";
 import { JobInbox } from "@/components/JobInbox";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
+import { CareerLedger } from "@/components/CareerLedger";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -701,6 +702,8 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <CareerLedger />
 
         <ApplicationTracker
           result={result}
