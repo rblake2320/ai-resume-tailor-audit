@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { mdToAtsText } from "./markdown.ts";
+import { affirmativelyPresent } from "./ats.ts";
 
 export const EvidenceStateSchema = z.enum([
   "proven", "partially_supported", "unsupported", "needs_clarification", "intentionally_omitted",
@@ -135,7 +136,7 @@ export function summarizeHonestyViolations(violations: readonly string[]): Hones
   };
 }
 
-const comparable = (value: string) => mdToAtsText(value)
+const comparableText = (value: string) => value
   .replaceAll("&amp;", "&")
   .replaceAll("&lt;", "<")
   .replaceAll("&gt;", ">")
@@ -147,21 +148,28 @@ const comparable = (value: string) => mdToAtsText(value)
   .replace(/\s+/gu, " ")
   .trim();
 
+// Résumés and evidence are plain text. Generated documents are Markdown.
+// Keeping those paths separate prevents Markdown-shaped source text (for
+// example a footnote beginning with "*") from being rewritten asymmetrically.
+const comparableSource = (value: string) => comparableText(value);
+const comparableOutput = (value: string) => comparableText(mdToAtsText(value));
+
 /** Deterministic post-generation boundary for structured evidence references. */
 export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
-  const source = comparable(originalResume);
-  const output = comparable(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
+  const source = comparableSource(originalResume);
+  const output = comparableOutput(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
   const violations: string[] = [];
   for (const requirement of result.requirement_evidence) {
     for (const evidence of requirement.evidence) {
-      if (!source.includes(comparable(evidence))) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
+      const cited = comparableSource(evidence);
+      if (!source.includes(cited) || !affirmativelyPresent(source, cited)) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
     }
     for (const text of requirement.tailoredText) {
-      if (!output.includes(comparable(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
+      if (!output.includes(comparableOutput(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
     }
   }
   for (const keyword of result.keywords.added) {
-    if (!output.includes(comparable(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
+    if (!output.includes(comparableOutput(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
   }
   if (violations.length) throw new HonestyValidationError([...new Set(violations)]);
 }

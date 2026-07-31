@@ -48,7 +48,7 @@ const NEGATION =
  * negation cue in the same clause. Prevents a disclaimer like "no Kubernetes
  * experience" from counting Kubernetes as a matched skill.
  */
-function affirmativelyPresent(resume: string, keyword: string): boolean {
+export function affirmativelyPresent(resume: string, keyword: string): boolean {
   const kw = keyword.replace(/[.*+?^${}()|[\]\\]/g, "");
   if (!kw) return false;
   let idx = resume.indexOf(kw);

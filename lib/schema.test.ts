@@ -90,6 +90,35 @@ describe("deterministic evidence boundary", () => {
     });
     expect(() => assertTailorResultEvidence(result, "Built CI pipelines. Mentored four engineers.")).toThrow(/failed evidence validation/);
   });
+  it("rejects a positive citation found only inside a negated disclaimer", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      requirement_evidence: [{ id: "k8s", requirement: "Kubernetes", category: "mandatory", state: "proven",
+        evidence: ["proficient in Kubernetes"], tailoredText: ["proficient in Kubernetes"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nproficient in Kubernetes",
+    });
+    expect(() => assertTailorResultEvidence(result, "Not proficient in Kubernetes.")).toThrow(/failed evidence validation/);
+  });
+  it("does not treat Markdown-shaped plain source text asymmetrically", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: [{ id: "footnote", requirement: "Operations", category: "mandatory", state: "proven",
+        evidence: ["* operated the deployment process"], tailoredText: ["operated the deployment process"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nOperated the deployment process.",
+    });
+    expect(() => assertTailorResultEvidence(result, "Experience\n* operated the deployment process")).not.toThrow();
+  });
+  it("matches visible text through nested Markdown emphasis", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: ["CI"] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines"], tailoredText: ["Built CI pipelines"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\n**Built *CI* pipelines**",
+    });
+    expect(() => assertTailorResultEvidence(result, "Built CI pipelines")).not.toThrow();
+  });
   it("summarizes failures without copying requirement ids, keywords, or document text", () => {
     const summary = summarizeHonestyViolations([
       "Requirement secret-id cites evidence absent from the original résumé.",

@@ -61,15 +61,19 @@ export function mdToHtml(md: string): string {
 export function mdToAtsText(md: string): string {
   return md
     .split("\n")
-    .map((line) =>
-      line
+    .map((line) => {
+      let visible = line
         .replace(/^#{1,4}\s+/, "")
         .replace(/^\s*[-*•]\s+/, "• ")
-        .replace(/\*\*([^*]+)\*\*/g, "$1")
-        .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2")
-        .replace(/^---$/, "")
-        .trimEnd(),
-    )
+        .replace(/^---$/, "");
+      // Two passes unwrap nested emphasis such as **Built *CI* pipelines**.
+      for (let pass = 0; pass < 2; pass += 1) {
+        visible = visible
+          .replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+      }
+      return visible.trimEnd();
+    })
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
