@@ -812,7 +812,17 @@
         "tags": [
           "Official submissions"
         ],
-        "description": "Human-only approval of an exact final preview; returns a short-lived, exact-content-bound receipt.",
+        "description": "Human-only approval of an exact final preview; returns a short-lived, exact-content-bound receipt. JSON request body is capped at 6,000,000 bytes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionPreview"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Signed approval receipt"
@@ -821,6 +831,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -832,12 +848,31 @@
         "tags": [
           "Official submissions"
         ],
-        "description": "Consumes a one-time approval receipt and calls only an explicitly allowlisted, credentialed official connector.",
+        "description": "Consumes a one-time approval receipt and calls only an explicitly allowlisted, credentialed official connector. JSON request body is capped at 8,000,000 bytes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteSubmissionRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Provider accepted the operation"
           },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -1156,6 +1191,263 @@
             "enum": [
               "RATE_LIMIT_UNAVAILABLE"
             ]
+          }
+        }
+      },
+      "SubmissionTarget": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "boardToken",
+              "jobId"
+            ],
+            "properties": {
+              "provider": {
+                "const": "greenhouse"
+              },
+              "boardToken": {
+                "type": "string"
+              },
+              "jobId": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "site",
+              "postingId",
+              "requiredFields"
+            ],
+            "properties": {
+              "provider": {
+                "const": "lever"
+              },
+              "site": {
+                "type": "string"
+              },
+              "postingId": {
+                "type": "string"
+              },
+              "requiredFields": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "rawMessage"
+            ],
+            "properties": {
+              "provider": {
+                "const": "gmail"
+              },
+              "rawMessage": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000000
+              }
+            }
+          }
+        ]
+      },
+      "SubmissionPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "provider",
+          "company",
+          "role",
+          "destination",
+          "packetVersion",
+          "resumeChecksum",
+          "coverLetterChecksum",
+          "packetChecksum",
+          "personalDataCategories",
+          "fields",
+          "createdAt",
+          "target"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "greenhouse",
+              "lever",
+              "gmail"
+            ]
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "destination": {
+            "type": "string",
+            "format": "uri"
+          },
+          "packetVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "resumeChecksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "coverLetterChecksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "packetChecksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "personalDataCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target": {
+            "$ref": "#/components/schemas/SubmissionTarget"
+          }
+        }
+      },
+      "ApprovalReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "preview",
+          "approvedAt",
+          "expiresAt",
+          "nonce",
+          "signature"
+        ],
+        "properties": {
+          "preview": {
+            "$ref": "#/components/schemas/SubmissionPreview"
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nonce": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "ApplicationPacket": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "version",
+          "checksums",
+          "jobSnapshot"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "checksums": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "packet",
+              "resume",
+              "coverLetter"
+            ],
+            "properties": {
+              "packet": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "resume": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "coverLetter": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          },
+          "jobSnapshot": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "company",
+              "title"
+            ],
+            "properties": {
+              "company": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ExecuteSubmissionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "receipt",
+          "packet"
+        ],
+        "properties": {
+          "receipt": {
+            "$ref": "#/components/schemas/ApprovalReceipt"
+          },
+          "packet": {
+            "$ref": "#/components/schemas/ApplicationPacket"
           }
         }
       }

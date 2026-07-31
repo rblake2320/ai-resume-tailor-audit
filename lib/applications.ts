@@ -1,6 +1,7 @@
 import type { TailorResult } from "./schema";
 import type { JobPostingSnapshot } from "./schema";
 import { sha256 } from "./job-inbox";
+import { canonicalJson } from "./canonical-json";
 
 export const APPLICATION_STATES = [
   "discovered", "saved", "reviewing", "tailoring", "ready", "submitted",
@@ -60,11 +61,14 @@ export interface ApplicationRecord {
   reminders: ApplicationReminder[];
 }
 
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  if (value && typeof value === "object") return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${canonical(entry)}`).join(",")}}`;
-  return JSON.stringify(value);
-}
+// Packet checksums previously ordered keys with `localeCompare`, which is locale-
+// and ICU-dependent: "a" sorts before "A" under en-US but after it by code unit.
+// `screeningAnswers` keys are employer-supplied question names, so two hosts
+// could compute different checksums for the same packet and a packet sealed on
+// one machine would fail verification on another. Submission now gates on
+// `verifyApplicationPacket`, which makes that a correctness risk rather than a
+// latent one. The shared canonicaliser orders by code unit.
+const canonical = canonicalJson;
 
 export async function createApplicationPacket(input: {
   jobSnapshot: JobPostingSnapshot;

@@ -6,13 +6,17 @@ import { isSameOriginMutation, POST as disconnectPost } from "../app/api/connect
 import { JOB_IMPORT_BODY_MAX_BYTES, POST as importJobsPost } from "../app/api/jobs/import/route";
 import { PARSE_RESUME_BODY_MAX_BYTES, POST as parseResumePost } from "../app/api/parse-resume/route";
 import { safeFetch, SsrfError } from "./ssrf";
+import { POST as approveSubmission, SUBMISSION_APPROVAL_BODY_MAX_BYTES } from "../app/api/submissions/approve/route";
+import { POST as executeSubmission, SUBMISSION_EXECUTE_BODY_MAX_BYTES } from "../app/api/submissions/execute/route";
 
 const originalApiKey = process.env.ANTHROPIC_API_KEY;
 const originalAgentToken = process.env.RESUME_FOUNDRY_AGENT_API_TOKEN;
+const originalApprovalSecret = process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET;
 afterEach(() => {
   vi.unstubAllGlobals();
   if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = originalApiKey;
   if (originalAgentToken === undefined) delete process.env.RESUME_FOUNDRY_AGENT_API_TOKEN; else process.env.RESUME_FOUNDRY_AGENT_API_TOKEN = originalAgentToken;
+  if (originalApprovalSecret === undefined) delete process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET; else process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = originalApprovalSecret;
 });
 
 describe("network route boundaries", () => {
@@ -41,6 +45,41 @@ describe("network route boundaries", () => {
       method: "POST", headers: { "content-type": "multipart/form-data; boundary=x", "content-length": String(PARSE_RESUME_BODY_MAX_BYTES + 1) }, body: "--x--",
     }) as never);
     expect(resume.status).toBe(413);
+  });
+
+  it("bounds both submission routes before approval, nonce consumption, or provider work", async () => {
+    process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = "human-approval-secret-for-tests";
+    const approval = await approveSubmission(new Request("https://app.test/api/submissions/approve", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": String(SUBMISSION_APPROVAL_BODY_MAX_BYTES + 1),
+        "x-resume-foundry-human-approval": "human-approval-secret-for-tests",
+      },
+      body: "{}",
+    }));
+    expect(approval.status).toBe(413);
+
+    const execute = await executeSubmission(new Request("https://app.test/api/submissions/execute", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": String(SUBMISSION_EXECUTE_BODY_MAX_BYTES + 1) },
+      body: "{}",
+    }));
+    expect(execute.status).toBe(413);
+  });
+
+  it("rejects unsupported submission media types and malformed declared lengths", async () => {
+    process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = "human-approval-secret-for-tests";
+    const cases = [
+      [approveSubmission, "https://app.test/api/submissions/approve", { "x-resume-foundry-human-approval": "human-approval-secret-for-tests" }],
+      [executeSubmission, "https://app.test/api/submissions/execute", {}],
+    ] as const;
+    for (const [handler, url, authorization] of cases) {
+      const media = await handler(new Request(url, { method: "POST", headers: { ...authorization, "content-type": "text/plain" }, body: "{}" }));
+      expect(media.status).toBe(415);
+      const length = await handler(new Request(url, { method: "POST", headers: { ...authorization, "content-type": "application/json", "content-length": "-1" }, body: "{}" }));
+      expect(length.status).toBe(400);
+    }
   });
 
   it("rejects LinkedIn and Indeed without making a network request", async () => {
