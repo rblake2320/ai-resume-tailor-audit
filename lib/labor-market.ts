@@ -4,6 +4,7 @@ export const LABOR_MARKET_STALE_AFTER_MS = 3 * 366 * 24 * 60 * 60 * 1000;
 const BLS_ENDPOINT = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
 const ONET_ENDPOINT = "https://api-v2.onetcenter.org/online/occupations";
 const PROVIDER_RESPONSE_LIMIT_BYTES = 512 * 1024;
+const HttpsUrlSchema = z.string().url().refine((value) => new URL(value).protocol === "https:", "Source URL must use HTTPS.");
 
 export const LaborMarketSnapshotSchema = z.strictObject({
   occupationCode: z.string().min(1),
@@ -18,7 +19,7 @@ export const LaborMarketSnapshotSchema = z.strictObject({
   projectionEndYear: z.number().int().min(1900).max(2200).nullable(),
   asOfDate: z.string().date(),
   source: z.literal("BLS"),
-  sourceUrl: z.string().url(),
+  sourceUrl: HttpsUrlSchema,
   uncertainty: z.string().min(1),
   retrievedAt: z.string().datetime(),
 }).superRefine((value, context) => {
@@ -40,7 +41,7 @@ export const OnetOccupationProfileSchema = z.strictObject({
   occupationTitle: z.string().min(1).max(500),
   description: z.string().max(10_000),
   source: z.literal("ONET"),
-  sourceUrl: z.string().url(),
+  sourceUrl: HttpsUrlSchema,
   asOfDate: z.string().date(),
   retrievedAt: z.string().datetime(),
   uncertainty: z.string().min(1),
@@ -224,7 +225,7 @@ export async function fetchOnetOccupation(
 }
 
 export const TrainingResourceSchema = z.strictObject({
-  id: z.string().min(1), title: z.string().min(1), provider: z.string().min(1), sourceUrl: z.string().url(),
+  id: z.string().min(1), title: z.string().min(1), provider: z.string().min(1), sourceUrl: HttpsUrlSchema,
   skills: z.array(z.string().min(1)), cost: z.strictObject({ amount: z.number().nonnegative().nullable(), currency: z.string().length(3), note: z.string() }),
   durationHours: z.number().nonnegative().nullable(), prerequisites: z.array(z.string()), accessibility: z.array(z.string()), accreditation: z.string(), evidenceQuality: z.enum(["official", "accredited", "provider_claim", "community"]), asOfDate: z.string().date(),
 });

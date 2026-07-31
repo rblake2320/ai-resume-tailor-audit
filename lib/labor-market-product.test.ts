@@ -170,4 +170,15 @@ describe("career-path records", () => {
       now: new Date("2026-07-31T12:00:00Z"),
     })).toThrow(/occupation code/i);
   });
+
+  it("rejects non-HTTPS provenance and training links before rendering them", () => {
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, sourceUrl: "http://www.bls.gov/emp/" }, new Date("2026-07-31T13:00:00Z"))).toThrow(/HTTPS/i);
+    expect(() => createCareerPathRecord({
+      profile: onetProfile,
+      projection,
+      evidenceGaps: ["network security"],
+      trainingResources: [{ id: "bad", title: "Bad link", provider: "Unknown", sourceUrl: "javascript:alert(1)", skills: ["network security"], cost: { amount: null, currency: "USD", note: "" }, durationHours: null, prerequisites: [], accessibility: [], accreditation: "", evidenceQuality: "provider_claim", asOfDate: "2026-01-01" }],
+      now: new Date("2026-07-31T13:00:00Z"),
+    })).toThrow(/HTTPS|URL/i);
+  });
 });
