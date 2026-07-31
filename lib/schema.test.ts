@@ -392,6 +392,15 @@ describe("deterministic evidence boundary", () => {
 });
 
 describe("tailorResultJsonSchema", () => {
+  it("omits provider-unsupported array bounds while retaining runtime caps", () => {
+    const schema = tailorResultJsonSchema();
+    expect(JSON.stringify(schema)).not.toMatch(/"(?:minItems|maxItems)"/u);
+    const tooMany = Array.from({ length: 101 }, (_, index) => ({
+      id: `r-${index}`, requirement: "Requirement", category: "mandatory" as const,
+      state: "proven" as const, evidence: ["Evidence"], tailoredText: ["Evidence"], recommendation: "",
+    }));
+    expect(() => TailorResultSchema.parse({ ...VALID_RESULT, requirement_evidence: tooMany })).toThrow();
+  });
   it("emits additionalProperties:false on every object (structured-output requirement)", () => {
     const schema = tailorResultJsonSchema();
     const objects: Record<string, unknown>[] = [];
