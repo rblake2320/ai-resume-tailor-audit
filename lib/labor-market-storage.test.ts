@@ -12,8 +12,8 @@ class MemoryStorage implements Storage {
   setItem(key: string, value: string) { this.#data.set(key, value); }
 }
 
-const profile: OnetOccupationProfile = { kind: "occupation_profile", occupationCode: "15-1252.00", occupationTitle: "Software Developers", description: "Develop software.", source: "ONET", sourceUrl: "https://www.onetonline.org/link/summary/15-1252.00", asOfDate: "2026-01-15", retrievedAt: "2026-07-31T12:00:00.000Z", uncertainty: "No hiring guarantee.", skills: ["Programming"], knowledge: [], tasks: [], technologies: [] };
-const projection: LaborMarketSnapshot = { occupationCode: "15-1252", occupationTitle: "Software Developers", geography: "United States", employmentLevel: 1000, medianWage: 120000, projectedGrowthPercent: 8, annualOpenings: 100, replacementOpenings: 20, projectionStartYear: 2024, projectionEndYear: 2034, asOfDate: "2026-01-01", source: "BLS", sourceUrl: "https://www.bls.gov/emp/", uncertainty: "Projection only.", retrievedAt: "2026-07-31T12:00:00.000Z" };
+const profile: OnetOccupationProfile = { kind: "occupation_profile", occupationCode: "15-1252.00", occupationTitle: "Software Developers", description: "Develop software.", source: "ONET", sourceUrl: "https://www.onetonline.org/link/summary/15-1252.00", sourceYear: 2026, sourceContents: [], retrievedAt: "2026-07-31T12:00:00.000Z", uncertainty: "No hiring guarantee.", reportedTitles: ["Software Engineer"] };
+const projection: LaborMarketSnapshot = { occupationCode: "15-1252", occupationTitle: "Software Developers", geography: "United States", employmentLevel: 1000, medianWage: { amount: 120000, currency: "USD", period: "year", unit: "per worker" }, projectedGrowthPercent: 8, annualOpenings: 100, replacementOpenings: 20, projectionStartYear: 2024, projectionEndYear: 2034, asOfDate: "2026-01-01", source: "BLS", sourceUrl: "https://www.bls.gov/emp/", uncertainty: "Projection only.", retrievedAt: "2026-07-31T12:00:00.000Z", verification: "user_supplied_unverified" };
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -36,5 +36,14 @@ describe("career-path local records", () => {
     localStorage.setItem(`${CAREER_PATH_RECORDS_KEY}:quarantine`, "bad");
     clearCareerPathRecords();
     expect(localStorage.length).toBe(0);
+  });
+
+  it("rejects oversized saved fields and arrays instead of growing browser storage without bound", () => {
+    const localStorage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage });
+    const record = createCareerPathRecord({ profile, projection, evidenceGaps: [], trainingResources: [], id: "path-1", now: new Date("2026-07-31T12:00:00Z") });
+    expect(() => saveCareerPathRecord({ ...record, evidenceGaps: ["x".repeat(501)] })).toThrow();
+    expect(() => saveCareerPathRecord({ ...record, profile: { ...profile, reportedTitles: Array.from({ length: 101 }, (_, index) => `Title ${index}`) } })).toThrow();
+    expect(localStorage.getItem(CAREER_PATH_RECORDS_KEY)).toBeNull();
   });
 });

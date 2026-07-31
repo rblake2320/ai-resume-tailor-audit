@@ -18,13 +18,11 @@ const onetProfile: OnetOccupationProfile = {
   description: "Research, design, and develop software.",
   source: "ONET",
   sourceUrl: "https://www.onetonline.org/link/summary/15-1252.00",
-  asOfDate: "2026-01-15",
+  sourceYear: 2026,
+  sourceContents: [{ title: "Occupation description", source: "Analyst", year: 2025 }],
   retrievedAt: "2026-07-31T12:00:00.000Z",
   uncertainty: "O*NET describes occupational characteristics; it does not predict hiring outcomes.",
-  skills: ["Programming"],
-  knowledge: ["Computers and Electronics"],
-  tasks: ["Develop software systems."],
-  technologies: ["Python"],
+  reportedTitles: ["Software Engineer"],
 };
 
 const projection: LaborMarketSnapshot = {
@@ -32,7 +30,7 @@ const projection: LaborMarketSnapshot = {
   occupationTitle: "Software Developers",
   geography: "United States",
   employmentLevel: 1000,
-  medianWage: 120000,
+  medianWage: { amount: 120000, currency: "USD", period: "year", unit: "per worker" },
   projectedGrowthPercent: 8,
   annualOpenings: 100,
   replacementOpenings: 20,
@@ -43,6 +41,7 @@ const projection: LaborMarketSnapshot = {
   sourceUrl: "https://www.bls.gov/emp/tables/occupational-projections-and-characteristics.htm",
   uncertainty: "Projection, not a guarantee.",
   retrievedAt: "2026-07-31T12:00:00.000Z",
+  verification: "user_supplied_unverified",
 };
 
 function providers(): LaborMarketProviders {
@@ -54,7 +53,7 @@ function providers(): LaborMarketProviders {
       sourceUrl: "https://api.bls.gov/publicAPI/v2/timeseries/data/",
       seriesId: "CES0000000001",
       geography: "As defined by the BLS series metadata; verify before use.",
-      asOfDate: "2026-12-31",
+      asOfPeriod: "2026-M01",
       retrievedAt: "2026-07-31T12:00:00.000Z",
       uncertainty: "Historical observations are not occupational projections.",
       observations: [{ year: 2026, period: "M01", value: 12.5, footnotes: [] }],
@@ -136,6 +135,7 @@ describe("career-path records", () => {
         accreditation: "Regional",
         evidenceQuality: "accredited",
         asOfDate: "2026-01-01",
+        verification: "user_supplied_unverified",
       }],
       now: new Date("2026-07-31T12:00:00Z"),
       id: "path-1",
@@ -177,7 +177,7 @@ describe("career-path records", () => {
       profile: onetProfile,
       projection,
       evidenceGaps: ["network security"],
-      trainingResources: [{ id: "bad", title: "Bad link", provider: "Unknown", sourceUrl: "javascript:alert(1)", skills: ["network security"], cost: { amount: null, currency: "USD", note: "" }, durationHours: null, prerequisites: [], accessibility: [], accreditation: "", evidenceQuality: "provider_claim", asOfDate: "2026-01-01" }],
+      trainingResources: [{ id: "bad", title: "Bad link", provider: "Unknown", sourceUrl: "javascript:alert(1)", skills: ["network security"], cost: { amount: null, currency: "USD", note: "" }, durationHours: null, prerequisites: [], accessibility: [], accreditation: "", evidenceQuality: "provider_claim", asOfDate: "2026-01-01", verification: "user_supplied_unverified" }],
       now: new Date("2026-07-31T13:00:00Z"),
     })).toThrow(/HTTPS|URL/i);
   });
