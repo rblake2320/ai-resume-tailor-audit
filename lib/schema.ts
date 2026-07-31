@@ -1,5 +1,26 @@
 import { z } from "zod";
 
+export const EvidenceStateSchema = z.enum([
+  "proven", "partially_supported", "unsupported", "needs_clarification", "intentionally_omitted",
+]);
+
+export const RequirementEvidenceSchema = z.strictObject({
+  id: z.string().min(1).max(100),
+  requirement: z.string().min(1),
+  category: z.enum(["mandatory", "preferred", "responsibility", "logistics"]),
+  state: EvidenceStateSchema,
+  evidence: z.array(z.string()).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
+  tailoredText: z.array(z.string()).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
+  recommendation: z.string().describe("Honest next step, clarification, adjacent skill, portfolio task, training, or omission rationale"),
+}).superRefine((item, context) => {
+  if (item.state === "unsupported" && (item.evidence.length > 0 || item.tailoredText.length > 0)) {
+    context.addIssue({ code: "custom", message: "Unsupported requirements cannot claim evidence or tailored text." });
+  }
+  if ((item.state === "proven" || item.state === "partially_supported") && item.evidence.length === 0) {
+    context.addIssue({ code: "custom", message: "Supported requirements must cite résumé evidence." });
+  }
+});
+
 export const TailorResultSchema = z.strictObject({
   match_score_before: z
     .int()
@@ -60,6 +81,9 @@ export const TailorResultSchema = z.strictObject({
       }),
     )
     .describe("Honest gaps the candidate should know about"),
+  requirement_evidence: z
+    .array(RequirementEvidenceSchema)
+    .describe("Auditable mapping of each material job requirement to source résumé evidence and resulting tailored text"),
   ats_checks: z
     .array(
       z.strictObject({

@@ -16,6 +16,15 @@ const VALID_RESULT = {
     not_added: [{ keyword: "rust", reason: "no evidence in resume" }],
   },
   gap_analysis: [{ gap: "No Rust experience", advice: "Ship a small Rust CLI project" }],
+  requirement_evidence: [{
+    id: "rust",
+    requirement: "Rust",
+    category: "mandatory",
+    state: "unsupported",
+    evidence: [] as string[],
+    tailoredText: [] as string[],
+    recommendation: "Build and publish a small Rust project.",
+  }],
   ats_checks: [{ check: "Single column", status: "pass", note: "OK" }],
   tailored_resume_markdown: "# Jane Doe",
   cover_letter_markdown: "Dear [Hiring Manager]…",
@@ -37,6 +46,15 @@ describe("TailorResultSchema", () => {
         changes: [{ kind: "fabricated", detail: "x" }],
       }),
     ).toThrow();
+  });
+
+  it("rejects unsupported requirements that claim evidence or tailored text", () => {
+    const dishonest = structuredClone(VALID_RESULT);
+    dishonest.requirement_evidence[0] = {
+      ...dishonest.requirement_evidence[0],
+      evidence: ["Invented Rust experience"],
+    };
+    expect(() => TailorResultSchema.parse(dishonest)).toThrow(/Unsupported requirements/);
   });
 });
 
