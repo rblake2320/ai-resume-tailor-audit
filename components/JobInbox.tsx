@@ -5,6 +5,7 @@ import { addJobSnapshot, createJobSnapshot, parseJobImport, type JobImportInput 
 import type { JobPostingSnapshot } from "@/lib/schema";
 import { deleteJobSnapshot, loadJobInbox, saveJobInbox } from "@/lib/storage";
 import { ToolButton } from "@/components/ui";
+import { SourceConnectors } from "@/components/SourceConnectors";
 
 export function JobInbox({ current, onSelect }: { current: JobImportInput; onSelect: (job: JobPostingSnapshot) => void }) {
   const [jobs, setJobs] = useState<JobPostingSnapshot[]>(() => loadJobInbox());
@@ -47,6 +48,7 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
         <input ref={fileRef} className="sr-only" type="file" accept=".csv,.json,text/csv,application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); event.target.value = ""; }} />
       </div>
     </div>
+    <SourceConnectors onJobs={addInputs} />
     {message && <p role="status" className="mt-2 text-xs text-brass-300">{message}</p>}
     {jobs.length === 0 ? <p className="mt-3 rounded-lg border border-dashed border-ink-700 p-4 text-xs text-ink-400">No saved jobs yet. Load or paste a posting, then save it here.</p> :
       <ul className="mt-3 grid gap-2 md:grid-cols-2">{jobs.map((job) => <li key={job.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-ink-700 px-3 py-2">

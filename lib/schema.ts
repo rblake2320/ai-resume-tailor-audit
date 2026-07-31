@@ -178,6 +178,14 @@ export const JobSourceSchema = z.enum([
   "manual", "url", "csv", "json", "greenhouse", "lever", "usajobs", "email", "other",
 ]);
 export const RemoteStatusSchema = z.enum(["remote", "hybrid", "onsite", "unspecified"]);
+export const SourcePermissionSchema = z.strictObject({
+  automatedIngestion: z.boolean(),
+  guidedHandoff: z.boolean(),
+  directSubmission: z.boolean(),
+  requiresEmployerAuthorization: z.boolean(),
+  termsUrl: z.string().url().or(z.literal("")),
+  note: z.string().max(1000),
+});
 export const CompensationSchema = z.strictObject({
   currency: z.string().min(3).max(3).default("USD"),
   minimum: z.number().finite().nonnegative().nullable().default(null),
@@ -191,6 +199,10 @@ export const JobPostingSnapshotSchema = z.strictObject({
   id: z.string().min(1),
   source: JobSourceSchema,
   sourceId: z.string().max(500).default(""),
+  permissions: SourcePermissionSchema.default({
+    automatedIngestion: false, guidedHandoff: true, directSubmission: false,
+    requiresEmployerAuthorization: false, termsUrl: "", note: "User-provided posting; no automated source access assumed.",
+  }),
   company: z.string().min(1).max(200),
   title: z.string().min(1).max(200),
   location: z.string().max(300).default(""),
@@ -211,3 +223,4 @@ export const JobPostingSnapshotSchema = z.strictObject({
 export type JobSource = z.infer<typeof JobSourceSchema>;
 export type RemoteStatus = z.infer<typeof RemoteStatusSchema>;
 export type JobPostingSnapshot = z.infer<typeof JobPostingSnapshotSchema>;
+export type SourcePermission = z.infer<typeof SourcePermissionSchema>;

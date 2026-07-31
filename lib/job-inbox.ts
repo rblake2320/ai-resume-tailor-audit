@@ -3,6 +3,7 @@ import {
   type JobPostingSnapshot,
   type JobSource,
   type RemoteStatus,
+  type SourcePermission,
 } from "./schema";
 
 export interface JobImportInput {
@@ -18,11 +19,27 @@ export interface JobImportInput {
   applicationUrl?: string;
   postedAt?: string | null;
   closesAt?: string | null;
+  permissions?: SourcePermission;
 }
 
 export type DuplicateKey = "sourceId" | "canonicalUrl" | "companyTitleLocation" | "descriptionHash";
 
 const normalize = (value: string) => value.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+
+export function defaultSourcePermissions(source: JobSource): SourcePermission {
+  const officialFeed = ["greenhouse", "lever", "usajobs"].includes(source);
+  return {
+    automatedIngestion: officialFeed,
+    guidedHandoff: true,
+    directSubmission: false,
+    requiresEmployerAuthorization: source === "greenhouse" || source === "lever",
+    termsUrl: source === "greenhouse" ? "https://developers.greenhouse.io/job-board.html"
+      : source === "lever" ? "https://github.com/lever/postings-api"
+      : source === "usajobs" ? "https://developer.usajobs.gov/api-reference/"
+      : "",
+    note: officialFeed ? "Official public job feed; direct submission remains disabled without separate authorization." : "User-provided import; no third-party site automation authorized.",
+  };
+}
 
 export function canonicalJobUrl(value: string): string {
   if (!value.trim()) return "";
@@ -60,6 +77,7 @@ export async function createJobSnapshot(
     id: crypto.randomUUID(),
     source,
     sourceId: input.sourceId?.trim() ?? "",
+    permissions: input.permissions ?? defaultSourcePermissions(source),
     company: input.company.trim(),
     title: input.title.trim(),
     location: input.location?.trim() ?? "",
