@@ -14,6 +14,7 @@ The boundary recognizes these paths:
 
 - `RESUME_FOUNDRY_AGENT_STORE` (file; its containing directory is secured)
 - `RESUME_FOUNDRY_SUBMISSION_LEDGER` (file; its containing directory is secured)
+- `RESUME_FOUNDRY_SUBMISSION_ATTEMPT_DIR` (directory)
 - `RESUME_FOUNDRY_NONCE_STORE` (directory)
 - `RESUME_FOUNDRY_RATE_LIMIT_DIR` (directory)
 - `RESUME_FOUNDRY_AUDIT_STORE` (file; its containing directory is secured)
