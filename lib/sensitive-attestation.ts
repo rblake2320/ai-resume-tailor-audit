@@ -179,7 +179,10 @@ export function verifySensitivePresentation(input: {
   if (input.status.revokedCredentialIds.has(credential.id)) throw new Error("Credential is revoked.");
   if (parseDate(credential.validFrom, "Credential validFrom") > now || parseDate(credential.validUntil, "Credential validUntil") <= now) throw new Error("Credential is outside its validity window.");
 
+  const disclosedKeys = new Set<ClaimKey>();
   for (const disclosure of presentation.disclosures) {
+    if (disclosedKeys.has(disclosure[1])) throw new Error(`Claim ${disclosure[1]} was disclosed more than once.`);
+    disclosedKeys.add(disclosure[1]);
     if (!credential.digests.includes(digest(disclosure))) throw new Error("Disclosure is not bound to the credential.");
     if (!key.allowedClaims.includes(disclosure[1])) throw new Error(`Issuer is not authorized for ${disclosure[1]}.`);
   }

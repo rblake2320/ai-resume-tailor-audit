@@ -504,26 +504,34 @@ export default function Home() {
                 }}
               />
             </div>
+            <label htmlFor="job-description" className="sr-only">Job description</label>
             <textarea
+              id="job-description"
               value={jobText}
               onChange={(e) => { invalidateResult(); setJobText(e.target.value); }}
               placeholder="…or paste the full job description here…"
               className="h-40 w-full resize-y rounded-lg border border-ink-700 bg-ink-950/80 p-3 font-mono text-xs leading-relaxed text-ink-100 outline-none transition focus:border-brass-400/60"
             />
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <label htmlFor="job-title" className="sr-only">Job title (optional)</label>
               <input
+                id="job-title"
                 value={jobTitle}
                 onChange={(e) => { invalidateResult(); setJobTitle(e.target.value); }}
                 placeholder="Job title (optional)"
                 className="rounded-lg border border-ink-700 bg-ink-950/80 px-3 py-2 text-xs text-ink-100 outline-none transition focus:border-brass-400/60"
               />
+              <label htmlFor="job-company" className="sr-only">Company (optional)</label>
               <input
+                id="job-company"
                 value={company}
                 onChange={(e) => { invalidateResult(); setCompany(e.target.value); }}
                 placeholder="Company (optional)"
                 className="rounded-lg border border-ink-700 bg-ink-950/80 px-3 py-2 text-xs text-ink-100 outline-none transition focus:border-brass-400/60"
               />
+              <label htmlFor="tailoring-emphasis" className="sr-only">Tailoring emphasis</label>
               <select
+                id="tailoring-emphasis"
                 value={emphasis}
                 onChange={(e) => { invalidateResult(); setEmphasis(e.target.value as typeof emphasis); }}
                 className="rounded-lg border border-ink-700 bg-ink-950/80 px-3 py-2 text-xs text-ink-100 outline-none transition focus:border-brass-400/60"
