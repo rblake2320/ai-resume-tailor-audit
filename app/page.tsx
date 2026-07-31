@@ -260,8 +260,13 @@ export default function Home() {
     generationAbortRef.current = controller;
     cancelReasonRef.current = null;
     const timeout = window.setTimeout(() => {
+      if (generationId !== activeGenerationRef.current) return;
       cancelReasonRef.current = "timeout";
+      activeGenerationRef.current += 1;
+      generationAbortRef.current = null;
       controller.abort();
+      setError("Generation timed out after three minutes. Your inputs are safe; retry when ready.");
+      setPhase("error");
     }, GENERATION_TIMEOUT_MS);
     setPhase("working");
     setThinking("");
@@ -338,8 +343,14 @@ export default function Home() {
   }, [candidateName, resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
 
   const cancelGeneration = useCallback(() => {
+    const controller = generationAbortRef.current;
+    if (!controller) return;
     cancelReasonRef.current = "cancelled";
-    generationAbortRef.current?.abort();
+    activeGenerationRef.current += 1;
+    generationAbortRef.current = null;
+    controller.abort();
+    setError("Generation cancelled. Your inputs are safe and unchanged.");
+    setPhase("error");
   }, []);
 
   const clearJob = useCallback(() => {

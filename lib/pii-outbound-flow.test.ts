@@ -52,6 +52,7 @@ describe("real browser outbound PII flow", () => {
   beforeEach(async () => {
     localStorage.clear();
     HTMLElement.prototype.scrollTo = vi.fn();
+    HTMLElement.prototype.scrollIntoView = vi.fn();
     requests = [];
     deleteCareerLedgerMock.mockReset();
     deleteCareerLedgerMock.mockResolvedValue(undefined);
@@ -184,6 +185,78 @@ describe("real browser outbound PII flow", () => {
       currentController.error(new DOMException("cancelled", "AbortError"));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
+  });
+
+  it.each([
+    ["thinking", { type: "thinking", text: "LATE CANCELLED ANALYSIS" }],
+    ["progress", { type: "progress", chars: 999 }],
+    ["error", { type: "error", message: "late cancelled error" }],
+    ["result", {
+      type: "result",
+      data: {
+        match_score_before: 1, match_score_after: 2, score_rationale: "Late cancelled result",
+        changes: [], keywords: { matched: [], added: [], not_added: [] }, gap_analysis: [],
+        requirement_evidence: [], ats_checks: [], tailored_resume_markdown: "Late cancelled resume",
+        cover_letter_markdown: "Late cancelled letter",
+      },
+    }],
+  ])("ignores a late %s event when cancellation is ignored by the stream", async (_type, event) => {
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    vi.mocked(fetch).mockImplementationOnce(async (_url, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(new ReadableStream({ start(controller) { streamController = controller; } }), { status: 200 });
+    });
+
+    await act(async () => { button("Forge my resume").click(); });
+    await act(async () => { button("Cancel generation").click(); });
+    expect(document.body.textContent).toContain("Generation cancelled");
+
+    await act(async () => {
+      streamController.enqueue(new TextEncoder().encode(`${JSON.stringify(event)}\n`));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(document.body.textContent).not.toContain("LATE CANCELLED ANALYSIS");
+    expect(document.body.textContent).not.toContain("999 chars");
+    expect(document.body.textContent).not.toContain("late cancelled error");
+    expect(document.body.textContent).not.toContain("Late cancelled resume");
+    expect(JSON.parse(localStorage.getItem("art:history") ?? "[]")).toEqual([]);
+    expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("times out immediately in the UI and ignores a late result when abort is ignored", async () => {
+    vi.useFakeTimers();
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    vi.mocked(fetch).mockImplementationOnce(async (_url, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(new ReadableStream({ start(controller) { streamController = controller; } }), { status: 200 });
+    });
+    const lateResult = {
+      type: "result",
+      data: {
+        match_score_before: 1, match_score_after: 2, score_rationale: "Late timeout result",
+        changes: [], keywords: { matched: [], added: [], not_added: [] }, gap_analysis: [],
+        requirement_evidence: [], ats_checks: [], tailored_resume_markdown: "Late timeout resume",
+        cover_letter_markdown: "Late timeout letter",
+      },
+    };
+
+    try {
+      await act(async () => { button("Forge my resume").click(); });
+      await act(async () => { vi.advanceTimersByTime(180_000); });
+      expect(document.body.textContent).toContain("Generation timed out after three minutes");
+
+      await act(async () => {
+        streamController.enqueue(new TextEncoder().encode(`${JSON.stringify(lateResult)}\n`));
+        await vi.runAllTimersAsync();
+      });
+
+      expect(document.body.textContent).not.toContain("Late timeout resume");
+      expect(JSON.parse(localStorage.getItem("art:history") ?? "[]")).toEqual([]);
+      expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("makes erase-all reachable when a profile exists without history", async () => {

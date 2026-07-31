@@ -247,7 +247,10 @@ export async function clearAllData(): Promise<void> {
   } catch (error) { failures.push(new LocalPersistenceError("erasing local data", { cause: error })); }
   try { clearCareerPathRecords(); } catch (error) { failures.push(error); }
   try { await deleteCareerLedger(); }
-  catch (error) { failures.push(new LocalPersistenceError("erasing the encrypted career ledger", { cause: error })); }
+  catch (error) {
+    const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
+    failures.push(new LocalPersistenceError(`erasing the encrypted career ledger${detail}`, { cause: error }));
+  }
   try { window.dispatchEvent?.(new Event("resume-foundry:data-cleared")); } catch (error) { failures.push(error); }
   if (failures.length) throw failures[0];
 }
