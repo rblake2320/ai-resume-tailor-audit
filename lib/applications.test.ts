@@ -23,14 +23,13 @@ describe("immutable application packets", () => {
     expect(await verifyApplicationPacket(tampered)).toMatchObject({ valid: false });
     await expect(transitionApplication(createApplicationRecord(tampered), "submitted")).rejects.toThrow(/integrity failed/);
   });
-  it("allows only valid state transitions and records submission time", async () => {
+  it("records submission without replacing or mutating the approved packet", async () => {
     const record = createApplicationRecord(await packet());
     await expect(transitionApplication(record, "offer")).rejects.toThrow(/Invalid application transition/);
     const submitted = await transitionApplication(record, "submitted", new Date("2026-01-02T00:00:00Z"));
-    expect(submitted.packet.submittedAt).toBe("2026-01-02T00:00:00.000Z");
-    expect(submitted.packet.version).toBe(2);
-    expect(submitted.packet.checksums.packet).not.toBe(record.packet.checksums.packet);
-    expect(submitted.packetHistory).toEqual([record.packet]);
+    expect(submitted.packet).toEqual(record.packet);
+    expect(submitted.timeline).toContainEqual({ at: "2026-01-02T00:00:00.000Z", type: "application.submitted", detail: "Packet v1 submitted" });
+    expect(submitted.packetHistory).toEqual([]);
     expect(record.state).toBe("ready"); expect(record.packet.submittedAt).toBeNull();
   });
   it("reports every required analytics family", async () => {

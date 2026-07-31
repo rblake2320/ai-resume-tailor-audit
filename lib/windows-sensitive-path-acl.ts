@@ -10,6 +10,7 @@ export const WINDOWS_ACL_MODE_ENV = "RESUME_FOUNDRY_WINDOWS_ACL_MODE";
 const SENSITIVE_PATHS = [
   { env: "RESUME_FOUNDRY_AGENT_STORE", kind: "file" },
   { env: "RESUME_FOUNDRY_SUBMISSION_LEDGER", kind: "file" },
+  { env: "RESUME_FOUNDRY_SUBMISSION_ATTEMPT_DIR", kind: "directory" },
   { env: "RESUME_FOUNDRY_NONCE_STORE", kind: "directory" },
   { env: "RESUME_FOUNDRY_RATE_LIMIT_DIR", kind: "directory" },
   { env: "RESUME_FOUNDRY_AUDIT_STORE", kind: "file" },

@@ -11,6 +11,8 @@ describe("official-submission OpenAPI request contracts", () => {
     const schema = spec.components.schemas.SubmissionPreview;
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).toEqual(expect.arrayContaining(["applicationId", "packetChecksum", "personalDataCategories", "fields", "target"]));
+    expect(schema.properties.priorAttemptAcknowledgement.required).toEqual(["attemptId", "statement"]);
+    expect(schema.properties.priorAttemptAcknowledgement.properties.statement.const).toMatch(/may already have reached the provider/u);
   });
 
   it("binds execution to exactly a receipt and application packet", () => {

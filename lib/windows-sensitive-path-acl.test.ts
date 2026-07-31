@@ -113,6 +113,7 @@ describe("Windows sensitive-path ACL startup boundary", () => {
       RESUME_FOUNDRY_WINDOWS_ACL_MODE: "apply",
       RESUME_FOUNDRY_AGENT_STORE: path.join(root, "private", "agent.json"),
       RESUME_FOUNDRY_SUBMISSION_LEDGER: path.join(root, "private", "submissions.jsonl"),
+      RESUME_FOUNDRY_SUBMISSION_ATTEMPT_DIR: path.join(root, "attempts"),
       RESUME_FOUNDRY_NONCE_STORE: path.join(root, "nonces"),
     };
     await expect(
@@ -122,10 +123,11 @@ describe("Windows sensitive-path ACL startup boundary", () => {
       checked: [
         "RESUME_FOUNDRY_AGENT_STORE",
         "RESUME_FOUNDRY_NONCE_STORE",
+        "RESUME_FOUNDRY_SUBMISSION_ATTEMPT_DIR",
         "RESUME_FOUNDRY_SUBMISSION_LEDGER",
       ],
     });
-    expect(runner).toHaveBeenCalledTimes(4);
+    expect(runner).toHaveBeenCalledTimes(6);
     expect(runner).toHaveBeenCalledWith({
       targetPath: path.join(root, "private"),
       mode: "preflight",

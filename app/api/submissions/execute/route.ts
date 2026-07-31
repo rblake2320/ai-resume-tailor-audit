@@ -6,6 +6,7 @@ import { consumeSubmissionApproval } from "@/lib/submission-ledger";
 import { googleOAuthConfig, openConnection } from "@/lib/google-oauth";
 import type { StoredGoogleConnection } from "../../connections/google/callback/route";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
+import { executeSubmissionAttempt } from "@/lib/submission-attempts";
 
 export const SUBMISSION_EXECUTE_BODY_MAX_BYTES = 8_000_000;
 
@@ -57,22 +58,28 @@ export async function POST(request: Request) {
     if (provider === "greenhouse") {
       const apiKey = process.env.GREENHOUSE_JOB_BOARD_API_KEY;
       if (!apiKey) throw new Error("Greenhouse credential is unavailable.");
-      await consumeSubmissionApproval(use);
-      return NextResponse.json(await submitGreenhouse({ apiKey, receipt, approvalSecret: secret }));
+      return NextResponse.json(await executeSubmissionAttempt({ receipt, approvalSecret: secret }, async () => {
+        await consumeSubmissionApproval(use);
+        return submitGreenhouse({ apiKey, receipt, approvalSecret: secret });
+      }));
     }
     if (provider === "lever") {
       const apiKey = process.env.LEVER_POSTINGS_API_KEY;
       if (!apiKey) throw new Error("Lever credential is unavailable.");
-      await consumeSubmissionApproval(use);
-      return NextResponse.json(await submitLever({ apiKey, receipt, approvalSecret: secret }));
+      return NextResponse.json(await executeSubmissionAttempt({ receipt, approvalSecret: secret }, async () => {
+        await consumeSubmissionApproval(use);
+        return submitLever({ apiKey, receipt, approvalSecret: secret });
+      }));
     }
 
     const sealed = (await cookies()).get("rf_google_connection")?.value;
     if (!sealed) throw new Error("Google OAuth connection is required.");
     const connection = openConnection<StoredGoogleConnection>(sealed, googleOAuthConfig().encryptionKey);
     if (!connection.features.includes("email_drafts")) throw new Error("Gmail draft permission was not granted.");
-    await consumeSubmissionApproval(use);
-    return NextResponse.json(await createGmailDraft({ accessToken: connection.tokens.access_token, receipt, approvalSecret: secret }));
+    return NextResponse.json(await executeSubmissionAttempt({ receipt, approvalSecret: secret }, async () => {
+      await consumeSubmissionApproval(use);
+      return createGmailDraft({ accessToken: connection.tokens.access_token, receipt, approvalSecret: secret });
+    }));
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Submission failed." },

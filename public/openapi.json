@@ -1340,6 +1340,23 @@
           },
           "target": {
             "$ref": "#/components/schemas/SubmissionTarget"
+          },
+          "priorAttemptAcknowledgement": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "attemptId",
+              "statement"
+            ],
+            "properties": {
+              "attemptId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "statement": {
+                "const": "I understand this exact packet may already have reached the provider and authorize one retry."
+              }
+            }
           }
         }
       },
