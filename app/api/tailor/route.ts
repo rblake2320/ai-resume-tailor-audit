@@ -3,16 +3,11 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
 import { assertTailorResultEvidence, HonestyValidationError, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
+import { resolveModel } from "@/lib/anthropic-model";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// Use an app-specific override first so unrelated shell/CLI aliases such as
-// ANTHROPIC_MODEL=opusplan cannot silently break this production route.
-const MODEL =
-  process.env.RESUME_FOUNDRY_ANTHROPIC_MODEL ||
-  process.env.ANTHROPIC_MODEL ||
-  "claude-opus-5";
 
 type StreamEvent =
   | { type: "thinking"; text: string }
@@ -49,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
       try {
         const msgStream = client.beta.messages.stream({
-          model: MODEL,
+          model: resolveModel(),
           max_tokens: 64000,
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",

@@ -1,27 +1,105 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { canonicalJson } from "./canonical-json";
 
 export const SubmissionProviderSchema = z.enum(["greenhouse", "lever", "gmail"]);
+
+const PROVIDER_TOKEN = /^[A-Za-z0-9_-]{1,100}$/;
+
+/**
+ * Where the submission goes and what routes it.
+ *
+ * This used to be read from the unsigned request body, so a receipt approved
+ * for one board could be replayed to submit to a different board and job.
+ * Routing is part of what the applicant approves, so it lives inside the
+ * signed preview.
+ */
+export const SubmissionTargetSchema = z.discriminatedUnion("provider", [
+  z.strictObject({ provider: z.literal("greenhouse"), boardToken: z.string().regex(PROVIDER_TOKEN), jobId: z.string().regex(PROVIDER_TOKEN) }),
+  z.strictObject({ provider: z.literal("lever"), site: z.string().regex(PROVIDER_TOKEN), postingId: z.string().regex(PROVIDER_TOKEN), requiredFields: z.array(z.string().min(1)).min(1) }),
+  z.strictObject({ provider: z.literal("gmail"), rawMessage: z.string().min(1).max(5_000_000) }),
+]);
+export type SubmissionTarget = z.infer<typeof SubmissionTargetSchema>;
+
+const SHA256_HEX = /^[a-f0-9]{64}$/;
+
 export const SubmissionPreviewSchema = z.strictObject({
   applicationId: z.string().min(1), provider: SubmissionProviderSchema, company: z.string().min(1), role: z.string().min(1),
-  destination: z.string().url(), packetVersion: z.number().int().positive(), resumeChecksum: z.string().regex(/^[a-f0-9]{64}$/),
-  coverLetterChecksum: z.string().regex(/^[a-f0-9]{64}$/), personalDataCategories: z.array(z.string()),
+  destination: z.string().url(), packetVersion: z.number().int().positive(), resumeChecksum: z.string().regex(SHA256_HEX),
+  coverLetterChecksum: z.string().regex(SHA256_HEX),
+  /** Binds the exact frozen packet the applicant reviewed. */
+  packetChecksum: z.string().regex(SHA256_HEX),
+  personalDataCategories: z.array(z.string()),
   fields: z.record(z.string(), z.unknown()), createdAt: z.string().datetime(),
+  target: SubmissionTargetSchema,
+}).superRefine((value, context) => {
+  if (value.target.provider !== value.provider) {
+    context.addIssue({ code: "custom", message: "Approved target provider must match the preview provider." });
+  }
 });
 export type SubmissionPreview = z.infer<typeof SubmissionPreviewSchema>;
 
-export interface ApprovalReceipt { preview: SubmissionPreview; approvedAt: string; expiresAt: string; nonce: string; signature: string }
+const APPROVAL_TTL_MS = 10 * 60_000;
+
+export const ApprovalReceiptSchema = z.strictObject({
+  preview: SubmissionPreviewSchema,
+  approvedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  nonce: z.string().min(8).max(200),
+  signature: z.string().min(1),
+});
+export type ApprovalReceipt = z.infer<typeof ApprovalReceiptSchema>;
+
+const mac = (unsigned: unknown, secret: string) => createHmac("sha256", secret).update(canonicalJson(unsigned)).digest();
+
 export function issueSubmissionApproval(preview: SubmissionPreview, secret: string, now = new Date()): ApprovalReceipt {
   if (secret.length < 24) throw new Error("Submission approval secret must be at least 24 characters.");
-  const expires = new Date(now.getTime() + 10 * 60_000);
-  const unsigned = { preview: SubmissionPreviewSchema.parse(preview), approvedAt: now.toISOString(), expiresAt: expires.toISOString(), nonce: randomUUID() };
-  return { ...unsigned, signature: createHmac("sha256", secret).update(JSON.stringify(unsigned)).digest("base64url") };
+  const unsigned = {
+    preview: SubmissionPreviewSchema.parse(preview),
+    approvedAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + APPROVAL_TTL_MS).toISOString(),
+    nonce: randomUUID(),
+  };
+  return { ...unsigned, signature: mac(unsigned, secret).toString("base64url") };
 }
-export function verifySubmissionApproval(receipt: ApprovalReceipt, secret: string, now = new Date()): SubmissionPreview {
-  const { signature, ...unsigned } = receipt; const expected = createHmac("sha256", secret).update(JSON.stringify(unsigned)).digest();
+
+/**
+ * Returns the approved preview, or throws. Everything transmitted downstream
+ * must be read from this return value, never from the caller's request body.
+ */
+export function verifySubmissionApproval(receipt: unknown, secret: string, now = new Date()): SubmissionPreview {
+  // Parse before comparing: a malformed `expiresAt` previously reached
+  // `new Date(...)`, produced NaN, and `NaN <= now` is false — so a receipt
+  // with `expiresAt: "not-a-date"` never expired.
+  const parsed = ApprovalReceiptSchema.safeParse(receipt);
+  if (!parsed.success) throw new Error("Submission approval is invalid or expired.");
+  const { signature, ...unsigned } = parsed.data;
+  const expected = mac(unsigned, secret);
   const actual = Buffer.from(signature, "base64url");
-  if (actual.length !== expected.length || !timingSafeEqual(actual, expected) || new Date(receipt.expiresAt) <= now) throw new Error("Submission approval is invalid or expired.");
-  return SubmissionPreviewSchema.parse(receipt.preview);
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error("Submission approval is invalid or expired.");
+
+  const expiresAt = Date.parse(parsed.data.expiresAt);
+  const approvedAt = Date.parse(parsed.data.approvedAt);
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(approvedAt)) throw new Error("Submission approval is invalid or expired.");
+  if (expiresAt <= now.getTime()) throw new Error("Submission approval is invalid or expired.");
+  // Holding the signing key must not buy a longer window than the policy.
+  if (expiresAt - approvedAt > APPROVAL_TTL_MS) throw new Error("Submission approval is invalid or expired.");
+  return parsed.data.preview;
+}
+
+/**
+ * Throws unless the packet presented for transmission is the exact packet the
+ * applicant approved. Callers must additionally run `verifyApplicationPacket`
+ * so a self-consistent but forged packet cannot satisfy this by simply
+ * carrying matching checksums of its own tampered content.
+ */
+export function assertApprovedPacket(preview: SubmissionPreview, checksums: { packet: string; resume: string; coverLetter: string }) {
+  const mismatched = [
+    preview.packetChecksum !== checksums.packet && "packet",
+    preview.resumeChecksum !== checksums.resume && "resume",
+    preview.coverLetterChecksum !== checksums.coverLetter && "cover letter",
+  ].filter(Boolean);
+  if (mismatched.length) throw new Error(`Submission packet does not match the approved packet (${mismatched.join(", ")}).`);
 }
 
 type Fetcher = typeof fetch;
@@ -50,26 +128,46 @@ function validateFields(fields: Record<string, unknown>, required: readonly stri
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(String(fields.email))) throw new Error("email must be valid.");
 }
 
-export async function submitGreenhouse(input: { boardToken: string; jobId: string; apiKey: string; fields: Record<string, unknown>; receipt: ApprovalReceipt; approvalSecret: string }, fetcher: Fetcher = fetch) {
-  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret); if (preview.provider !== "greenhouse") throw new Error("Approval provider mismatch.");
-  const required = await greenhouseRequiredFields(input.boardToken, input.jobId, fetcher); validateFields(input.fields, required);
-  const response = await retryRequest(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(input.boardToken)}/jobs/${encodeURIComponent(input.jobId)}`,
-    { method: "POST", headers: { authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}`, "content-type": "application/json" }, body: JSON.stringify(input.fields) }, fetcher);
+/**
+ * Every connector below takes only a receipt plus deployment credentials.
+ *
+ * There is deliberately no `fields`, `boardToken`, `jobId`, `site`,
+ * `postingId`, or `rawMessage` parameter: routing and content are read from the
+ * verified preview, so a caller cannot substitute anything the applicant did
+ * not approve. That substitution was the original defect — the receipt verified
+ * while the request body supplied a different board and a different résumé.
+ */
+export async function submitGreenhouse(input: { apiKey: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {
+  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret);
+  if (preview.target.provider !== "greenhouse") throw new Error("Approval provider mismatch.");
+  const { boardToken, jobId } = preview.target;
+  const required = await greenhouseRequiredFields(boardToken, jobId, fetcher);
+  validateFields(preview.fields, required);
+  const response = await retryRequest(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs/${encodeURIComponent(jobId)}`,
+    { method: "POST", headers: { authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}`, "content-type": "application/json" }, body: JSON.stringify(preview.fields) }, fetcher);
   return { provider: "greenhouse" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
 }
 
-export async function submitLever(input: { site: string; postingId: string; apiKey: string; requiredFields: string[]; fields: Record<string, unknown>; receipt: ApprovalReceipt; approvalSecret: string }, fetcher: Fetcher = fetch) {
-  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret); if (preview.provider !== "lever") throw new Error("Approval provider mismatch.");
-  if (!input.requiredFields.length) throw new Error("Employer-provided Lever required-field configuration is required.");
-  validateFields(input.fields, [...new Set(["name", "email", ...input.requiredFields])]);
-  const url = `https://api.lever.co/v0/postings/${encodeURIComponent(input.site)}/${encodeURIComponent(input.postingId)}?key=${encodeURIComponent(input.apiKey)}`;
-  const response = await retryRequest(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input.fields) }, fetcher);
+export async function submitLever(input: { apiKey: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {
+  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret);
+  if (preview.target.provider !== "lever") throw new Error("Approval provider mismatch.");
+  const { site, postingId, requiredFields } = preview.target;
+  validateFields(preview.fields, [...new Set(["name", "email", ...requiredFields])]);
+  // The key stays in a header: a query-string credential lands in provider
+  // access logs, proxy logs, and any telemetry that records request URLs.
+  const url = `https://api.lever.co/v0/postings/${encodeURIComponent(site)}/${encodeURIComponent(postingId)}`;
+  const response = await retryRequest(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}` },
+    body: JSON.stringify(preview.fields),
+  }, fetcher);
   return { provider: "lever" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
 }
 
-export async function createGmailDraft(input: { accessToken: string; rawMessage: string; receipt: ApprovalReceipt; approvalSecret: string }, fetcher: Fetcher = fetch) {
-  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret); if (preview.provider !== "gmail") throw new Error("Approval provider mismatch.");
-  const raw = Buffer.from(input.rawMessage, "utf8").toString("base64url");
+export async function createGmailDraft(input: { accessToken: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {
+  const preview = verifySubmissionApproval(input.receipt, input.approvalSecret);
+  if (preview.target.provider !== "gmail") throw new Error("Approval provider mismatch.");
+  const raw = Buffer.from(preview.target.rawMessage, "utf8").toString("base64url");
   const response = await retryRequest("https://gmail.googleapis.com/gmail/v1/users/me/drafts", { method: "POST", headers: { authorization: `Bearer ${input.accessToken}`, "content-type": "application/json" }, body: JSON.stringify({ message: { raw } }) }, fetcher);
   const body = await response.json() as { id?: string }; if (!body.id) throw new Error("Gmail did not return a draft identifier.");
   return { provider: "gmail" as const, draftId: body.id, sent: false, applicationId: preview.applicationId };
