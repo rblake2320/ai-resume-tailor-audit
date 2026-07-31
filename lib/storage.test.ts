@@ -4,6 +4,7 @@ import {
   clearAllData,
   deleteSavePoint,
   loadJobInbox,
+  loadHistory,
   loadSavePoints,
   saveJobInbox,
   type Session,
@@ -60,10 +61,16 @@ describe("local save points", () => {
     expect(points.at(-1)?.profile.resume).toBe("resume 3");
   });
 
-  it("erases checkpoints with the rest of the local user data", () => {
+  it("erases checkpoints with the rest of the local user data", async () => {
     addSavePoint({ resume: "private", extraInfo: "" }, session);
-    clearAllData();
+    await clearAllData();
     expect(loadSavePoints()).toEqual([]);
+  });
+  it("quarantines malformed persisted history instead of bricking every reload", () => {
+    localStorage.setItem("art:history", JSON.stringify([{ result: { broken: true } }]));
+    expect(loadHistory()).toEqual([]);
+    expect(localStorage.getItem("art:history")).toBeNull();
+    expect(localStorage.getItem("art:history:quarantine")).toContain("broken");
   });
 });
 

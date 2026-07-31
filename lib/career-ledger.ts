@@ -49,6 +49,12 @@ export const CareerEventSchema = z.strictObject({
   correctionReason: z.string().max(2000).default(""),
   previousHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
   hash: z.string().regex(/^[a-f0-9]{64}$/),
+}).superRefine((event, context) => {
+  for (const [index, skill] of event.skills.entries()) {
+    if (skill.source === "ai_suggestion" && skill.state === "fact") {
+      context.addIssue({ code: "custom", path: ["skills", index, "state"], message: "AI-suggested skills cannot be recorded as facts." });
+    }
+  }
 });
 
 export const CareerPrivacySchema = z.strictObject({
@@ -160,7 +166,23 @@ export function currentCareerEvents(ledger: CareerLedger): CareerEvent[] {
 export async function deleteCareerEvent(ledger: CareerLedger, eventId: string, reason: string, now = new Date()): Promise<CareerLedger> {
   const parsed = CareerLedgerSchema.parse(ledger); const removed = parsed.events.find((event) => event.id === eventId);
   if (!removed) throw new Error("Career event not found."); if (!reason.trim()) throw new Error("Deletion reason is required.");
-  const retained = parsed.events.filter((event) => event.id !== eventId && event.supersedesEventId !== eventId);
+  // Erase the whole correction lineage. Removing only the newest correction would
+  // resurrect superseded sensitive text; removing only a root would orphan later
+  // corrections. A deletion must never make older content current again.
+  const erased = new Set([eventId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const event of parsed.events) {
+      if ((erased.has(event.id) && event.supersedesEventId && !erased.has(event.supersedesEventId)) ||
+          (event.supersedesEventId && erased.has(event.supersedesEventId) && !erased.has(event.id))) {
+        erased.add(event.id);
+        if (event.supersedesEventId) erased.add(event.supersedesEventId);
+        changed = true;
+      }
+    }
+  }
+  const retained = parsed.events.filter((event) => !erased.has(event.id));
   const rebuilt: CareerEvent[] = []; let previousHash: string | null = null;
   for (const [index, event] of retained.entries()) {
     const { hash: _hash, ...body } = event; const withoutHash = { ...body, sequence: index + 1, previousHash };
@@ -182,8 +204,12 @@ export async function reviewInferredSkill(ledger: CareerLedger, eventId: string,
 }
 
 export async function createDisclosurePacket(ledger: CareerLedger, eventIds: readonly string[]) {
-  const selected = currentCareerEvents(ledger).filter((event) => eventIds.includes(event.id) && event.visibility !== "private");
-  const events = selected.map(({ originalSource: _privateSource, collaborators: _privatePeople, ...safe }) => safe);
+  const selected = currentCareerEvents(ledger).filter((event) => eventIds.includes(event.id) && event.visibility === "packet_selectable");
+  const events = selected.map(({ originalSource: _privateSource, collaborators: _privatePeople, context: _privateContext,
+    correctionReason: _privateCorrection, evidence, ...safe }) => ({
+    ...safe,
+    evidence: evidence.map(({ locator: _privateLocator, ...reference }) => reference),
+  }));
   const body = { schemaVersion: 1, sourceLedgerId: ledger.ledgerId, createdAt: new Date().toISOString(), events };
   return { ...body, checksum: await sha256(body) };
 }

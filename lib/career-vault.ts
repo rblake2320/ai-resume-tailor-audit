@@ -34,8 +34,18 @@ export async function loadCareerLedger(passphrase: string): Promise<CareerLedger
   const value = await storedValue(); if (!value) return null;
   const encrypted = EncryptedCareerBackupSchema.safeParse(value);
   if (encrypted.success) return importEncryptedCareerLedger(encrypted.data, passphrase);
-  // One-time migration for the original plaintext-v1 browser vault. It is immediately re-encrypted.
-  const migrated = migrateCareerLedger(value); await saveCareerLedger(migrated, passphrase); return migrated;
+  throw new Error("A legacy plaintext career vault was detected. Use the explicit migration action before unlocking it.");
+}
+
+/** Explicit, one-time migration. Unknown/current plaintext objects are rejected. */
+export async function migrateLegacyPlaintextCareerLedger(passphrase: string): Promise<CareerLedger> {
+  const value = await storedValue();
+  if (!value || typeof value !== "object" || (value as { schemaVersion?: unknown }).schemaVersion !== 1) {
+    throw new Error("No supported legacy plaintext-v1 career vault was found.");
+  }
+  const migrated = migrateCareerLedger(value);
+  await saveCareerLedger(migrated, passphrase);
+  return migrated;
 }
 
 export async function saveCareerLedger(ledger: CareerLedger, passphrase: string): Promise<void> {
@@ -52,9 +62,13 @@ export async function saveCareerLedger(ledger: CareerLedger, passphrase: string)
 }
 
 export async function deleteCareerLedger(): Promise<void> {
-  const db = await openVault();
-  try { await requestResult(db.transaction(STORE, "readwrite").objectStore(STORE).delete(ACTIVE)); }
-  finally { db.close(); }
+  if (typeof indexedDB === "undefined") return;
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error("Career vault deletion failed."));
+    request.onblocked = () => reject(new Error("Career vault deletion was blocked by another open tab."));
+  });
 }
 
 export const careerVaultDatabaseName = DB_NAME;

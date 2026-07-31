@@ -49,11 +49,18 @@ describe("career evidence ledger", () => {
   it("selectively discloses only eligible events and removes private source details", async () => {
     let ledger = await appendCareerEvent(createCareerLedger("owner-1"), event());
     ledger = await appendCareerEvent(ledger, event({ title: "Private reflection", visibility: "private" }));
+    ledger = await appendCareerEvent(ledger, event({ title: "Advisor note", visibility: "advisor_only" }));
+    ledger = await appendCareerEvent(ledger, event({ title: "Guardian note", visibility: "guardian_visible" }));
     const packet = await createDisclosurePacket(ledger, ledger.events.map((entry) => entry.id));
     expect(packet.events).toHaveLength(1);
     expect(packet.events[0].title).toBe("Robotics team");
     expect(packet.events[0]).not.toHaveProperty("originalSource");
     expect(packet.events[0]).not.toHaveProperty("collaborators");
+    expect(packet.events[0]).not.toHaveProperty("context");
+    expect(packet.events[0]).not.toHaveProperty("correctionReason");
+    expect(packet.events[0].evidence[0]).not.toHaveProperty("locator");
+    expect(JSON.stringify(packet)).not.toContain("Advisor note");
+    expect(JSON.stringify(packet)).not.toContain("Guardian note");
     expect(packet.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
@@ -89,6 +96,22 @@ describe("career evidence ledger", () => {
     expect(JSON.stringify(ledger)).not.toContain("Robotics team"); expect(ledger.events.map((item) => item.title)).toEqual(["Keep me"]);
     expect(ledger.deletions[0]).toMatchObject({ eventId: removed.id, priorHash: removed.hash, reason: "Owner request" });
     expect((await verifyCareerLedger(ledger)).valid).toBe(true);
+  });
+  it("erases an entire correction lineage without resurrecting superseded content", async () => {
+    let ledger = await appendCareerEvent(createCareerLedger("owner"), event({ title: "Sensitive original" }));
+    const original = ledger.events[0];
+    ledger = await appendCareerEvent(ledger, event({ title: "Sensitive correction", supersedesEventId: original.id, correctionReason: "Corrected" }));
+    const correction = ledger.events[1];
+    ledger = await deleteCareerEvent(ledger, correction.id, "Erase the corrected item");
+    expect(currentCareerEvents(ledger)).toEqual([]);
+    expect(JSON.stringify(ledger)).not.toContain("Sensitive original");
+    expect(JSON.stringify(ledger)).not.toContain("Sensitive correction");
+    expect((await verifyCareerLedger(ledger)).valid).toBe(true);
+  });
+  it("rejects AI-suggested skills that callers attempt to promote directly to facts", async () => {
+    await expect(appendCareerEvent(createCareerLedger("owner"), event({
+      skills: [{ name: "invented credential", state: "fact", source: "ai_suggestion" }],
+    }))).rejects.toThrow(/cannot be recorded as facts/);
   });
   it("lets the owner confirm, edit, or reject AI skill mappings without upgrading them to facts", async () => {
     let ledger = await appendCareerEvent(createCareerLedger("owner"), event({ skills: [{ name: "systems thinking", state: "unconfirmed_inference", source: "ai_suggestion" }] }));

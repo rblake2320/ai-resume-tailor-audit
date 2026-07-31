@@ -1,7 +1,9 @@
-import type { TailorResult } from "./schema";
+import { z } from "zod";
+import { TailorResultSchema, type TailorResult } from "./schema";
 import type { PrivacyMode } from "./pii";
 import { JobPostingSnapshotSchema, type JobPostingSnapshot } from "./schema";
 import type { ApplicationRecord } from "./applications";
+import { deleteCareerLedger } from "./career-vault";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -28,15 +30,25 @@ const HISTORY_KEY = "art:history";
 const HISTORY_LIMIT = 25;
 
 const canStore = () => typeof window !== "undefined" && !!window.localStorage;
+const ProfileSchema = z.strictObject({ resume: z.string(), extraInfo: z.string(), updatedAt: z.number().finite() });
+const HistoryEntrySchema = z.strictObject({ id: z.string().min(1), createdAt: z.number().finite(), jobTitle: z.string(), company: z.string(), result: TailorResultSchema });
+const SessionSchema = z.strictObject({ jobText: z.string(), jobUrl: z.string(), jobTitle: z.string(), company: z.string(), emphasis: z.enum(["balanced", "technical", "leadership"]), privacyMode: z.enum(["protect", "review", "exact"]), result: TailorResultSchema.nullable() }).partial();
+
+function parseStored<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
+  if (!canStore()) return fallback;
+  const raw = localStorage.getItem(key); if (!raw) return fallback;
+  try { return schema.parse(JSON.parse(raw)); }
+  catch {
+    // Quarantine the exact bytes for explicit recovery/export while ensuring one
+    // malformed record cannot brick every reload.
+    try { localStorage.setItem(`${key}:quarantine`, raw); localStorage.removeItem(key); } catch { /* storage may be full */ }
+    return fallback;
+  }
+}
 
 export function loadProfile(): Profile | null {
   if (!canStore()) return null;
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as Profile) : null;
-  } catch {
-    return null;
-  }
+  return parseStored(PROFILE_KEY, ProfileSchema.nullable(), null);
 }
 
 export function saveProfile(profile: Omit<Profile, "updatedAt">): void {
@@ -46,12 +58,7 @@ export function saveProfile(profile: Omit<Profile, "updatedAt">): void {
 
 export function loadHistory(): HistoryEntry[] {
   if (!canStore()) return [];
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
-  } catch {
-    return [];
-  }
+  return parseStored(HISTORY_KEY, HistoryEntrySchema.array(), []);
 }
 
 export function addHistory(entry: Omit<HistoryEntry, "id" | "createdAt">): HistoryEntry[] {
@@ -98,12 +105,7 @@ const APPLICATIONS_KEY = "art:applications:v1";
 
 export function loadSession(): Partial<Session> | null {
   if (!canStore()) return null;
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Partial<Session>) : null;
-  } catch {
-    return null;
-  }
+  return parseStored(SESSION_KEY, SessionSchema.nullable(), null);
 }
 
 export function saveSession(session: Session): void {
@@ -187,7 +189,7 @@ export function saveApplications(records: readonly ApplicationRecord[]): void {
   localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(records));
 }
 
-export function clearAllData(): void {
+export async function clearAllData(): Promise<void> {
   if (!canStore()) return;
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(HISTORY_KEY);
@@ -195,5 +197,10 @@ export function clearAllData(): void {
   localStorage.removeItem(SAVE_POINTS_KEY);
   localStorage.removeItem(JOB_INBOX_KEY);
   localStorage.removeItem(APPLICATIONS_KEY);
+  localStorage.removeItem("rf:career-last-backup");
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index); if (key?.endsWith(":quarantine")) localStorage.removeItem(key);
+  }
+  await deleteCareerLedger();
   window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
 }

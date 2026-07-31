@@ -782,9 +782,9 @@ export default function Home() {
                 Past runs <span className="text-ink-400">(stored only in this browser)</span>
               </h2>
               <ToolButton
-                onClick={() => {
+                onClick={async () => {
                   if (confirm("Delete your saved profile and all history from this browser?")) {
-                    clearAllData();
+                    await clearAllData();
                     setHistory([]);
                     setSavePoints([]);
                     setResume("");
