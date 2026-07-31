@@ -18,6 +18,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 | **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
 | **Local-first privacy** | Your profile and history live in your browser's localStorage. The app does not write a server-side copy. One click erases everything. |
 | **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
+| **Legitimate source connectors** | Import official Greenhouse and Lever public boards, USAJOBS searches, forwarded alerts, CSV/JSON, URLs, or manual text. LinkedIn/Indeed scraping and automated apply remain prohibited. |
 
 ## Features
 
@@ -40,6 +41,8 @@ npm run dev                  # http://localhost:3000
 ```
 
 Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. `ANTHROPIC_MODEL` remains a lower-priority compatibility fallback.
+
+The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials.
 
 > The tailor endpoint enables Anthropic's server-side refusal fallback (`fallbacks: "default"`) so a rare safety-classifier decline re-routes automatically instead of failing the request.
 
