@@ -161,10 +161,50 @@ const qualifiedRatherThanProven = (evidence: string): boolean => {
     || /\bevaluated\b.{0,40}\b(?:but\s+)?did\s+not\s+deploy\b/u.test(text);
 };
 
-const CONTINUATION_END = /\b(?:a|an|and|as|at|by|for|from|in|of|on|or|the|to|with|across|cutting)$/iu;
-const RECORD_END = /(?:[.!?;:]|\b(?:19|20)\d{2}(?:\s*[-–]\s*(?:(?:19|20)\d{2}|present))?)$/iu;
-const ABBREVIATION_END = /\b(?:inc|ltd|llc|corp|u\.s|ph\.d)\.$/iu;
-const SECTION_HEADING = /^(?:professional|work|relevant)?\s*(?:experience|summary|skills|education|certifications?|projects?|achievements?|publications?|awards?)$/iu;
+// A line ending in one of these cannot end a résumé record: the sentence is
+// grammatically incomplete, so the next visual line is always a wrap.
+const CONTINUATION_END =
+  /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|with|within|across|among|between|covering|cutting|during|including|spanning|supporting|through|throughout|under|using|via)$/iu;
+const SENTENCE_END = /[.!?;:]$/u;
+const ABBREVIATION_END = /\b(?:[a-z]|inc|ltd|llc|corp|co|dept|est|no|vs|approx|pct|e\.g|i\.e|u\.s|u\.k|ph\.d|m\.s|b\.s|m\.d|jr|sr|mr|mrs|ms|dr|st|ave)\.$/iu;
+/** Words carrying no prose signal, so a record header may contain them. */
+const HEADER_STOPWORDS = new Set(["a", "an", "and", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "with", "&"]);
+/** A line that is essentially only a date or a date range. */
+const DATE_ONLY = /^[^\p{L}]*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*(?:[-–—]|to)?\s*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:(?:19|20)\d{2}|present|current|now)?[^\p{L}]*$/iu;
+
+/**
+ * True when the line reads as running prose rather than a record header.
+ *
+ * This is the discriminator that separates a wrapped sentence from a new
+ * résumé record. `Identity and fraud domains` continues a bullet; `Initech
+ * Corp — Staff Engineer` starts one. Both begin with a capital letter, so
+ * neither line position nor the first word can tell them apart — but a header
+ * capitalises every significant word and prose does not.
+ */
+const readsAsProse = (line: string): boolean =>
+  line
+    .split(/\s+/u)
+    .slice(1)
+    .some((word) => {
+      const bare = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+      return bare.length > 0 && !HEADER_STOPWORDS.has(bare.toLowerCase()) && /^\p{Ll}/u.test(bare);
+    });
+
+/**
+ * A capitalised past-tense verb opening a line starts a new achievement, not a
+ * wrap. Résumé bullets conventionally open with such a verb, so when a marker
+ * is lost in PDF extraction this is the only remaining signal that two
+ * achievements are separate. Irregular forms are listed; the rest are `-ed`.
+ */
+const ACHIEVEMENT_OPENER =
+  /^(?:built|led|ran|grew|cut|drove|oversaw|rewrote|rebuilt|won|wrote|took|made|set|sold|held|kept|sent|spent|chose|began|brought|taught|found|gave|met|saw|told|left|paid|beat|broke|drew|knew|ran|rose|spoke)\b|^\p{Lu}\p{Ll}+ed\b/u;
+
+/** A new résumé record: a heading, a date row, a company/title row, a skills list, or a new achievement. */
+const startsRecord = (line: string): boolean =>
+  (/\p{L}/u.test(line) && line === line.toLocaleUpperCase("en-US"))
+  || DATE_ONLY.test(line)
+  || !readsAsProse(line)
+  || (/^\p{Lu}/u.test(line) && ACHIEVEMENT_OPENER.test(line));
 
 /**
  * Reconstruct likely logical lines from PDF visual-line output without
@@ -175,12 +215,10 @@ const SECTION_HEADING = /^(?:professional|work|relevant)?\s*(?:experience|summar
 const sourceEvidenceSegments = (source: string): string[] => {
   const segments: string[] = [];
   let current = "";
-  let bullet = false;
   const flush = () => {
     const normalized = comparableSource(current);
     if (normalized) segments.push(normalized);
     current = "";
-    bullet = false;
   };
 
   for (const raw of source.replace(/[\v\f\u2028\u2029]/gu, "\n\n").split(/\r?\n/u)) {
@@ -197,21 +235,33 @@ const sourceEvidenceSegments = (source: string): string[] => {
       // marker-free logical record for ordinary model citations and wraps.
       segments.push(comparableSource(line));
       current = bulletMatch[1];
-      bullet = true;
       continue;
     }
     if (!current) {
       current = line;
       continue;
     }
-    const hardRecordEnd = /\p{L}/u.test(current) && current === current.toLocaleUpperCase("en-US")
-      || (RECORD_END.test(current) && !ABBREVIATION_END.test(current));
-    const nextRecordStart = (/\p{L}/u.test(line) && line === line.toLocaleUpperCase("en-US"))
-      || SECTION_HEADING.test(line)
-      || /\b(?:19|20)\d{2}(?:\s*[-–]\s*(?:(?:19|20)\d{2}|present))?$/iu.test(line);
-    const isContinuation = !nextRecordStart && (bullet
-      || /^[\p{Ll}\p{N},.;:)]/u.test(line)
-      || (!hardRecordEnd && CONTINUATION_END.test(current)));
+    // Affirmative continuation signals, strongest first. Earlier revisions asked
+    // "is this a continuation?" and defaulted to joining, which welded separate
+    // records; then "is the next line record-shaped?" and defaulted to breaking,
+    // which split wrapped bullets. A line now joins only when something
+    // positively indicates a wrap.
+    // A heading or date row closes its record: it must never absorb the body
+    // line beneath it.
+    const endsSentence = (SENTENCE_END.test(current) && !ABBREVIATION_END.test(current))
+      || (/\p{L}/u.test(current) && current === current.toLocaleUpperCase("en-US"))
+      || DATE_ONLY.test(current);
+    const isContinuation =
+      // An incomplete sentence cannot end a record, whatever follows it.
+      (CONTINUATION_END.test(current) && !endsSentence)
+      // No résumé record begins with a lowercase word or with punctuation. A
+      // bare date row is the exception: it opens a record even though it starts
+      // with a numeral, so "…40%" ⏎ "2015-2019" must not fuse while
+      // "…platform" ⏎ "2021 saw 40% growth" still wraps.
+      || (/^[\p{Ll}\p{N},.;:)\]]/u.test(line) && !DATE_ONLY.test(line))
+      // Otherwise the next line must read as prose and the previous line must
+      // not have closed a sentence.
+      || (!startsRecord(line) && !endsSentence);
     if (isContinuation) current += ` ${line}`;
     else {
       flush();

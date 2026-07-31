@@ -63,7 +63,11 @@ export function affirmativelyPresent(resume: string, keyword: string, rejectQual
     const before = haystack.slice(Math.max(0, idx - 160), idx);
     const after = haystack.slice(idx + kw.length, idx + kw.length + 80).split(/[.;\n]/u, 1)[0];
     const qualifiedByDegree = rejectQualified
-      && /\b(?:minimal|limited)(?:\s+(?!(?:with|at|by|from|for|of|and|or)\b)[\p{L}\p{N}'’+/#.-]+){0,3}\s*$/iu.test(before)
+      // The relational test applies only to the word DIRECTLY after the
+      // qualifier. "Contoso Limited with 9 years" is a company name, while
+      // "Limited experience with Kubernetes" is a denial that must still fire;
+      // applying the exclusion to every word in the gap silenced both.
+      && /\b(?:minimal|limited)(?!\s+(?:with|at|by|from|for|of|and|or)\b)(?:\s+[\p{L}\p{N}'’+/#.-]+){0,3}\s*$/iu.test(before)
       && /\b(?:experience|proficiency|knowledge|familiarity|exposure|expertise|skills?|background)\b/iu.test(`${before.slice(-80)} ${kw} ${after}`);
     const negated = NONE_OF.test(before)
       || (!FALSE_NEGATION.test(before) && DIRECT_NEGATION.test(before))
