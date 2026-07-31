@@ -175,7 +175,10 @@ export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
 
 export function loadApplications(): ApplicationRecord[] {
   if (!canStore()) return [];
-  try { return JSON.parse(localStorage.getItem(APPLICATIONS_KEY) ?? "[]") as ApplicationRecord[]; }
+  try {
+    const records = JSON.parse(localStorage.getItem(APPLICATIONS_KEY) ?? "[]") as ApplicationRecord[];
+    return records.map((record) => ({ ...record, packetHistory: record.packetHistory ?? [], reminders: record.reminders ?? [] }));
+  }
   catch { return []; }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicationAnalytics, createApplicationPacket, createApplicationRecord, transitionApplication } from "./applications";
+import { applicationAnalytics, approveReminder, buildInterviewPrep, createApplicationPacket, createApplicationRecord, dismissReminder, transitionApplication } from "./applications";
 import { createJobSnapshot } from "./job-inbox";
 import type { TailorResult } from "./schema";
 
@@ -31,5 +31,20 @@ describe("immutable application packets", () => {
     const analytics = applicationAnalytics([submitted]);
     expect(analytics).toMatchObject({ responseRate: 0, interviewConversionRate: 0 });
     expect(Object.keys(analytics)).toEqual(expect.arrayContaining(["applicationsPerWeek", "sourceEffectiveness", "resumeVersionEffectiveness", "averageResponseHours", "skillsMostOftenMissing", "companiesAwaitingFollowUp", "rolesNeedingAttention"]));
+  });
+  it("suggests state-bound reminders but never schedules without user approval", async () => {
+    const submitted = await transitionApplication(createApplicationRecord(await packet()), "submitted", new Date("2026-01-02T00:00:00Z"));
+    expect(submitted.reminders[0]).toMatchObject({ kind: "follow_up", status: "suggested", approvedAt: null, dueAt: "2026-01-09T00:00:00.000Z" });
+    expect(submitted.followUpAt).toBeNull();
+    const scheduled = approveReminder(submitted, submitted.reminders[0].id, new Date("2026-01-02T01:00:00Z"));
+    expect(scheduled.reminders[0].status).toBe("scheduled"); expect(scheduled.followUpAt).toBe("2026-01-09T00:00:00.000Z");
+    expect(dismissReminder(scheduled, scheduled.reminders[0].id).followUpAt).toBeNull();
+  });
+  it("builds interview preparation from the immutable submitted packet only", async () => {
+    let record = await transitionApplication(createApplicationRecord(await packet()), "submitted");
+    record = await transitionApplication(record, "recruiter_response"); record = await transitionApplication(record, "interviewing");
+    const prep = buildInterviewPrep(record); const originalRole = prep.role;
+    result.gap_analysis.push({ gap: "Live profile mutation", advice: "Must not leak" });
+    expect(buildInterviewPrep(record)).toEqual(prep); expect(prep.role).toBe(originalRole); expect(prep.packetChecksum).toBe(record.packet.checksums.packet);
   });
 });

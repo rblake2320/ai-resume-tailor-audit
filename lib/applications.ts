@@ -31,6 +31,15 @@ export interface ApplicationPacket {
 }
 
 export interface ApplicationEvent { at: string; type: string; detail: string }
+export interface ApplicationReminder {
+  id: string;
+  kind: "follow_up" | "interview_prep";
+  dueAt: string;
+  status: "suggested" | "scheduled" | "completed" | "dismissed";
+  createdAt: string;
+  approvedAt: string | null;
+  note: string;
+}
 export interface ApplicationRecord {
   id: string;
   packet: ApplicationPacket;
@@ -48,6 +57,7 @@ export interface ApplicationRecord {
   documentLinks: string[];
   emailLinks: string[];
   calendarLinks: string[];
+  reminders: ApplicationReminder[];
 }
 
 function canonical(value: unknown): string {
@@ -82,7 +92,45 @@ export async function createApplicationPacket(input: {
 }
 
 export function createApplicationRecord(packet: ApplicationPacket): ApplicationRecord {
-  return { id: crypto.randomUUID(), packet: structuredClone(packet), packetHistory: [], state: "ready", timeline: [{ at: packet.createdAt, type: "packet.created", detail: `Packet v${packet.version} created` }], notes: [], contacts: [], interviewDates: [], followUpAt: null, compensation: "", referral: "", rejectionReason: "", nextAction: "Review and approve submission", documentLinks: [], emailLinks: [], calendarLinks: [] };
+  return { id: crypto.randomUUID(), packet: structuredClone(packet), packetHistory: [], state: "ready", timeline: [{ at: packet.createdAt, type: "packet.created", detail: `Packet v${packet.version} created` }], notes: [], contacts: [], interviewDates: [], followUpAt: null, compensation: "", referral: "", rejectionReason: "", nextAction: "Review and approve submission", documentLinks: [], emailLinks: [], calendarLinks: [], reminders: [] };
+}
+
+function suggestedReminder(next: ApplicationState, now: Date): ApplicationReminder | null {
+  const days = next === "submitted" ? 7 : next === "recruiter_response" ? 2 : next === "interviewing" ? 1 : null;
+  if (days === null) return null;
+  const due = new Date(now); due.setUTCDate(due.getUTCDate() + days);
+  const kind = next === "interviewing" ? "interview_prep" : "follow_up";
+  return { id: crypto.randomUUID(), kind, dueAt: due.toISOString(), status: "suggested", createdAt: now.toISOString(), approvedAt: null,
+    note: kind === "interview_prep" ? "Prepare from the exact submitted packet." : "Review and approve this follow-up reminder." };
+}
+
+export function approveReminder(record: ApplicationRecord, reminderId: string, now = new Date()): ApplicationRecord {
+  const updated = structuredClone(record); const reminder = updated.reminders.find((item) => item.id === reminderId);
+  if (!reminder || reminder.status !== "suggested") throw new Error("Only a suggested reminder can be approved.");
+  reminder.status = "scheduled"; reminder.approvedAt = now.toISOString();
+  updated.followUpAt = reminder.kind === "follow_up" ? reminder.dueAt : updated.followUpAt;
+  updated.timeline.push({ at: now.toISOString(), type: "reminder.approved", detail: `${reminder.kind} at ${reminder.dueAt}` });
+  return updated;
+}
+
+export function dismissReminder(record: ApplicationRecord, reminderId: string, now = new Date()): ApplicationRecord {
+  const updated = structuredClone(record); const reminder = updated.reminders.find((item) => item.id === reminderId);
+  if (!reminder || !["suggested", "scheduled"].includes(reminder.status)) throw new Error("Reminder is already terminal.");
+  reminder.status = "dismissed"; if (updated.followUpAt === reminder.dueAt) updated.followUpAt = null;
+  updated.timeline.push({ at: now.toISOString(), type: "reminder.dismissed", detail: reminder.kind }); return updated;
+}
+
+export function buildInterviewPrep(record: ApplicationRecord) {
+  const packet = structuredClone(record.packet);
+  return {
+    packetId: packet.id, packetVersion: packet.version, packetChecksum: packet.checksums.packet,
+    role: packet.jobSnapshot.title, company: packet.jobSnapshot.company,
+    boundAt: packet.submittedAt ?? packet.createdAt,
+    evidenceStories: packet.tailoredResult.requirement_evidence.filter((item) => item.state === "proven" || item.state === "partially_supported").map((item) => ({ requirement: item.requirement, evidence: item.evidence })),
+    honestGaps: packet.tailoredResult.gap_analysis.map((item) => ({ ...item })),
+    questionsToPrepare: packet.tailoredResult.requirement_evidence.map((item) => `How would you demonstrate: ${item.requirement}?`),
+    questionsToAsk: [`What would success in the first 90 days look like for ${packet.jobSnapshot.title}?`, "Which requirements matter most during the first six months?"],
+  };
 }
 
 export function allowedTransitions(state: ApplicationState): readonly ApplicationState[] { return TRANSITIONS[state]; }
@@ -92,6 +140,7 @@ export async function transitionApplication(record: ApplicationRecord, next: App
   const updated = structuredClone(record);
   updated.state = next;
   updated.timeline.push({ at: now.toISOString(), type: "application.transition", detail: `${record.state} -> ${next}` });
+  const reminder = suggestedReminder(next, now); if (reminder) updated.reminders.push(reminder);
   if (next === "submitted") {
     updated.packetHistory.push(structuredClone(updated.packet));
     const { checksums: _oldChecksums, ...packetBody } = updated.packet;
