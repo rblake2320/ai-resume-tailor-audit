@@ -142,4 +142,17 @@ export async function executeAgentOperation(raw: AgentRequest) {
   } finally { release(); }
 }
 
-export async function queryAuditLog(): Promise<AuditEntry[]> { return (await loadStore()).audit.map((entry) => ({ ...entry })); }
+/**
+ * Reads under the same lock as writes.
+ *
+ * `saveStore` replaces the file by rename. An unlocked read landing in that
+ * window sees ENOENT, which `loadStore` legitimately maps to an empty store for
+ * the first-run case — so the audit trail would come back empty rather than
+ * missing, which is the more dangerous of the two failures.
+ */
+export async function queryAuditLog(): Promise<AuditEntry[]> {
+  const read = async () => (await loadStore()).audit.map((entry) => ({ ...entry }));
+  let lockPath: string | null = null;
+  try { lockPath = `${storePath()}.lock`; } catch { lockPath = null; }
+  return lockPath ? withFileLock(lockPath, read) : read();
+}
