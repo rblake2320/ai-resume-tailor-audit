@@ -30,3 +30,4 @@ Thumbs.db
 # Misc
 *.log
 *.tsbuildinfo
+.resume-foundry/

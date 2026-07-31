@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
+    ,"mcp": "node --experimental-strip-types scripts/mcp-server.ts"
   },
   "license": "MIT",
   "type": "module",
@@ -18,6 +19,7 @@
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "docx": "^9.7.1",
     "next": "^16.2.12",
     "react": "^19.2.8",

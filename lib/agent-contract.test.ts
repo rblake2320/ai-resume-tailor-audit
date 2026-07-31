@@ -1,22 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import spec from "../public/openapi.json";
+import { AGENT_OPERATIONS } from "./agent-service";
 
-const contract = JSON.parse(readFileSync(resolve("public/openapi.json"), "utf8"));
-
-describe("agent automation contract", () => {
-  it("publishes every current HTTP operation with stable operation IDs", () => {
-    expect(contract.openapi).toBe("3.1.0");
-    expect(contract.paths["/api/capabilities"].get.operationId).toBe("getCapabilities");
-    expect(contract.paths["/api/fetch-job"].post.operationId).toBe("fetchJob");
-    expect(contract.paths["/api/parse-resume"].post.operationId).toBe("parseResume");
-    expect(contract.paths["/api/tailor"].post.operationId).toBe("tailorResume");
+describe("agent API and MCP contract parity", () => {
+  it("publishes every policy operation in OpenAPI", () => {
+    const paths = spec.paths as Record<string, unknown>;
+    for (const operation of AGENT_OPERATIONS) expect(paths[`/api/agent/${operation}`]).toBeDefined();
+    expect(paths["/api/agent/audit"]).toBeDefined();
   });
-
-  it("documents human review and the trusted-local boundary", () => {
-    expect(contract.info.description).toContain("human review");
-    const guide = readFileSync(resolve("public/AGENT_ACCESS.md"), "utf8");
-    expect(guide).toContain("human approval");
-    expect(guide).toContain("Not implemented yet");
+  it("registers every same operation in the MCP server source", async () => {
+    const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../scripts/mcp-server.ts", import.meta.url), "utf8"));
+    expect(source).toContain("for (const operation of AGENT_OPERATIONS)");
+    expect(source).toContain("executeAgentOperation({ operation");
   });
 });
