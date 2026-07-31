@@ -17,6 +17,8 @@ export function GET() {
     operations: [
       { id: "fetchJob", method: "POST", path: "/api/fetch-job", openWorld: true },
       { id: "importJobs", method: "POST", path: "/api/jobs/import", openWorld: true, sources: ["greenhouse", "lever", "usajobs", "email"] },
+      { id: "lookupOnetOccupation", method: "POST", path: "/api/labor-market/onet", openWorld: true, source: "ONET" },
+      { id: "fetchBlsObservations", method: "POST", path: "/api/labor-market/bls-series", openWorld: true, source: "BLS", observationsOnly: true },
       { id: "parseResume", method: "POST", path: "/api/parse-resume", openWorld: false },
       { id: "tailorResume", method: "POST", path: "/api/tailor", openWorld: true, streaming: "ndjson" },
       { id: "agentOperations", method: "POST", path: "/api/agent/{operation}", authentication: "bearer", humanApproval: true },

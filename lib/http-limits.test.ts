@@ -25,4 +25,9 @@ describe("bounded HTTP bodies", () => {
     const response = new Response("x".repeat(100), { headers: { "content-type": "text/html" } });
     await expect(readResponseText(response, 10)).rejects.toMatchObject({ status: 413 });
   });
+
+  it("rejects malformed remote Content-Length instead of ignoring it", async () => {
+    const response = new Response("{}", { headers: { "content-length": "not-a-number" } });
+    await expect(readResponseText(response, 10)).rejects.toMatchObject({ status: 400 });
+  });
 });

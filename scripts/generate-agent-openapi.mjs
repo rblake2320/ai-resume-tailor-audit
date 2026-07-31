@@ -22,12 +22,24 @@ spec.paths["/api/jobs/import"] = { post: {
   requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["source"], properties: { source: { type: "string", enum: ["greenhouse", "lever", "usajobs", "email"] }, query: { type: "string" }, payload: { type: "string" }, maxPages: { type: "integer", minimum: 1, maximum: 20 } } } } } },
   responses: { "200": { description: "Imported normalized job records" }, "400": { $ref: "#/components/responses/Error" }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } },
 } };
+spec.paths["/api/labor-market/onet"] = { post: {
+  operationId: "lookupOnetOccupation", tags: ["Labor market"],
+  description: "Looks up a bounded O*NET occupation overview. O*NET characteristics are not hiring or fit guarantees.",
+  requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["occupationCode"], properties: { occupationCode: { type: "string", pattern: "^[0-9]{2}-[0-9]{4}\\.[0-9]{2}$" } } } } } },
+  responses: { "200": { description: "Validated O*NET occupation profile" }, "400": { $ref: "#/components/responses/Error" }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } },
+} };
+spec.paths["/api/labor-market/bls-series"] = { post: {
+  operationId: "fetchBlsObservations", tags: ["Labor market"],
+  description: "Fetches bounded BLS time-series observations. These observations are not occupational projections.",
+  requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: false, required: ["seriesIds", "startYear", "endYear"], properties: { seriesIds: { type: "array", minItems: 1, maxItems: 50, items: { type: "string", minLength: 1, maxLength: 100 } }, startYear: { type: "integer", minimum: 1900, maximum: 2200 }, endYear: { type: "integer", minimum: 1900, maximum: 2200 } } } } } },
+  responses: { "200": { description: "Validated BLS observation series" }, "400": { $ref: "#/components/responses/Error" }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } },
+} };
 spec.components.schemas.RateLimitError = { type: "object", additionalProperties: false, required: ["error", "code"], properties: { error: { type: "string" }, code: { type: "string", enum: ["RATE_LIMITED"] } } };
 spec.components.schemas.RateLimitUnavailableError = { type: "object", additionalProperties: false, required: ["error", "code"], properties: { error: { type: "string" }, code: { type: "string", enum: ["RATE_LIMIT_UNAVAILABLE"] } } };
 const retryAfter = { description: "Whole seconds before retrying.", required: true, schema: { type: "string", pattern: "^[1-9][0-9]*$" } };
 spec.components.responses.RateLimited = { description: "Configured fixed-window capacity is exhausted.", headers: { "Retry-After": retryAfter }, content: { "application/json": { schema: { $ref: "#/components/schemas/RateLimitError" } } } };
 spec.components.responses.RateLimitUnavailable = { description: "The required production safety limiter is unavailable or invalid.", headers: { "Retry-After": retryAfter }, content: { "application/json": { schema: { $ref: "#/components/schemas/RateLimitUnavailableError" } } } };
-for (const path of ["/api/fetch-job", "/api/jobs/import", "/api/parse-resume", "/api/tailor"]) {
+for (const path of ["/api/fetch-job", "/api/jobs/import", "/api/labor-market/onet", "/api/labor-market/bls-series", "/api/parse-resume", "/api/tailor"]) {
   const responses = spec.paths[path]?.post?.responses;
   if (!responses) throw new Error(`Public OpenAPI path ${path} is missing.`);
   responses["429"] = { $ref: "#/components/responses/RateLimited" };

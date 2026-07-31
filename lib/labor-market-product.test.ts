@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { GET as capabilities } from "../app/api/capabilities/route";
 import {
   createLaborMarketHandlers,
   createConfiguredLaborMarketProviders,
@@ -62,6 +65,16 @@ function providers(): LaborMarketProviders {
 }
 
 describe("labor-market product API", () => {
+  it("keeps both public routes aligned across capabilities and OpenAPI", async () => {
+    const capabilityBody = await capabilities().json() as { operations: Array<{ path?: string }> };
+    const advertised = capabilityBody.operations.map((operation) => operation.path);
+    const spec = JSON.parse(await readFile(path.resolve("public/openapi.json"), "utf8")) as { paths: Record<string, { post?: unknown }> };
+    for (const route of ["/api/labor-market/onet", "/api/labor-market/bls-series"]) {
+      expect(advertised).toContain(route);
+      expect(spec.paths[route]?.post).toBeDefined();
+    }
+  });
+
   it("makes O*NET reachable through a bounded, mockable server handler without returning credentials", async () => {
     const source = providers();
     const handlers = createLaborMarketHandlers(source);
@@ -92,6 +105,21 @@ describe("labor-market product API", () => {
       body: "not-json",
     }));
     expect(malformed.status).toBe(400);
+    expect(source.lookupOnetOccupation).not.toHaveBeenCalled();
+  });
+
+  it("shares the strict request boundary for content type, declared size, streamed size, and malformed length", async () => {
+    const source = providers();
+    const handlers = createLaborMarketHandlers(source);
+    const requests = [
+      new Request("http://localhost/api/labor-market/onet", { method: "POST", body: "{}" }),
+      new Request("http://localhost/api/labor-market/onet", { method: "POST", headers: { "content-type": "text/plain" }, body: "{}" }),
+      new Request("http://localhost/api/labor-market/onet", { method: "POST", headers: { "content-type": "application/json", "content-length": "4097" }, body: "{}" }),
+      new Request("http://localhost/api/labor-market/onet", { method: "POST", headers: { "content-type": "application/json", "content-length": "not-a-number" }, body: "{}" }),
+      new Request("http://localhost/api/labor-market/onet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ occupationCode: "15-1252.00", padding: "x".repeat(5000) }) }),
+    ];
+    const expected = [415, 415, 413, 400, 413];
+    for (const [index, request] of requests.entries()) expect((await handlers.onet(request)).status).toBe(expected[index]);
     expect(source.lookupOnetOccupation).not.toHaveBeenCalled();
   });
 

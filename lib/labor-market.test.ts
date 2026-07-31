@@ -42,6 +42,26 @@ describe("labor-market path intelligence", () => {
     await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(jsonResponse({ ...official, padding: "x".repeat(600_000) })))).rejects.toThrow(/size limit/);
   });
 
+  it("fails closed on provider content type, declared/streamed size, malformed length, and abort", async () => {
+    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(
+      new Response("{}", { headers: { "content-type": "text/html" } }),
+    ))).rejects.toThrow(/content type/i);
+    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(
+      new Response("{}", { headers: { "content-type": "application/json", "content-length": "600000" } }),
+    ))).rejects.toThrow(/size limit/i);
+    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(
+      new Response("{}", { headers: { "content-type": "application/json", "content-length": "NaN" } }),
+    ))).rejects.toThrow(/invalid length/i);
+    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(
+      new Response("x".repeat(600_000), { headers: { "content-type": "application/json" } }),
+    ))).rejects.toThrow(/size limit/i);
+    const aborted = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      throw new DOMException("provider timed out", "AbortError");
+    });
+    await expect(fetchOnetOccupation("15-1252.00", "key", aborted as typeof fetch)).rejects.toMatchObject({ name: "AbortError" });
+  });
+
   it("preserves exact BLS observations and rejects messages, missing series, and invalid/empty rows", async () => {
     const official = fixture("bls-timeseries-response.json");
     const fetcher = vi.fn().mockResolvedValue(jsonResponse(official));

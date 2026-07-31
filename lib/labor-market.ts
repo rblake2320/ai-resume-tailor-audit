@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readResponseText } from "./http-limits";
 
 export const LABOR_MARKET_STALE_AFTER_MS = 3 * 366 * 24 * 60 * 60 * 1000;
 const BLS_ENDPOINT = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
@@ -114,30 +115,15 @@ type Fetcher = typeof fetch;
 async function boundedJson(response: Response, limitBytes = PROVIDER_RESPONSE_LIMIT_BYTES): Promise<unknown> {
   const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (contentType !== "application/json") throw new Error("Labor-market provider returned an unsupported content type.");
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > limitBytes) throw new Error("Labor-market provider response exceeded the size limit.");
-  if (!response.body) throw new Error("Labor-market provider returned an empty response.");
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > limitBytes) {
-        await reader.cancel();
-        throw new Error("Labor-market provider response exceeded the size limit.");
-      }
-      chunks.push(value);
+  let text: string;
+  try { text = await readResponseText(response, limitBytes); }
+  catch (error) {
+    if (error instanceof Error && /too large|size limit|Content-Length/iu.test(error.message)) {
+      throw new Error("Labor-market provider response exceeded the size limit or declared an invalid length.");
     }
-  } finally {
-    reader.releaseLock();
+    throw error;
   }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  try { return JSON.parse(new TextDecoder().decode(bytes)); }
+  try { return JSON.parse(text); }
   catch { throw new Error("Labor-market provider returned malformed JSON."); }
 }
 

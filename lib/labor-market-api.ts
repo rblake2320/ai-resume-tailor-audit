@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HttpLimitError, readJsonBody } from "./http-limits";
 import {
   BlsObservationSeriesSchema,
   fetchBlsSeries,
@@ -23,46 +24,12 @@ export interface LaborMarketProviders {
   fetchBlsObservations(seriesIds: string[], startYear: number, endYear: number): Promise<BlsObservationSeries[]>;
 }
 
-class RequestBoundaryError extends Error {
-  constructor(message: string, readonly status: number) { super(message); }
-}
-
-async function readBoundedJson(request: Request): Promise<unknown> {
-  const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
-  if (contentType !== "application/json") throw new RequestBoundaryError("Content-Type must be application/json.", 415);
-  const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > REQUEST_LIMIT_BYTES) throw new RequestBoundaryError("Request body is too large.", 413);
-  if (!request.body) throw new RequestBoundaryError("Request body is required.", 400);
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > REQUEST_LIMIT_BYTES) {
-        await reader.cancel();
-        throw new RequestBoundaryError("Request body is too large.", 413);
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  try { return JSON.parse(new TextDecoder().decode(bytes)); }
-  catch { throw new RequestBoundaryError("Request body must contain valid JSON.", 400); }
-}
-
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { "cache-control": "no-store" } });
 }
 
 function requestError(error: unknown): Response {
-  if (error instanceof RequestBoundaryError) return json({ error: error.message }, error.status);
+  if (error instanceof HttpLimitError) return json({ error: error.message }, error.status);
   if (error instanceof z.ZodError) return json({ error: "Request did not match the labor-market contract.", issues: error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, 400);
   return json({ error: "Request could not be processed." }, 400);
 }
@@ -76,7 +43,7 @@ export function createLaborMarketHandlers(providers: LaborMarketProviders) {
     async onet(request: Request): Promise<Response> {
       let body: z.infer<typeof OnetRequestSchema>;
       try {
-        body = OnetRequestSchema.parse(await readBoundedJson(request));
+        body = OnetRequestSchema.parse(await readJsonBody(request, REQUEST_LIMIT_BYTES));
       } catch (error) { return requestError(error); }
       try {
         const profile = OnetOccupationProfileSchema.parse(await providers.lookupOnetOccupation(body.occupationCode));
@@ -86,7 +53,7 @@ export function createLaborMarketHandlers(providers: LaborMarketProviders) {
     async bls(request: Request): Promise<Response> {
       let body: z.infer<typeof BlsRequestSchema>;
       try {
-        body = BlsRequestSchema.parse(await readBoundedJson(request));
+        body = BlsRequestSchema.parse(await readJsonBody(request, REQUEST_LIMIT_BYTES));
       } catch (error) { return requestError(error); }
       try {
         const series = BlsObservationSeriesSchema.array().max(50).parse(await providers.fetchBlsObservations(body.seriesIds, body.startYear, body.endYear));

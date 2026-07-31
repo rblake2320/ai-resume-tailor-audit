@@ -64,7 +64,11 @@ export async function readResponseText(response: Response, maxBytes: number): Pr
   const declaredLength = response.headers.get("content-length");
   if (declaredLength !== null) {
     const length = Number(declaredLength);
-    if (Number.isFinite(length) && length > maxBytes) {
+    if (!Number.isSafeInteger(length) || length < 0) {
+      await response.body.cancel("invalid response content length").catch(() => undefined);
+      throw new HttpLimitError(400, "Remote response has an invalid Content-Length header.");
+    }
+    if (length > maxBytes) {
       await response.body.cancel("response body limit exceeded").catch(() => undefined);
       throw new HttpLimitError(413, "Remote response is too large.");
     }
