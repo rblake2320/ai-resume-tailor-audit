@@ -5,7 +5,10 @@ import {
   deleteSavePoint,
   loadJobInbox,
   loadHistory,
+  loadApplications,
+  loadProfile,
   loadSavePoints,
+  loadSession,
   saveJobInbox,
   type Session,
 } from "./storage";
@@ -71,6 +74,18 @@ describe("local save points", () => {
     expect(loadHistory()).toEqual([]);
     expect(localStorage.getItem("art:history")).toBeNull();
     expect(localStorage.getItem("art:history:quarantine")).toContain("broken");
+  });
+
+  it.each([
+    ["art:profile", () => loadProfile(), null],
+    ["art:session", () => loadSession(), null],
+    ["art:save-points", () => loadSavePoints(), []],
+    ["art:applications:v1", () => loadApplications(), []],
+  ] as const)("quarantines malformed persisted data in %s", (key, load, fallback) => {
+    localStorage.setItem(key, JSON.stringify([{ unexpected: "private data" }]));
+    expect(load()).toEqual(fallback);
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(localStorage.getItem(`${key}:quarantine`)).toContain("private data");
   });
 });
 

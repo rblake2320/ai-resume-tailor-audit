@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import type { TailorResult } from "@/lib/schema";
 import { mdToAtsText, mdToHtml } from "@/lib/markdown";
 import { downloadDocx } from "@/lib/docx-export";
@@ -41,6 +41,16 @@ export function ResultView({
 
   const activeMd = tab === "cover" ? result.cover_letter_markdown : result.tailored_resume_markdown;
   const activeName = tab === "cover" ? `cover-letter-${slug}` : `resume-${slug}`;
+  const tabs: Tab[] = ["resume", "ats", "cover"];
+  function moveTab(event: KeyboardEvent<HTMLButtonElement>, current: Tab) {
+    const index = tabs.indexOf(current);
+    const next = event.key === "ArrowRight" ? tabs[(index + 1) % tabs.length]
+      : event.key === "ArrowLeft" ? tabs[(index - 1 + tabs.length) % tabs.length]
+        : event.key === "Home" ? tabs[0] : event.key === "End" ? tabs.at(-1)! : null;
+    if (!next) return;
+    event.preventDefault(); setTab(next);
+    document.getElementById(`result-tab-${next}`)?.focus();
+  }
 
   return (
     <div className="space-y-6">
@@ -157,6 +167,7 @@ export function ResultView({
               aria-controls="result-document-panel"
               tabIndex={tab === t ? 0 : -1}
               onClick={() => setTab(t)}
+              onKeyDown={(event) => moveTab(event, t)}
               className={`rounded-md px-3 py-1.5 text-xs transition ${
                 tab === t
                   ? "bg-brass-400/15 text-brass-300 border border-brass-400/40"
@@ -222,12 +233,22 @@ export function ResultView({
               </pre>
             </div>
           ) : (
-            <div className="sheet mx-auto max-w-3xl p-8 md:p-12" data-print-area>
+            <div className="sheet mx-auto max-w-3xl p-8 md:p-12">
               <div
                 className="md"
                 dangerouslySetInnerHTML={{ __html: tab === "cover" ? coverHtml : resumeHtml }}
               />
             </div>
+          )}
+        </div>
+        <div className="print-document" data-print-area data-print-kind={tab} aria-hidden="true">
+          {tab === "ats" ? (
+            <pre>{atsText}</pre>
+          ) : (
+            <div
+              className="md"
+              dangerouslySetInnerHTML={{ __html: tab === "cover" ? coverHtml : resumeHtml }}
+            />
           )}
         </div>
       </div>

@@ -33,6 +33,28 @@ const canStore = () => typeof window !== "undefined" && !!window.localStorage;
 const ProfileSchema = z.strictObject({ resume: z.string(), extraInfo: z.string(), updatedAt: z.number().finite() });
 const HistoryEntrySchema = z.strictObject({ id: z.string().min(1), createdAt: z.number().finite(), jobTitle: z.string(), company: z.string(), result: TailorResultSchema });
 const SessionSchema = z.strictObject({ jobText: z.string(), jobUrl: z.string(), jobTitle: z.string(), company: z.string(), emphasis: z.enum(["balanced", "technical", "leadership"]), privacyMode: z.enum(["protect", "review", "exact"]), result: TailorResultSchema.nullable() }).partial();
+const SavePointSchema = z.strictObject({
+  id: z.string().min(1), createdAt: z.number().finite(), label: z.string(),
+  profile: z.strictObject({ resume: z.string(), extraInfo: z.string() }),
+  session: SessionSchema.required(),
+});
+const ApplicationPacketSchema = z.strictObject({
+  id: z.string().min(1), version: z.number().int().positive(), jobSnapshot: JobPostingSnapshotSchema,
+  profileSnapshot: z.strictObject({ resume: z.string(), extraInfo: z.string(), checksum: z.string().min(1) }),
+  tailoredResult: TailorResultSchema, screeningAnswers: z.record(z.string(), z.string()), userEdits: z.array(z.string()),
+  submissionChannel: z.enum(["guided", "email", "lever", "greenhouse", "other"]).nullable(),
+  checksums: z.strictObject({ job: z.string().min(1), profile: z.string().min(1), resume: z.string().min(1), coverLetter: z.string().min(1), packet: z.string().min(1) }),
+  createdAt: z.iso.datetime(), submittedAt: z.iso.datetime().nullable(),
+});
+const ApplicationRecordSchema: z.ZodType<ApplicationRecord> = z.strictObject({
+  id: z.string().min(1), packet: ApplicationPacketSchema, packetHistory: z.array(ApplicationPacketSchema).default([]),
+  state: z.enum(["discovered", "saved", "reviewing", "tailoring", "ready", "submitted", "recruiter_response", "interviewing", "offer", "rejected", "withdrawn", "no_response"]),
+  timeline: z.array(z.strictObject({ at: z.string(), type: z.string(), detail: z.string() })), notes: z.array(z.string()),
+  contacts: z.array(z.strictObject({ name: z.string(), role: z.string(), email: z.string() })), interviewDates: z.array(z.string()),
+  followUpAt: z.string().nullable(), compensation: z.string(), referral: z.string(), rejectionReason: z.string(), nextAction: z.string(),
+  documentLinks: z.array(z.string()), emailLinks: z.array(z.string()), calendarLinks: z.array(z.string()),
+  reminders: z.array(z.strictObject({ id: z.string().min(1), kind: z.enum(["follow_up", "interview_prep"]), dueAt: z.string(), status: z.enum(["suggested", "scheduled", "completed", "dismissed"]), createdAt: z.string(), approvedAt: z.string().nullable(), note: z.string() })).default([]),
+});
 
 function parseStored<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
   if (!canStore()) return fallback;
@@ -119,12 +141,7 @@ export function saveSession(session: Session): void {
 
 export function loadSavePoints(): SavePoint[] {
   if (!canStore()) return [];
-  try {
-    const raw = localStorage.getItem(SAVE_POINTS_KEY);
-    return raw ? (JSON.parse(raw) as SavePoint[]) : [];
-  } catch {
-    return [];
-  }
+  return parseStored(SAVE_POINTS_KEY, SavePointSchema.array(), []);
 }
 
 export function addSavePoint(
@@ -177,16 +194,12 @@ export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
 
 export function loadApplications(): ApplicationRecord[] {
   if (!canStore()) return [];
-  try {
-    const records = JSON.parse(localStorage.getItem(APPLICATIONS_KEY) ?? "[]") as ApplicationRecord[];
-    return records.map((record) => ({ ...record, packetHistory: record.packetHistory ?? [], reminders: record.reminders ?? [] }));
-  }
-  catch { return []; }
+  return parseStored(APPLICATIONS_KEY, ApplicationRecordSchema.array(), []);
 }
 
 export function saveApplications(records: readonly ApplicationRecord[]): void {
   if (!canStore()) return;
-  localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(records));
+  localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(ApplicationRecordSchema.array().parse(records)));
 }
 
 export async function clearAllData(): Promise<void> {
