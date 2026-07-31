@@ -13,8 +13,8 @@ const run = promisify(execFile);
 const serverPath = path.join(import.meta.dirname, "..", "scripts", "mcp-server.ts");
 
 let root = "";
-beforeEach(async () => { root = await mkdtemp(path.join(tmpdir(), "foundry-mcp-")); process.env.RESUME_FOUNDRY_AGENT_STORE = path.join(root, "store.json"); });
-afterEach(async () => { delete process.env.RESUME_FOUNDRY_AGENT_STORE; await rm(root, { recursive: true, force: true }); });
+beforeEach(async () => { root = await mkdtemp(path.join(tmpdir(), "foundry-mcp-")); process.env.RESUME_FOUNDRY_AGENT_STORE = path.join(root, "store.json"); process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY = "test-only-audit-key-with-32-bytes-minimum"; });
+afterEach(async () => { delete process.env.RESUME_FOUNDRY_AGENT_STORE; delete process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY; await rm(root, { recursive: true, force: true }); });
 
 describe("MCP protocol", () => {
   it("starts under native Node type stripping", async () => {

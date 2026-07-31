@@ -15,11 +15,13 @@ beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "foundry-race-"));
   store = path.join(root, "store.json");
   process.env.RESUME_FOUNDRY_AGENT_STORE = store;
+  process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY = "test-only-audit-key-with-32-bytes-minimum";
   process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = "human-only";
   process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT = "1";
 });
 afterEach(async () => {
   delete process.env.RESUME_FOUNDRY_AGENT_STORE;
+  delete process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY;
   delete process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET;
   delete process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT;
   await rm(root, { recursive: true, force: true });

@@ -5,8 +5,8 @@ import path from "node:path";
 import { executeAgentOperation, queryAuditLog } from "./agent-service";
 
 let root = "";
-beforeEach(async () => { root = await mkdtemp(path.join(tmpdir(), "foundry-agent-")); process.env.RESUME_FOUNDRY_AGENT_STORE = path.join(root, "store.json"); process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = "human-only"; process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT = "1"; });
-afterEach(async () => { delete process.env.RESUME_FOUNDRY_AGENT_STORE; delete process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET; delete process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT; await rm(root, { recursive: true, force: true }); });
+beforeEach(async () => { root = await mkdtemp(path.join(tmpdir(), "foundry-agent-")); process.env.RESUME_FOUNDRY_AGENT_STORE = path.join(root, "store.json"); process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY = "test-only-audit-key-with-32-bytes-minimum"; process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET = "human-only"; process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT = "1"; });
+afterEach(async () => { delete process.env.RESUME_FOUNDRY_AGENT_STORE; delete process.env.RESUME_FOUNDRY_AGENT_AUDIT_KEY; delete process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET; delete process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT; await rm(root, { recursive: true, force: true }); });
 
 async function importJob() {
   const imported = await executeAgentOperation({ operation: "jobs.import", input: { title: "Engineer", company: "Acme", description: "Build reliable TypeScript systems with testing and security." }, actor: "test" });
@@ -26,7 +26,7 @@ describe("agent policy service", () => {
   it("persists every allowed and denied action in a queryable audit log", async () => {
     await executeAgentOperation({ operation: "jobs.search", input: { query: "engineer" }, actor: "agent" });
     await executeAgentOperation({ operation: "applications.approve", input: { applicationId: "missing" }, actor: "agent" });
-    const audit = await queryAuditLog(); expect(audit).toHaveLength(2); expect(audit.map((entry) => entry.allowed)).toEqual([true, false]); expect(JSON.stringify(audit)).not.toContain("human-only");
+    const audit = await queryAuditLog(); expect(audit.entries).toHaveLength(2); expect(audit.entries.map((entry) => entry.allowed)).toEqual([true, false]); expect(JSON.stringify(audit)).not.toContain("human-only");
     expect(JSON.parse(await readFile(process.env.RESUME_FOUNDRY_AGENT_STORE!, "utf8")).audit).toHaveLength(2);
   });
 

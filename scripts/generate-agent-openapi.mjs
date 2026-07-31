@@ -11,9 +11,12 @@ for (const operation of operations) {
     responses: { "200": { description: "Operation completed" }, "400": { $ref: "#/components/responses/Error" }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } },
   } };
 }
-spec.paths["/api/agent/audit"] = { get: { operationId: "queryAgentAudit", tags: ["Agent operations"], security: [{ bearerAuth: [] }], responses: { "200": { description: "Queryable allowed and denied action log" }, "401": { $ref: "#/components/responses/Error" } } } };
+spec.paths["/api/agent/audit"] = { get: { operationId: "queryAgentAudit", tags: ["Agent operations"], security: [{ bearerAuth: [] }], parameters: [
+  { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 50 } },
+  { name: "cursor", in: "query", schema: { type: "string" } },
+], responses: { "200": { description: "HMAC-authenticated, cursor-paginated allowed and denied action log" }, "400": { $ref: "#/components/responses/Error" }, "401": { $ref: "#/components/responses/Error" } } } };
 spec.components.securitySchemes = { ...(spec.components.securitySchemes ?? {}), bearerAuth: { type: "http", scheme: "bearer" } };
-spec.components.schemas.AgentOperationRequest = { type: "object", additionalProperties: false, properties: { input: { type: "object", additionalProperties: true }, actor: { type: "string" }, piiApproved: { type: "boolean", default: false } } };
+spec.components.schemas.AgentOperationRequest = { type: "object", additionalProperties: false, properties: { input: { type: "object", additionalProperties: true }, piiApproved: { type: "boolean", default: false } } };
 const sha256 = { type: "string", pattern: "^[a-f0-9]{64}$" };
 spec.components.schemas.SubmissionTarget = { oneOf: [
   { type: "object", additionalProperties: false, required: ["provider", "boardToken", "jobId"], properties: { provider: { const: "greenhouse" }, boardToken: { type: "string" }, jobId: { type: "string" } } },
