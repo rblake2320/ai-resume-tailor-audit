@@ -2,6 +2,7 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { withFileLock } from "./file-lock.ts";
 
 export const AGENT_OPERATIONS = [
   "jobs.import", "jobs.search", "jobs.get", "jobs.compare", "jobs.dismiss", "matches.score",
@@ -110,16 +111,35 @@ async function executeAgentOperationInner(raw: AgentRequest) {
     await saveStore(store); return { ok: true, operation: request.operation, result };
   } catch (error) {
     store.audit.push({ id: randomUUID(), at: now, actor: request.actor, operation: request.operation, allowed: false, reason: error instanceof Error ? error.message : "Operation denied.", inputHash: hash(request.input), resultId: null });
-    await saveStore(store); return { ok: false, operation: request.operation, error: error instanceof Error ? error.message : "Operation denied." };
+    // This save previously ran unguarded inside the failure path, so a rename
+    // race surfaced as an uncaught EPERM that killed the process.
+    await saveStore(store).catch(() => undefined);
+    return { ok: false, operation: request.operation, error: error instanceof Error ? error.message : "Operation denied." };
   }
 }
 
 let operationQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Serialises every operation, first within this process and then across
+ * processes.
+ *
+ * The in-process queue alone left the whole-file read-modify-write open to a
+ * lost-update race: four concurrent processes each read the same store, all
+ * four passed a daily limit of one, and three writes vanished.
+ */
 export async function executeAgentOperation(raw: AgentRequest) {
   const preceding = operationQueue; let release!: () => void;
   operationQueue = new Promise<void>((resolve) => { release = resolve; });
   await preceding;
-  try { return await executeAgentOperationInner(raw); } finally { release(); }
+  try {
+    let lockPath: string | null = null;
+    // An unset or relative store path is reported by the inner call, which
+    // returns a generic failure rather than echoing the configured path.
+    try { lockPath = `${storePath()}.lock`; } catch { lockPath = null; }
+    if (!lockPath) return await executeAgentOperationInner(raw);
+    return await withFileLock(lockPath, () => executeAgentOperationInner(raw));
+  } finally { release(); }
 }
 
 export async function queryAuditLog(): Promise<AuditEntry[]> { return (await loadStore()).audit.map((entry) => ({ ...entry })); }
