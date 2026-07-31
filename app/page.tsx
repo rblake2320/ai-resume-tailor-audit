@@ -89,6 +89,9 @@ export default function Home() {
   const restoreForgeFocusRef = useRef(false);
   const generationAbortRef = useRef<AbortController | null>(null);
   const cancelReasonRef = useRef<"cancelled" | "timeout" | null>(null);
+  const reportPersistenceFailure = useCallback((failure: unknown) => {
+    setNotice(failure instanceof Error ? failure.message : "Browser storage failed. Your latest changes may not survive a reload.");
+  }, []);
 
   useEffect(() => {
     if (pendingPii.length === 0 && restoreForgeFocusRef.current) {
@@ -106,32 +109,32 @@ export default function Home() {
 
   // Persist the active session (job form + current result) so a reload restores it.
   useEffect(() => {
-    saveSession({ jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result });
-  }, [jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result]);
+    try { saveSession({ jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result }); }
+    catch (failure) { queueMicrotask(() => reportPersistenceFailure(failure)); }
+  }, [jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   // Keep a bounded recovery trail after the user pauses. Identical states are
   // deduplicated, so typing does not create a checkpoint storm.
   useEffect(() => {
     if (!resume.trim() && !jobText.trim()) return;
     const timer = setTimeout(() => {
-      setSavePoints(
-        addSavePoint(
+      try { setSavePoints(addSavePoint(
           { resume, extraInfo },
           { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
-        ),
-      );
+        )); }
+      catch (failure) { reportPersistenceFailure(failure); }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result]);
+  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   // Debounced autosave of the profile (all setState happens inside the timer callback)
   useEffect(() => {
     const t = setTimeout(() => {
-      saveProfile({ resume, extraInfo });
-      setSavedSnapshot({ resume, extraInfo });
+      try { saveProfile({ resume, extraInfo }); setSavedSnapshot({ resume, extraInfo }); }
+      catch (failure) { reportPersistenceFailure(failure); }
     }, 600);
     return () => clearTimeout(t);
-  }, [resume, extraInfo]);
+  }, [resume, extraInfo, reportPersistenceFailure]);
 
   const profileSaved =
     savedSnapshot === null ||
@@ -261,7 +264,8 @@ export default function Home() {
           else if (event.type === "result") {
             const restoredResult = restorePii(event.data, restorationMap);
             setResult(restoredResult);
-            setHistory(addHistory({ jobTitle, company, result: restoredResult }));
+            try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
+            catch (failure) { reportPersistenceFailure(failure); }
             setPhase("done");
             finished = true;
           }
@@ -283,7 +287,7 @@ export default function Home() {
       window.clearTimeout(timeout);
       generationAbortRef.current = null;
     }
-  }, [resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode]);
+  }, [resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
 
   const cancelGeneration = useCallback(() => {
     cancelReasonRef.current = "cancelled";
@@ -323,6 +327,16 @@ export default function Home() {
     setPhase(point.session.result ? "done" : "idle");
     setNotice(`Restored save point from ${new Date(point.createdAt).toLocaleString()}.`);
   }, []);
+
+  const createManualSavePoint = useCallback(() => {
+    try {
+      setSavePoints(addSavePoint(
+        { resume, extraInfo },
+        { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
+        "Manual save point",
+      ));
+    } catch (failure) { reportPersistenceFailure(failure); }
+  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 md:px-8">
@@ -735,15 +749,7 @@ export default function Home() {
               </p>
             </div>
             <ToolButton
-              onClick={() =>
-                setSavePoints(
-                  addSavePoint(
-                    { resume, extraInfo },
-                    { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
-                    "Manual save point",
-                  ),
-                )
-              }
+              onClick={createManualSavePoint}
             >
               Save point now
             </ToolButton>
@@ -771,7 +777,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSavePoints(deleteSavePoint(point.id))}
+                    onClick={() => { try { setSavePoints(deleteSavePoint(point.id)); } catch (failure) { reportPersistenceFailure(failure); } }}
                     className="shrink-0 text-xs text-ink-400 transition hover:text-bad"
                     aria-label={`Delete save point from ${new Date(point.createdAt).toLocaleString()}`}
                   >
@@ -792,11 +798,9 @@ export default function Home() {
               <ToolButton
                 onClick={async () => {
                   if (confirm("Delete your saved profile and all history from this browser?")) {
-                    await clearAllData();
-                    setHistory([]);
-                    setSavePoints([]);
-                    setResume("");
-                    setExtraInfo("");
+                    try {
+                      await clearAllData(); setHistory([]); setSavePoints([]); setResume(""); setExtraInfo("");
+                    } catch (failure) { reportPersistenceFailure(failure); }
                   }
                 }}
               >
@@ -834,7 +838,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setHistory(deleteHistory(h.id))}
+                    onClick={() => { try { setHistory(deleteHistory(h.id)); } catch (failure) { reportPersistenceFailure(failure); } }}
                     className="shrink-0 text-xs text-ink-400 transition hover:text-bad"
                     aria-label="Delete entry"
                   >

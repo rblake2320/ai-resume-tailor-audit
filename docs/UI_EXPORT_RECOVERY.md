@@ -10,6 +10,8 @@ DOCX export is single-column and uses ordinary Word headings, paragraphs, and bu
 
 Profile, session, history, save-point, job-inbox, and application records are schema-validated on load. Malformed records are removed from the active key and copied byte-for-byte to a sibling `:quarantine` key where feasible. The app then opens with an empty safe fallback instead of repeatedly crashing on reload.
 
+If browser storage itself is unavailable or throws while reading, loaders fail closed to their empty fallback. Writes use one explicit persistence boundary and raise a `LocalPersistenceError`; the profile, checkpoint, job-inbox, application, and erase interfaces catch that error and tell the user that the change may not survive reload. A failed write never updates the corresponding in-memory "saved" state or displays a success message.
+
 Quarantine is recovery evidence, not trusted application state. The **Erase all my data** action removes active and quarantined local records and deletes the encrypted career-ledger database.
 
 ## Accessibility and narrow screens

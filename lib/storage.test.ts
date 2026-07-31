@@ -6,11 +6,15 @@ import {
   loadJobInbox,
   loadHistory,
   loadApplications,
+  loadCareerBackupMarker,
   loadProfile,
   loadSavePoints,
   loadSession,
+  LocalPersistenceError,
   saveApplications,
+  saveCareerBackupMarker,
   saveJobInbox,
+  saveProfile,
   type Session,
 } from "./storage";
 import { createJobSnapshot } from "./job-inbox";
@@ -123,5 +127,34 @@ describe("job inbox persistence", () => {
     const record = createApplicationRecord(await createApplicationPacket({ jobSnapshot: job, profile: { resume: "Original", extraInfo: "Evidence" }, result }));
     saveApplications([record]);
     expect(loadApplications()).toEqual([record]);
+  });
+});
+
+describe("unavailable browser storage", () => {
+  it("fails reads closed when localStorage access throws SecurityError", () => {
+    const deniedWindow = {} as Window;
+    Object.defineProperty(deniedWindow, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } });
+    vi.stubGlobal("window", deniedWindow);
+    expect(() => loadProfile()).not.toThrow();
+    expect(loadProfile()).toBeNull();
+    expect(loadSession()).toBeNull();
+    expect(loadApplications()).toEqual([]);
+  });
+
+  it("signals a write failure instead of claiming data was saved", () => {
+    const failing = {
+      getItem: () => null,
+      setItem: () => { throw new DOMException("full", "QuotaExceededError"); },
+      removeItem: vi.fn(),
+    };
+    vi.stubGlobal("window", { localStorage: failing });
+    expect(() => saveProfile({ resume: "private resume", extraInfo: "" })).toThrow(LocalPersistenceError);
+    expect(() => addSavePoint({ resume: "private resume", extraInfo: "" }, session)).toThrow(/may not survive a reload/);
+    expect(() => saveCareerBackupMarker("2026-07-31T12:00:00.000Z")).toThrow(LocalPersistenceError);
+  });
+
+  it("fails the career backup marker read closed when getItem throws", () => {
+    vi.stubGlobal("window", { localStorage: { getItem: () => { throw new DOMException("denied", "SecurityError"); } } });
+    expect(loadCareerBackupMarker()).toBeNull();
   });
 });

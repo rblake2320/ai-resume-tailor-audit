@@ -7,6 +7,7 @@ import {
 } from "@/lib/career-ledger";
 import { deleteCareerLedger, hasCareerLedger, loadCareerLedger, migrateLegacyPlaintextCareerLedger, saveCareerLedger } from "@/lib/career-vault";
 import { ToolButton } from "@/components/ui";
+import { loadCareerBackupMarker, saveCareerBackupMarker } from "@/lib/storage";
 
 export function CareerLedger() {
   const [ledger, setLedger] = useState<Ledger | null>(null);
@@ -39,10 +40,18 @@ export function CareerLedger() {
     await saveCareerLedger(next, passphrase); setLedger(next); setTitle(""); setDescription(""); setStatus("Entry appended and encrypted. Earlier history was not rewritten.");
   }
   async function downloadBackup() {
-    if (!ledger) return; const backup = await exportEncryptedCareerLedger(ledger, passphrase);
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
-    link.download = `resume-foundry-career-vault-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(link.href);
-    localStorage.setItem("rf:career-last-backup", new Date().toISOString()); setStatus("Encrypted recovery backup downloaded. Keep the passphrase separately.");
+    if (!ledger) return;
+    try {
+      const backup = await exportEncryptedCareerLedger(ledger, passphrase);
+      const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
+      link.download = `resume-foundry-career-vault-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(link.href);
+      try {
+        saveCareerBackupMarker(new Date().toISOString());
+        setStatus("Encrypted recovery backup downloaded. Keep the passphrase separately.");
+      } catch (error) {
+        setStatus(`Encrypted backup downloaded, but its date could not be saved: ${error instanceof Error ? error.message : "browser storage failed."}`);
+      }
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Backup export failed."); }
   }
   async function restore(file: File | undefined) {
     if (!file) return;
@@ -52,7 +61,7 @@ export function CareerLedger() {
   async function removeEvent(eventId: string) { if (!ledger || !confirm("Permanently erase this event's content? A non-content deletion receipt remains.")) return; const next = await deleteCareerEvent(ledger, eventId, "Owner-requested item deletion"); await saveCareerLedger(next, passphrase); setLedger(next); setStatus("Event content erased; deletion receipt retained."); }
   async function deleteAccountData() { if (!confirm("Delete the entire encrypted Career Ledger from this browser? Download a backup first if needed.")) return; await deleteCareerLedger(); setLedger(null); setVaultExists(false); setStatus("Career Ledger deleted from this browser."); }
   const active = ledger ? currentCareerEvents(ledger) : [];
-  const lastBackup = typeof window === "undefined" ? null : localStorage.getItem("rf:career-last-backup");
+  const lastBackup = loadCareerBackupMarker();
   return <section className="rounded-xl border border-ink-700 bg-ink-900/70 p-4" aria-labelledby="career-ledger-heading">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="career-ledger-heading" className="font-display text-xl font-semibold text-paper">Career ledger</h2><p className="text-[11px] text-ink-400">Keep projects, work, learning, volunteering, caregiving, and evidence for future uses you cannot predict yet.</p></div></div>
     <p role="status" className="mt-2 text-xs text-brass-300">{status}</p>

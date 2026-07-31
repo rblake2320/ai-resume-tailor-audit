@@ -29,7 +29,32 @@ const PROFILE_KEY = "art:profile";
 const HISTORY_KEY = "art:history";
 const HISTORY_LIMIT = 25;
 
-const canStore = () => typeof window !== "undefined" && !!window.localStorage;
+export class LocalPersistenceError extends Error {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(`Browser storage failed while ${operation}. Your latest changes may not survive a reload.`, options);
+    this.name = "LocalPersistenceError";
+  }
+}
+
+function availableStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try { return window.localStorage ?? null; }
+  catch { return null; }
+}
+
+function requireStorage(operation: string): Storage {
+  const storage = availableStorage();
+  if (!storage) throw new LocalPersistenceError(operation);
+  return storage;
+}
+
+function writeStored(key: string, value: unknown, operation: string): void {
+  try { requireStorage(operation).setItem(key, JSON.stringify(value)); }
+  catch (error) {
+    if (error instanceof LocalPersistenceError) throw error;
+    throw new LocalPersistenceError(operation, { cause: error });
+  }
+}
 const ProfileSchema = z.strictObject({ resume: z.string(), extraInfo: z.string(), updatedAt: z.number().finite() });
 const HistoryEntrySchema = z.strictObject({ id: z.string().min(1), createdAt: z.number().finite(), jobTitle: z.string(), company: z.string(), result: TailorResultSchema });
 const SessionSchema = z.strictObject({ jobText: z.string(), jobUrl: z.string(), jobTitle: z.string(), company: z.string(), emphasis: z.enum(["balanced", "technical", "leadership"]), privacyMode: z.enum(["protect", "review", "exact"]), result: TailorResultSchema.nullable() }).partial();
@@ -57,29 +82,29 @@ const ApplicationRecordSchema: z.ZodType<ApplicationRecord> = z.strictObject({
 });
 
 function parseStored<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
-  if (!canStore()) return fallback;
-  const raw = localStorage.getItem(key); if (!raw) return fallback;
+  const storage = availableStorage(); if (!storage) return fallback;
+  let raw: string | null;
+  try { raw = storage.getItem(key); } catch { return fallback; }
+  if (!raw) return fallback;
   try { return schema.parse(JSON.parse(raw)); }
   catch {
     // Quarantine the exact bytes for explicit recovery/export while ensuring one
     // malformed record cannot brick every reload.
-    try { localStorage.setItem(`${key}:quarantine`, raw); localStorage.removeItem(key); } catch { /* storage may be full */ }
+    try { storage.setItem(`${key}:quarantine`, raw); storage.removeItem(key); } catch { /* read remains fail-safe even if quarantine cannot be written */ }
     return fallback;
   }
 }
 
 export function loadProfile(): Profile | null {
-  if (!canStore()) return null;
   return parseStored(PROFILE_KEY, ProfileSchema.nullable(), null);
 }
 
 export function saveProfile(profile: Omit<Profile, "updatedAt">): void {
-  if (!canStore()) return;
-  localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...profile, updatedAt: Date.now() }));
+  if (typeof window === "undefined") return;
+  writeStored(PROFILE_KEY, { ...profile, updatedAt: Date.now() }, "saving the profile");
 }
 
 export function loadHistory(): HistoryEntry[] {
-  if (!canStore()) return [];
   return parseStored(HISTORY_KEY, HistoryEntrySchema.array(), []);
 }
 
@@ -88,13 +113,13 @@ export function addHistory(entry: Omit<HistoryEntry, "id" | "createdAt">): Histo
     { ...entry, id: crypto.randomUUID(), createdAt: Date.now() },
     ...loadHistory(),
   ].slice(0, HISTORY_LIMIT);
-  if (canStore()) localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  if (typeof window !== "undefined") writeStored(HISTORY_KEY, next, "saving generated history");
   return next;
 }
 
 export function deleteHistory(id: string): HistoryEntry[] {
   const next = loadHistory().filter((h) => h.id !== id);
-  if (canStore()) localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  if (typeof window !== "undefined") writeStored(HISTORY_KEY, next, "deleting generated history");
   return next;
 }
 
@@ -124,23 +149,32 @@ const SAVE_POINTS_KEY = "art:save-points";
 const SAVE_POINTS_LIMIT = 12;
 const JOB_INBOX_KEY = "art:job-inbox:v1";
 const APPLICATIONS_KEY = "art:applications:v1";
+const CAREER_BACKUP_MARKER_KEY = "rf:career-last-backup";
+
+export function loadCareerBackupMarker(): string | null {
+  const storage = availableStorage(); if (!storage) return null;
+  try { return storage.getItem(CAREER_BACKUP_MARKER_KEY); } catch { return null; }
+}
+
+export function saveCareerBackupMarker(at: string): void {
+  if (typeof window === "undefined") return;
+  try { requireStorage("recording the career-ledger backup date").setItem(CAREER_BACKUP_MARKER_KEY, at); }
+  catch (error) {
+    if (error instanceof LocalPersistenceError) throw error;
+    throw new LocalPersistenceError("recording the career-ledger backup date", { cause: error });
+  }
+}
 
 export function loadSession(): Partial<Session> | null {
-  if (!canStore()) return null;
   return parseStored(SESSION_KEY, SessionSchema.nullable(), null);
 }
 
 export function saveSession(session: Session): void {
-  if (!canStore()) return;
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  } catch {
-    // Quota/serialization failure must not break the app.
-  }
+  if (typeof window === "undefined") return;
+  writeStored(SESSION_KEY, session, "saving the active session");
 }
 
 export function loadSavePoints(): SavePoint[] {
-  if (!canStore()) return [];
   return parseStored(SAVE_POINTS_KEY, SavePointSchema.array(), []);
 }
 
@@ -159,26 +193,25 @@ export function addSavePoint(
     { id: crypto.randomUUID(), createdAt: Date.now(), label, profile, session },
     ...current,
   ].slice(0, SAVE_POINTS_LIMIT);
-  if (canStore()) localStorage.setItem(SAVE_POINTS_KEY, JSON.stringify(next));
+  if (typeof window !== "undefined") writeStored(SAVE_POINTS_KEY, next, "saving a recovery checkpoint");
   return next;
 }
 
 export function deleteSavePoint(id: string): SavePoint[] {
   const next = loadSavePoints().filter((point) => point.id !== id);
-  if (canStore()) localStorage.setItem(SAVE_POINTS_KEY, JSON.stringify(next));
+  if (typeof window !== "undefined") writeStored(SAVE_POINTS_KEY, next, "deleting a recovery checkpoint");
   return next;
 }
 
 export function loadJobInbox(): JobPostingSnapshot[] {
-  if (!canStore()) return [];
   return parseStored(JOB_INBOX_KEY, JobPostingSnapshotSchema.array(), []);
 }
 
 /** Snapshots are append-only: callers can add a revision, never mutate one in place. */
 export function saveJobInbox(jobs: readonly JobPostingSnapshot[]): void {
-  if (!canStore()) return;
+  if (typeof window === "undefined") return;
   JobPostingSnapshotSchema.array().parse(jobs);
-  localStorage.setItem(JOB_INBOX_KEY, JSON.stringify(jobs));
+  writeStored(JOB_INBOX_KEY, jobs, "saving the job inbox");
 }
 
 export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
@@ -188,27 +221,25 @@ export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
 }
 
 export function loadApplications(): ApplicationRecord[] {
-  if (!canStore()) return [];
   return parseStored(APPLICATIONS_KEY, ApplicationRecordSchema.array(), []);
 }
 
 export function saveApplications(records: readonly ApplicationRecord[]): void {
-  if (!canStore()) return;
-  localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(ApplicationRecordSchema.array().parse(records)));
+  if (typeof window === "undefined") return;
+  writeStored(APPLICATIONS_KEY, ApplicationRecordSchema.array().parse(records), "saving application records");
 }
 
 export async function clearAllData(): Promise<void> {
-  if (!canStore()) return;
-  localStorage.removeItem(PROFILE_KEY);
-  localStorage.removeItem(HISTORY_KEY);
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(SAVE_POINTS_KEY);
-  localStorage.removeItem(JOB_INBOX_KEY);
-  localStorage.removeItem(APPLICATIONS_KEY);
-  localStorage.removeItem("rf:career-last-backup");
-  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-    const key = localStorage.key(index); if (key?.endsWith(":quarantine")) localStorage.removeItem(key);
-  }
+  if (typeof window === "undefined") return;
+  const storage = requireStorage("erasing local data");
+  try {
+    storage.removeItem(PROFILE_KEY); storage.removeItem(HISTORY_KEY); storage.removeItem(SESSION_KEY);
+    storage.removeItem(SAVE_POINTS_KEY); storage.removeItem(JOB_INBOX_KEY); storage.removeItem(APPLICATIONS_KEY);
+    storage.removeItem(CAREER_BACKUP_MARKER_KEY);
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index); if (key?.endsWith(":quarantine")) storage.removeItem(key);
+    }
+  } catch (error) { throw new LocalPersistenceError("erasing local data", { cause: error }); }
   await deleteCareerLedger();
   window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
 }
