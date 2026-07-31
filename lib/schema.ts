@@ -316,6 +316,10 @@ export function tailorResultJsonSchema(): Record<string, unknown> {
     delete n.maximum;
     delete n.exclusiveMinimum;
     delete n.exclusiveMaximum;
+    // Anthropic structured outputs reject array cardinality keywords even
+    // though Zod must retain them for post-response workload limits.
+    delete n.minItems;
+    delete n.maxItems;
     for (const v of Object.values(n)) strip(v);
   };
   strip(schema);
