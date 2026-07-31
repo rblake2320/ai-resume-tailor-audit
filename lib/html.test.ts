@@ -71,6 +71,13 @@ describe("htmlToText", () => {
       .toBe("Visible");
   });
 
+  it("ends every dropped region only at that region's own closing tag", () => {
+    for (const tag of ["script", "style", "noscript", "svg", "iframe", "nav", "footer", "aside", "form", "head", "title", "template"]) {
+      const text = htmlToText(`<section><${tag}>junk</section>PAYLOAD</${tag}><p>Visible</p>`);
+      expect(text, tag).toBe("Visible");
+    }
+  });
+
   it("treats title as discarded RCDATA while retaining visible textarea text", () => {
     expect(htmlToText(`<title>Hidden </body> metadata</title><textarea>Visible &amp; literal </div> text</textarea>`))
       .toBe("Visible & literal </div> text");
