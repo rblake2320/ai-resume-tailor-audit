@@ -1,6 +1,7 @@
 import type { TailorResult } from "./schema";
 import type { PrivacyMode } from "./pii";
 import { JobPostingSnapshotSchema, type JobPostingSnapshot } from "./schema";
+import type { ApplicationRecord } from "./applications";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -93,6 +94,7 @@ const SESSION_KEY = "art:session";
 const SAVE_POINTS_KEY = "art:save-points";
 const SAVE_POINTS_LIMIT = 12;
 const JOB_INBOX_KEY = "art:job-inbox:v1";
+const APPLICATIONS_KEY = "art:applications:v1";
 
 export function loadSession(): Partial<Session> | null {
   if (!canStore()) return null;
@@ -171,6 +173,17 @@ export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
   return next;
 }
 
+export function loadApplications(): ApplicationRecord[] {
+  if (!canStore()) return [];
+  try { return JSON.parse(localStorage.getItem(APPLICATIONS_KEY) ?? "[]") as ApplicationRecord[]; }
+  catch { return []; }
+}
+
+export function saveApplications(records: readonly ApplicationRecord[]): void {
+  if (!canStore()) return;
+  localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(records));
+}
+
 export function clearAllData(): void {
   if (!canStore()) return;
   localStorage.removeItem(PROFILE_KEY);
@@ -178,5 +191,6 @@ export function clearAllData(): void {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(SAVE_POINTS_KEY);
   localStorage.removeItem(JOB_INBOX_KEY);
+  localStorage.removeItem(APPLICATIONS_KEY);
   window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
 }
