@@ -49,6 +49,12 @@
           "400": {
             "$ref": "#/components/responses/Error"
           },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
           "422": {
             "$ref": "#/components/responses/Error"
           }
@@ -133,6 +139,12 @@
           "400": {
             "$ref": "#/components/responses/Error"
           },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
           "500": {
             "$ref": "#/components/responses/Error"
           }
@@ -173,6 +185,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -210,6 +228,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -249,6 +273,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -286,6 +316,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -325,6 +361,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -362,6 +404,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -401,6 +449,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -438,6 +492,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -477,6 +537,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -514,6 +580,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -553,6 +625,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -590,6 +668,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -629,6 +713,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -666,6 +756,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -742,7 +838,8 @@
           "url": {
             "type": "string",
             "format": "uri",
-            "pattern": "^https?://"
+            "pattern": "^https?://",
+            "maxLength": 2048
           }
         }
       },
@@ -770,17 +867,21 @@
         "properties": {
           "resume": {
             "type": "string",
-            "minLength": 200
+            "minLength": 200,
+            "maxLength": 100000
           },
           "jobDescription": {
             "type": "string",
-            "minLength": 100
+            "minLength": 100,
+            "maxLength": 100000
           },
           "jobTitle": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 200
           },
           "company": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 200
           },
           "emphasis": {
             "type": "string",

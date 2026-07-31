@@ -23,7 +23,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 ## Features
 
 - **Master profile** — paste or upload (PDF / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
-- **Job by URL** — paste a careers-page link and the posting is fetched and extracted server-side (with a graceful fallback to paste for login-walled sites like LinkedIn).
+- **Job by URL** — paste a public careers-page link and a bounded HTML response is fetched and extracted server-side. LinkedIn and Indeed automation is rejected; paste those postings manually.
 - **Instant keyword scan** — deterministic, client-side coverage check the moment both fields are filled. Transparent baseline before the AI pass.
 - **AI tailoring** — streaming analysis you can watch live, then: before/after match scores with rationale, classified change log, matched / honestly-added / not-added keywords, gap analysis with concrete advice, and ATS formatting checks.
 - **Cover letter** — specific to your evidence and the posting, never generic filler.
@@ -91,7 +91,8 @@ lib/
 Design decisions worth knowing:
 
 - **No cloud profile by default.** Working profile/history remain client-side and the career ledger is encrypted in IndexedDB. Agent automation has a separate durable server-side store and bearer-token boundary; it is not an internet-ready multi-tenant identity system.
-- **Structured outputs** (`output_config.format` with a strict JSON schema derived from Zod) guarantee a parseable result; the same Zod schema re-validates server-side.
+- **Bounded ingress and fetching.** Tailoring, agent, connector, and résumé-upload bodies have pre-buffer byte limits and field/file maxima. Job-page reads enforce a timeout, redirect cap, standard web ports, HTML content type, prohibited-host policy on every redirect, and a 1 MB streaming limit before extraction.
+- **Structured outputs** (`output_config.format` with a strict JSON schema derived from Zod) request a parseable result; the same Zod schema re-validates server-side.
 - **Streaming NDJSON** from the tailor route: live thinking summaries (`thinking: adaptive, display: summarized`), progress ticks, then the final validated result.
 - **Fonts are npm-installed** (Fraunces, Instrument Sans, JetBrains Mono via Fontsource) — builds are hermetic, no network font fetch.
 

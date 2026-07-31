@@ -2,15 +2,42 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { extractTitle, htmlToText } from "@/lib/html";
 import { assertPublicUrl, safeFetch, SsrfError } from "@/lib/ssrf";
+import { HttpLimitError, readJsonBody, readResponseText } from "@/lib/http-limits";
 
 export const runtime = "nodejs";
 
-const BodySchema = z.object({ url: z.url() });
+const BodySchema = z.strictObject({ url: z.url().max(2_048) });
+export const FETCH_JOB_BODY_MAX_BYTES = 4_096;
+export const FETCH_JOB_RESPONSE_MAX_BYTES = 1_000_000;
+
+const PROHIBITED_JOB_DOMAINS = ["linkedin.com", "linkedin.cn", "indeed.com", "indeed.co.uk"];
+export function assertPermittedJobUrl(url: URL): void {
+  const host = url.hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
+  if (PROHIBITED_JOB_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+    throw new SsrfError("prohibited_job_host");
+  }
+}
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const body = BodySchema.safeParse(await req.json().catch(() => null));
+  let rawBody: unknown;
+  try {
+    rawBody = await readJsonBody(req, FETCH_JOB_BODY_MAX_BYTES);
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Invalid request body." },
+      { status: error instanceof HttpLimitError ? error.status : 400 },
+    );
+  }
+  const body = BodySchema.safeParse(rawBody);
   if (!body.success) {
     return Response.json({ error: "Send a valid job posting URL." }, { status: 400 });
+  }
+  try { assertPermittedJobUrl(new URL(body.data.url)); } catch (error) {
+    if (!(error instanceof SsrfError) || error.reason !== "prohibited_job_host") throw error;
+    return Response.json(
+      { error: "Automated fetching from LinkedIn and Indeed is not supported. Paste the posting text instead." },
+      { status: 400 },
+    );
   }
 
   // Validate scheme + resolve DNS and reject loopback/private/link-local/
@@ -37,7 +64,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         Accept: "text/html,application/xhtml+xml",
       },
       signal: AbortSignal.timeout(15_000),
-    });
+    }, 5, assertPermittedJobUrl);
 
     if (!res.ok) {
       return Response.json(
@@ -46,7 +73,16 @@ export async function POST(req: NextRequest): Promise<Response> {
       );
     }
 
-    const html = await res.text();
+    const contentType = res.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+    if (contentType !== "text/html" && contentType !== "application/xhtml+xml") {
+      await res.body?.cancel("unsupported content type").catch(() => undefined);
+      return Response.json(
+        { error: "That URL did not return an HTML job posting. Paste the posting text instead." },
+        { status: 422 },
+      );
+    }
+
+    const html = await readResponseText(res, FETCH_JOB_RESPONSE_MAX_BYTES);
     const text = htmlToText(html);
     if (text.length < 200) {
       return Response.json(
@@ -56,7 +92,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     return Response.json({ text: text.slice(0, 50_000), title: extractTitle(html) });
-  } catch {
+  } catch (error) {
+    if (error instanceof HttpLimitError) {
+      return Response.json({ error: "That page is too large to fetch safely. Paste the posting text instead." }, { status: 422 });
+    }
     return Response.json(
       { error: "Couldn't reach that URL. Check it, or paste the posting text instead." },
       { status: 422 },

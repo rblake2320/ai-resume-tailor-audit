@@ -9,10 +9,10 @@ Resume Foundry is a local-first résumé-tailoring and job-search reference app.
 
 ## Operations
 
-- `POST /api/fetch-job` with `{ "url": "https://..." }` fetches a public job page. This reaches the open internet and treats returned text as untrusted.
+- `POST /api/fetch-job` with `{ "url": "https://..." }` fetches a bounded public HTML job page. This reaches the open internet and treats returned text as untrusted. LinkedIn and Indeed are explicitly excluded; paste those postings manually.
 - `POST /api/parse-resume` as multipart form data with field `file` parses PDF, Markdown, or plain text.
-- `POST /api/tailor` with `{ resume, jobDescription, jobTitle?, company?, emphasis? }` streams NDJSON events: `progress`, `result`, or `error`.
-- `POST /api/agent/{operation}` exposes the fourteen operations listed in OpenAPI. Send `Authorization: Bearer $RESUME_FOUNDRY_AGENT_API_TOKEN`.
+- `POST /api/tailor` with `{ resume, jobDescription, jobTitle?, company?, emphasis? }` accepts at most 256,000 request bytes (with 100,000-character maxima for each main text field) and streams NDJSON events: `progress`, `result`, or `error`.
+- `POST /api/agent/{operation}` accepts at most 512,000 request bytes and exposes the fourteen operations listed in OpenAPI. Send `Authorization: Bearer $RESUME_FOUNDRY_AGENT_API_TOKEN`.
 - `GET /api/agent/audit` returns the persisted allowed/denied audit trail without raw request data.
 - `npm run mcp` launches the stdio MCP server. It calls the identical `executeAgentOperation` policy boundary.
 
