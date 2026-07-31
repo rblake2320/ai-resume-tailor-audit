@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { protectPii, restorePii } from "./pii";
 
 describe("client-side PII protection", () => {
+  afterEach(() => vi.restoreAllMocks());
   it("replaces common contact data before transmission and restores it afterward", () => {
     const source = "Jane Doe · jane@example.com · (512) 555-0199 · https://linkedin.com/in/jane";
     const protectedValue = protectPii(source);
@@ -62,6 +63,52 @@ describe("client-side PII protection", () => {
 
   it("does not guess personal names when the caller supplies none", () => {
     const source = "Jane Doe led delivery.";
+    expect(protectPii(source)).toEqual({ text: source, matches: [] });
+  });
+
+  it("masks canonically equivalent Unicode forms and restores the original text", () => {
+    const source = "JOSE\u0301 NU\u0301N\u0303EZ led delivery.";
+    const protectedValue = protectPii(source, { candidateNames: ["José Núñez"] });
+    expect(protectedValue.matches.map((match) => match.kind)).toEqual(["candidate name"]);
+    expect(protectedValue.text).not.toContain("JOSE\u0301");
+    expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
+  });
+
+  it.each(["555\u00a0123\u00a04567", "123\u00a045\u00a06789"])(
+    "protects non-breaking-space-delimited personal data %s",
+    (value) => {
+      const protectedValue = protectPii(value);
+      expect(protectedValue.matches).toHaveLength(1);
+      expect(protectedValue.text).not.toContain(value);
+      expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(value);
+    },
+  );
+
+  it("uses collision-resistant tokens and never restores model-added repetitions", () => {
+    const source = "Jane Doe [[RF_CANDIDATE_NAME_1]]";
+    const protectedValue = protectPii(source, { candidateNames: ["Jane Doe"] });
+    expect(protectedValue.text).toContain("[[RF_CANDIDATE_NAME_1]]");
+    expect(protectedValue.matches[0].token).not.toBe("[[RF_CANDIDATE_NAME_1]]");
+    expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
+
+    const repeatedByModel = `${protectedValue.text} ${protectedValue.matches[0].token}`;
+    expect(restorePii(repeatedByModel, protectedValue.matches)).toBe(`${source} ${protectedValue.matches[0].token}`);
+  });
+
+  it("regenerates a random prefix that already occurs in the source", () => {
+    const random = vi.spyOn(globalThis.crypto, "getRandomValues");
+    random.mockImplementationOnce((array) => { (array as Uint8Array).fill(0); return array; });
+    random.mockImplementationOnce((array) => { (array as Uint8Array).fill(1); return array; });
+    const collidingLiteral = `[[RF_${"00".repeat(16)}_CANDIDATE_NAME_1]]`;
+    const source = `${collidingLiteral} Jane Doe`;
+    const protectedValue = protectPii(source, { candidateNames: ["Jane Doe"] });
+    expect(protectedValue.matches[0].token).toContain("01".repeat(16));
+    expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
+    expect(random).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not classify arbitrary project or employer URLs as personal profiles", () => {
+    const source = "https://docs.example.com/project/runbook";
     expect(protectPii(source)).toEqual({ text: source, matches: [] });
   });
 });

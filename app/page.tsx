@@ -824,9 +824,9 @@ export default function Home() {
               <ToolButton
                 onClick={async () => {
                   if (confirm("Delete your saved profile and all history from this browser?")) {
-                    try {
-                      await clearAllData(); setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo("");
-                    } catch (failure) { reportPersistenceFailure(failure); }
+                    try { await clearAllData(); }
+                    catch (failure) { reportPersistenceFailure(failure); }
+                    finally { setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo(""); }
                   }
                 }}
               >

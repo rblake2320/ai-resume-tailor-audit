@@ -4,6 +4,7 @@ export interface PiiMatch {
   kind: "candidate name" | "email" | "phone" | "web profile" | "street address" | "government identifier";
   value: string;
   token: string;
+  occurrences: number;
 }
 
 const PATTERNS: Array<{ kind: PiiMatch["kind"]; pattern: RegExp }> = [
@@ -11,16 +12,18 @@ const PATTERNS: Array<{ kind: PiiMatch["kind"]; pattern: RegExp }> = [
   // An explicit + prefix is the conservative signal for international forms.
   // The digit count follows E.164's broad 8..15 digit envelope without
   // claiming that every national numbering plan is understood here.
-  { kind: "phone", pattern: /(?<![\p{L}\p{N}])\+\d(?:[ .()\-]*\d){7,14}(?!\d)/gu },
+  { kind: "phone", pattern: /(?<![\p{L}\p{N}\p{M}])\+\d(?:[.()\-\p{Z}\s]*\d){7,14}(?!\d)/gu },
   // US/NANP-shaped values, including compact and parenthesized forms commonly
   // pasted from resumes. Exact ten-digit delimiting avoids matching inside a
   // longer account or card number.
-  { kind: "phone", pattern: /(?<![\p{L}\p{N}])(?:\+?1[ .-]?)?(?:\(\d{3}\)|\d{3})[ .-]?\d{3}[ .-]?\d{4}(?![\p{L}\p{N}])/gu },
+  { kind: "phone", pattern: /(?<![\p{L}\p{N}\p{M}])(?:\+?1[.\-\p{Z}\s]?)?(?:\(\d{3}\)|\d{3})[.\-\p{Z}\s]?\d{3}[.\-\p{Z}\s]?\d{4}(?![\p{L}\p{N}\p{M}])/gu },
   // Delimit the complete value so dates and longer account/card numbers do not
   // produce a partial match. Compact identifiers can still collide with an
   // unrelated nine-digit identifier; review mode exists for that ambiguity.
-  { kind: "government identifier", pattern: /(?<![\p{L}\p{N}])(?:\d{3}-\d{2}-\d{4}|\d{3} \d{2} \d{4}|\d{9})(?![\p{L}\p{N}])/gu },
-  { kind: "web profile", pattern: /(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in|github\.com|gitlab\.com|[A-Z0-9.-]+\.[A-Z]{2,})\/[^\s)\]}]+/gi },
+  { kind: "government identifier", pattern: /(?<![\p{L}\p{N}\p{M}])(?:\d{3}-\d{2}-\d{4}|\d{3}[\p{Z}\s]\d{2}[\p{Z}\s]\d{4}|\d{9})(?![\p{L}\p{N}\p{M}])/gu },
+  // Infer only well-known profile hosts. Generic URLs may identify an
+  // employer, project, portfolio, or documentation page.
+  { kind: "web profile", pattern: /(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in|github\.com|gitlab\.com)\/[^\s)\]}]+/gi },
   { kind: "street address", pattern: /\b\d{1,6}\s+[A-Z0-9.' -]{2,50}\s(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way)\b[.,]?/gi },
 ];
 
@@ -41,12 +44,14 @@ function candidateNamePatterns(names: readonly string[]): RegExp[] {
   const unique = new Set<string>();
   const patterns: RegExp[] = [];
   for (const rawName of names) {
-    const name = rawName.trim().replace(/\s+/g, " ");
-    const identity = name.toLocaleLowerCase();
+    const name = rawName.trim().replace(/[\p{Z}\s]+/gu, " ").normalize("NFC");
+    const identity = name.toLocaleLowerCase().normalize("NFC");
     if (name.length < 2 || name.length > 120 || !/\p{L}/u.test(name) || unique.has(identity)) continue;
     unique.add(identity);
-    const body = name.split(" ").map(escapePattern).join("\\s+");
-    patterns.push(new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, "giu"));
+    for (const form of new Set([name.normalize("NFC"), name.normalize("NFD")])) {
+      const body = form.split(" ").map(escapePattern).join("[\\p{Z}\\s]+");
+      patterns.push(new RegExp(`(?<![\\p{L}\\p{N}\\p{M}])${body}(?![\\p{L}\\p{N}\\p{M}])`, "giu"));
+    }
   }
   return patterns;
 }
@@ -54,13 +59,14 @@ function candidateNamePatterns(names: readonly string[]): RegExp[] {
 export function protectPii(text: string, options: ProtectPiiOptions = {}): { text: string; matches: PiiMatch[] } {
   let protectedText = text;
   const matches: PiiMatch[] = [];
+  const tokenPrefix = randomTokenPrefix(text);
 
   const replaceMatches = (kind: PiiMatch["kind"], pattern: RegExp) => {
     protectedText = protectedText.replace(pattern, (value) => {
       const existing = matches.find((match) => match.value === value && match.kind === kind);
-      if (existing) return existing.token;
-      const token = `[[RF_${kind.toUpperCase().replace(/\s+/g, "_")}_${matches.length + 1}]]`;
-      matches.push({ kind, value, token });
+      if (existing) { existing.occurrences += 1; return existing.token; }
+      const token = `[[RF_${tokenPrefix}_${kind.toUpperCase().replace(/\s+/g, "_")}_${matches.length + 1}]]`;
+      matches.push({ kind, value, token, occurrences: 1 });
       return token;
     });
   };
@@ -74,17 +80,36 @@ export function protectPii(text: string, options: ProtectPiiOptions = {}): { tex
   return { text: protectedText, matches };
 }
 
+function randomTokenPrefix(source: string): string {
+  const cryptoProvider = globalThis.crypto;
+  if (!cryptoProvider?.getRandomValues) throw new Error("Secure random values are required for PII protection.");
+  for (;;) {
+    const bytes = cryptoProvider.getRandomValues(new Uint8Array(16));
+    const prefix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    if (!source.includes(`[[RF_${prefix}_`)) return prefix;
+  }
+}
+
 export function restorePii<T>(value: T, matches: PiiMatch[]): T {
-  if (typeof value === "string") {
-    let restored = value as string;
-    for (const match of matches) restored = restored.split(match.token).join(match.value);
-    return restored as T;
-  }
-  if (Array.isArray(value)) return value.map((item) => restorePii(item, matches)) as T;
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, restorePii(item, matches)]),
-    ) as T;
-  }
-  return value;
+  const remaining = new Map(matches.map((match) => [match.token, match.occurrences]));
+  const restore = (item: unknown): unknown => {
+    if (typeof item === "string") {
+      let restored = item;
+      for (const match of matches) {
+        restored = restored.replaceAll(match.token, () => {
+          const available = remaining.get(match.token) ?? 0;
+          if (available <= 0) return match.token;
+          remaining.set(match.token, available - 1);
+          return match.value;
+        });
+      }
+      return restored;
+    }
+    if (Array.isArray(item)) return item.map(restore);
+    if (item && typeof item === "object") {
+      return Object.fromEntries(Object.entries(item).map(([key, nested]) => [key, restore(nested)]));
+    }
+    return item;
+  };
+  return restore(value) as T;
 }
