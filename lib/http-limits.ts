@@ -8,12 +8,7 @@ export class HttpLimitError extends Error {
   }
 }
 
-export async function readJsonBody(request: Request, maxBytes: number): Promise<unknown> {
-  const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
-  if (contentType !== "application/json") {
-    throw new HttpLimitError(415, "Content-Type must be application/json.");
-  }
-
+export async function readRequestBytes(request: Request, maxBytes: number): Promise<Uint8Array> {
   const declaredLength = request.headers.get("content-length");
   if (declaredLength !== null) {
     const length = Number(declaredLength);
@@ -48,9 +43,18 @@ export async function readJsonBody(request: Request, maxBytes: number): Promise<
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return bytes;
+}
+
+export async function readJsonBody(request: Request, maxBytes: number): Promise<unknown> {
+  const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "application/json") {
+    throw new HttpLimitError(415, "Content-Type must be application/json.");
+  }
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  } catch {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readRequestBytes(request, maxBytes)));
+  } catch (error) {
+    if (error instanceof HttpLimitError) throw error;
     throw new HttpLimitError(400, "Invalid JSON request body.");
   }
 }

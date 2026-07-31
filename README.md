@@ -91,7 +91,7 @@ lib/
 Design decisions worth knowing:
 
 - **No cloud profile by default.** Working profile/history remain client-side and the career ledger is encrypted in IndexedDB. Agent automation has a separate durable server-side store and bearer-token boundary; it is not an internet-ready multi-tenant identity system.
-- **Bounded ingress and fetching.** Tailoring and agent JSON bodies have route-level byte limits and field maxima. Job-page reads enforce a timeout, redirect cap, standard web ports, HTML content type, and a 1 MB streaming limit before extraction.
+- **Bounded ingress and fetching.** Tailoring, agent, connector, and résumé-upload bodies have pre-buffer byte limits and field/file maxima. Job-page reads enforce a timeout, redirect cap, standard web ports, HTML content type, prohibited-host policy on every redirect, and a 1 MB streaming limit before extraction.
 - **Structured outputs** (`output_config.format` with a strict JSON schema derived from Zod) request a parseable result; the same Zod schema re-validates server-side.
 - **Streaming NDJSON** from the tailor route: live thinking summaries (`thinking: adaptive, display: summarized`), progress ticks, then the final validated result.
 - **Fonts are npm-installed** (Fraunces, Instrument Sans, JetBrains Mono via Fontsource) — builds are hermetic, no network font fetch.

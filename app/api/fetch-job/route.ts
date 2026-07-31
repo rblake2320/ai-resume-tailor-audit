@@ -10,10 +10,12 @@ const BodySchema = z.strictObject({ url: z.url().max(2_048) });
 export const FETCH_JOB_BODY_MAX_BYTES = 4_096;
 export const FETCH_JOB_RESPONSE_MAX_BYTES = 1_000_000;
 
-function prohibitedJobHost(raw: string): boolean {
-  const host = new URL(raw).hostname.toLowerCase().replace(/^www\./, "");
-  return host === "linkedin.com" || host.endsWith(".linkedin.com")
-    || host === "indeed.com" || host.endsWith(".indeed.com");
+const PROHIBITED_JOB_DOMAINS = ["linkedin.com", "linkedin.cn", "indeed.com", "indeed.co.uk"];
+export function assertPermittedJobUrl(url: URL): void {
+  const host = url.hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
+  if (PROHIBITED_JOB_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+    throw new SsrfError("prohibited_job_host");
+  }
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -30,7 +32,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!body.success) {
     return Response.json({ error: "Send a valid job posting URL." }, { status: 400 });
   }
-  if (prohibitedJobHost(body.data.url)) {
+  try { assertPermittedJobUrl(new URL(body.data.url)); } catch (error) {
+    if (!(error instanceof SsrfError) || error.reason !== "prohibited_job_host") throw error;
     return Response.json(
       { error: "Automated fetching from LinkedIn and Indeed is not supported. Paste the posting text instead." },
       { status: 400 },
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         Accept: "text/html,application/xhtml+xml",
       },
       signal: AbortSignal.timeout(15_000),
-    });
+    }, 5, assertPermittedJobUrl);
 
     if (!res.ok) {
       return Response.json(

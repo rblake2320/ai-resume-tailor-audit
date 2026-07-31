@@ -1,12 +1,27 @@
 import { NextRequest } from "next/server";
 import { extractText } from "unpdf";
+import { HttpLimitError, readRequestBytes } from "@/lib/http-limits";
 
 export const runtime = "nodejs";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+export const PARSE_RESUME_BODY_MAX_BYTES = MAX_BYTES + 64 * 1024;
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const form = await req.formData().catch(() => null);
+  let form: FormData | null = null;
+  try {
+    const contentType = req.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("multipart/form-data;")) {
+      return Response.json({ error: "Content-Type must be multipart/form-data." }, { status: 415 });
+    }
+    const bytes = await readRequestBytes(req, PARSE_RESUME_BODY_MAX_BYTES);
+    form = await new Request(req.url, { method: "POST", headers: { "content-type": contentType }, body: Uint8Array.from(bytes).buffer }).formData();
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof HttpLimitError ? error.message : "Invalid multipart form body." },
+      { status: error instanceof HttpLimitError ? error.status : 400 },
+    );
+  }
   const file = form?.get("file");
   if (!(file instanceof File)) {
     return Response.json({ error: "Upload a file in the 'file' field." }, { status: 400 });

@@ -134,9 +134,13 @@ export async function safeFetch(
   raw: string,
   init: RequestInit,
   maxRedirects = 5,
+  validateUrl?: (url: URL) => void,
 ): Promise<Response> {
   let current = raw;
   for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    let candidate: URL;
+    try { candidate = new URL(current); } catch { throw new SsrfError("invalid_url"); }
+    validateUrl?.(candidate);
     const { url } = await assertPublicUrl(current);
     const res = await fetch(url, { ...init, redirect: "manual" });
     if (res.status >= 300 && res.status < 400) {

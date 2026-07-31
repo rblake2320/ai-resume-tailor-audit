@@ -35,13 +35,24 @@ describe("htmlToText", () => {
       .toBe("Role");
     expect(htmlToText("<p hidden>secret</p><div style=display:none>injection</div><input hidden><p>Visible</p>"))
       .toBe("Visible");
+    for (const html of [
+      "<script/>PAYLOAD</script><p>Visible</p>",
+      "<script src=a.js />PAYLOAD</script><p>Visible</p>",
+      "<style/>PAYLOAD</style><p>Visible</p>",
+      "<script>PAYLOAD</ script><p>also hidden</p>",
+      "<div style=display:none>A<div></div>PAYLOAD</div><p>Visible</p>",
+      "<p hidden>A<p></p>PAYLOAD</p><p>Visible</p>",
+    ]) {
+      expect(htmlToText(html)).not.toContain("PAYLOAD");
+    }
   });
 
-  it("processes adversarial large input in bounded time", () => {
-    const html = "<div>ordinary job text</div>".repeat(50_000);
-    const started = performance.now();
-    expect(htmlToText(html)).toContain("ordinary job text");
-    expect(performance.now() - started).toBeLessThan(2_000);
+  it.each([
+    ["unterminated angle brackets", "<".repeat(200_000)],
+    ["mismatched hidden tags", "<svg></a>".repeat(111_000)],
+  ])("processes %s in linear bounded time", (_name, html) => {
+    const started = performance.now(); htmlToText(html);
+    expect(performance.now() - started).toBeLessThan(1_500);
   });
 });
 

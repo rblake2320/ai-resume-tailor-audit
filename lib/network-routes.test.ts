@@ -1,12 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { POST as tailorPost, TAILOR_BODY_MAX_BYTES } from "../app/api/tailor/route";
 import { POST as agentPost, AGENT_BODY_MAX_BYTES } from "../app/api/agent/[operation]/route";
-import { POST as fetchJobPost } from "../app/api/fetch-job/route";
-import { POST as disconnectPost } from "../app/api/connections/google/disconnect/route";
+import { assertPermittedJobUrl, POST as fetchJobPost } from "../app/api/fetch-job/route";
+import { isSameOriginMutation, POST as disconnectPost } from "../app/api/connections/google/disconnect/route";
+import { JOB_IMPORT_BODY_MAX_BYTES, POST as importJobsPost } from "../app/api/jobs/import/route";
+import { PARSE_RESUME_BODY_MAX_BYTES, POST as parseResumePost } from "../app/api/parse-resume/route";
+import { safeFetch, SsrfError } from "./ssrf";
 
 const originalApiKey = process.env.ANTHROPIC_API_KEY;
 const originalAgentToken = process.env.RESUME_FOUNDRY_AGENT_API_TOKEN;
 afterEach(() => {
+  vi.unstubAllGlobals();
   if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = originalApiKey;
   if (originalAgentToken === undefined) delete process.env.RESUME_FOUNDRY_AGENT_API_TOKEN; else process.env.RESUME_FOUNDRY_AGENT_API_TOKEN = originalAgentToken;
 });
@@ -28,8 +32,22 @@ describe("network route boundaries", () => {
     expect(response.status).toBe(413);
   });
 
+  it("rejects oversized connector and multipart bodies before parsing", async () => {
+    const jobs = await importJobsPost(new Request("https://app.test/api/jobs/import", {
+      method: "POST", headers: { "content-type": "application/json", "content-length": String(JOB_IMPORT_BODY_MAX_BYTES + 1) }, body: "{}",
+    }) as never);
+    expect(jobs.status).toBe(413);
+    const resume = await parseResumePost(new Request("https://app.test/api/parse-resume", {
+      method: "POST", headers: { "content-type": "multipart/form-data; boundary=x", "content-length": String(PARSE_RESUME_BODY_MAX_BYTES + 1) }, body: "--x--",
+    }) as never);
+    expect(resume.status).toBe(413);
+  });
+
   it("rejects LinkedIn and Indeed without making a network request", async () => {
-    for (const url of ["https://www.linkedin.com/jobs/view/1", "https://jobs.indeed.com/viewjob?jk=1"]) {
+    for (const url of [
+      "https://www.linkedin.com/jobs/view/1", "https://jobs.indeed.com/viewjob?jk=1",
+      "https://linkedin.com./jobs/view/1", "https://linkedin.cn/jobs/view/1", "https://indeed.co.uk/viewjob?jk=1",
+    ]) {
       const response = await fetchJobPost(new Request("https://app.test/api/fetch-job", {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url }),
       }) as never);
@@ -38,10 +56,27 @@ describe("network route boundaries", () => {
     }
   });
 
+  it("reapplies prohibited-host policy to every redirect", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
+      status: 302, headers: { location: "https://www.linkedin.com/jobs/view/1" },
+    })));
+    await expect(safeFetch("https://8.8.8.8/jobs", {}, 5, assertPermittedJobUrl))
+      .rejects.toMatchObject({ reason: "prohibited_job_host" } satisfies Partial<SsrfError>);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects cross-origin Google disconnect requests", async () => {
     const response = await disconnectPost(new Request("https://app.test/api/connections/google/disconnect", {
       method: "POST", headers: { origin: "https://attacker.test", "sec-fetch-site": "cross-site" },
     }));
     expect(response.status).toBe(403);
+  });
+
+  it("accepts only explicit same-origin disconnects, including configured TLS proxy origin", () => {
+    expect(isSameOriginMutation(new Request("https://app.test/api/x", { method: "POST" }), {})).toBe(false);
+    expect(isSameOriginMutation(new Request("https://app.test/api/x", { method: "POST", headers: { origin: "https://app.test", "sec-fetch-site": "same-origin" } }), {})).toBe(true);
+    const proxied = new Request("http://internal:3000/api/x", { method: "POST", headers: { origin: "https://resume.example", "sec-fetch-site": "same-origin" } });
+    expect(isSameOriginMutation(proxied, { RESUME_FOUNDRY_PUBLIC_ORIGIN: "https://resume.example" })).toBe(true);
+    expect(isSameOriginMutation(proxied, { RESUME_FOUNDRY_PUBLIC_ORIGIN: "not a URL" })).toBe(false);
   });
 });
