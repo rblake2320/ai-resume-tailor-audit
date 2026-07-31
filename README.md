@@ -30,7 +30,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 - **Exports** — DOCX (ATS-safe single column), Markdown, plain text, print/PDF, one-click copy.
 - **History** — past runs stored locally, reloadable, deletable.
 - **Career Ledger** — append-only, correction-aware evidence captured across school, work, projects, volunteering, and life transitions; encrypted at rest with portable backup and age-aware privacy controls.
-- **Career-path intelligence foundation** — tested BLS/O*NET adapters, provenance schemas, uncertainty-aware classification, and evidence-gap-linked training logic. Product ingestion/UI wiring remains in progress.
+- **Career-path evidence workspace** — server-side O*NET lookup, explicitly labeled BLS observational-series lookup, current occupational-projection snapshot import, provenance-preserving trend classification, and training suggestions limited to explicit evidence gaps. O*NET requires deployment credentials; projection imports remain user/operator supplied until an authoritative projections connector is added.
 - **Application operating system** — job inbox, immutable application packets, pipeline tracking, reminders, interview preparation, approved handoffs, official ATS connectors, and Gmail draft creation.
 - **Agent interfaces** — bearer-authenticated HTTP/OpenAPI operations and a stdio MCP server share one permission, approval, rate-limit, persistence, and audit boundary.
 
@@ -46,7 +46,7 @@ npm run dev                  # http://localhost:3000
 
 Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. `ANTHROPIC_MODEL` remains a lower-priority compatibility fallback.
 
-The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials.
+The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials. Career-path O*NET v2 lookup reads server-only `ONET_API_KEY`; optional `BLS_API_KEY` increases the public BLS API quota. The BLS time-series endpoint is not treated as an occupational-projections feed. Pasted projection and training catalogs are labeled user-supplied/unverified rather than provider-verified.
 
 > The tailor endpoint enables Anthropic's server-side refusal fallback (`fallbacks: "default"`) so a rare safety-classifier decline re-routes automatically instead of failing the request.
 
@@ -63,6 +63,8 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 | `npm run mcp` | Launch the stdio MCP tool server |
 
 CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
+
+The labor-market route contracts and deployment boundaries are documented in [`docs/LABOR_MARKET_API.md`](docs/LABOR_MARKET_API.md).
 
 ## Architecture
 
@@ -85,6 +87,8 @@ lib/
   docx-export.ts           # md → ATS-safe DOCX (docx package)
   storage.ts               # browser-local working profile + run history
   career-ledger.ts         # encrypted lifelong evidence ledger + portable recovery
+  labor-market.ts          # O*NET/BLS adapters, projection provenance + path logic
+  labor-market-api.ts      # bounded server-only provider boundary
   agent-service.ts         # shared HTTP/MCP policy, approval, persistence, and audit boundary
 ```
 

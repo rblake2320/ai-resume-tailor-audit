@@ -1,6 +1,6 @@
 # Public endpoint rate limits
 
-Resume Foundry bounds the unauthenticated work performed by its four browser-facing mutation endpoints. The defaults are fixed windows:
+Resume Foundry bounds the unauthenticated work performed by its browser-facing mutation endpoints. The defaults are fixed windows:
 
 | Scope | Default |
 |---|---:|
@@ -8,6 +8,8 @@ Resume Foundry bounds the unauthenticated work performed by its four browser-fac
 | `fetch-job` | 60 requests/minute |
 | `jobs-import` | 60 requests/minute |
 | `parse-resume` | 30 requests/minute |
+| `labor-market-onet` | 30 requests/minute |
+| `labor-market-bls-series` | 30 requests/minute |
 
 Production requires an absolute `RESUME_FOUNDRY_RATE_LIMIT_DIR` on a private durable local volume shared by every Node worker. Admission uses atomic exclusive-create slot files, so separate OS processes cannot spend the same slot. Missing, unwritable, or invalid production configuration fails closed with `503 RATE_LIMIT_UNAVAILABLE`; exhausted capacity returns `429 RATE_LIMITED` and `Retry-After`.
 

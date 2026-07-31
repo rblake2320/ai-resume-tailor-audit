@@ -120,7 +120,7 @@ describe("rate-limit contract", () => {
       paths: Record<string, { post?: { responses?: Record<string, { $ref?: string }> } }>;
       components: { responses: Record<string, { headers?: Record<string, { required?: boolean }> }> };
     };
-    for (const route of ["/api/fetch-job", "/api/jobs/import", "/api/parse-resume", "/api/tailor"]) {
+    for (const route of ["/api/fetch-job", "/api/jobs/import", "/api/labor-market/onet", "/api/labor-market/bls-series", "/api/parse-resume", "/api/tailor"]) {
       expect(spec.paths[route]?.post?.responses?.["429"]?.$ref).toBe("#/components/responses/RateLimited");
       expect(spec.paths[route]?.post?.responses?.["503"]?.$ref).toBe("#/components/responses/RateLimitUnavailable");
     }

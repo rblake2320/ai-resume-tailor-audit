@@ -4,6 +4,7 @@ import type { PrivacyMode } from "./pii";
 import { JobPostingSnapshotSchema, type JobPostingSnapshot } from "./schema";
 import type { ApplicationRecord } from "./applications";
 import { deleteCareerLedger } from "./career-vault";
+import { clearCareerPathRecords } from "./labor-market-storage";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -231,15 +232,18 @@ export function saveApplications(records: readonly ApplicationRecord[]): void {
 
 export async function clearAllData(): Promise<void> {
   if (typeof window === "undefined") return;
-  const storage = requireStorage("erasing local data");
+  const failures: unknown[] = [];
   try {
+    const storage = requireStorage("erasing local data");
     storage.removeItem(PROFILE_KEY); storage.removeItem(HISTORY_KEY); storage.removeItem(SESSION_KEY);
     storage.removeItem(SAVE_POINTS_KEY); storage.removeItem(JOB_INBOX_KEY); storage.removeItem(APPLICATIONS_KEY);
     storage.removeItem(CAREER_BACKUP_MARKER_KEY);
     for (let index = storage.length - 1; index >= 0; index -= 1) {
       const key = storage.key(index); if (key?.endsWith(":quarantine")) storage.removeItem(key);
     }
-  } catch (error) { throw new LocalPersistenceError("erasing local data", { cause: error }); }
-  await deleteCareerLedger();
-  window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
+  } catch (error) { failures.push(new LocalPersistenceError("erasing local data", { cause: error })); }
+  try { clearCareerPathRecords(); } catch (error) { failures.push(error); }
+  try { await deleteCareerLedger(); } catch (error) { failures.push(error); }
+  try { window.dispatchEvent?.(new Event("resume-foundry:data-cleared")); } catch (error) { failures.push(error); }
+  if (failures.length) throw failures[0];
 }

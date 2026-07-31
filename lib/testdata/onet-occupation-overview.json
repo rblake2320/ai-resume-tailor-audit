@@ -1,0 +1,20 @@
+{
+  "code": "15-1252.00",
+  "title": "Software Developers",
+  "tags": { "bright_outlook": true },
+  "description": "Research, design, and develop computer and network software or specialized utility programs.",
+  "sample_of_reported_titles": ["Application Developer", "Software Engineer"],
+  "updated": {
+    "year": 2026,
+    "contents": [
+      { "title": "Occupation description", "source": "Analyst", "year": 2025 },
+      { "title": "Sample of reported job titles", "source": "Incumbent", "year": 2024 }
+    ]
+  },
+  "summary_contents": [
+    { "href": "https://api-v2.onetcenter.org/online/occupations/15-1252.00/summary/tasks", "title": "Tasks" },
+    { "href": "https://api-v2.onetcenter.org/online/occupations/15-1252.00/summary/skills", "title": "Skills" }
+  ],
+  "details_contents": [],
+  "custom_contents": []
+}

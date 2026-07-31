@@ -907,6 +907,123 @@
           }
         }
       }
+    },
+    "/api/labor-market/onet": {
+      "post": {
+        "operationId": "lookupOnetOccupation",
+        "tags": [
+          "Labor market"
+        ],
+        "description": "Looks up a bounded O*NET occupation overview. O*NET characteristics are not hiring or fit guarantees.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "occupationCode"
+                ],
+                "properties": {
+                  "occupationCode": {
+                    "type": "string",
+                    "pattern": "^[0-9]{2}-[0-9]{4}\\.[0-9]{2}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated O*NET occupation profile"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
+          }
+        }
+      }
+    },
+    "/api/labor-market/bls-series": {
+      "post": {
+        "operationId": "fetchBlsObservations",
+        "tags": [
+          "Labor market"
+        ],
+        "description": "Fetches bounded BLS time-series observations. These observations are not occupational projections.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "seriesIds",
+                  "startYear",
+                  "endYear"
+                ],
+                "description": "The public contract advertises the conservative unregistered BLS tier: unique IDs and an ordered inclusive range of at most 10 years. Deployments with BLS_API_KEY also accept the official registered tier of 50 series and 20 years.",
+                "properties": {
+                  "seriesIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 25,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Z0-9_#-]{1,100}$"
+                    }
+                  },
+                  "startYear": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2200
+                  },
+                  "endYear": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated BLS observation series"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {

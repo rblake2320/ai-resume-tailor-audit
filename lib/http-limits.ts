@@ -8,14 +8,22 @@ export class HttpLimitError extends Error {
   }
 }
 
+async function cancelRequestBody(request: Request, reason: string): Promise<void> {
+  await request.body?.cancel(reason).catch(() => undefined);
+}
+
 export async function readRequestBytes(request: Request, maxBytes: number): Promise<Uint8Array> {
   const declaredLength = request.headers.get("content-length");
   if (declaredLength !== null) {
     const length = Number(declaredLength);
     if (!Number.isSafeInteger(length) || length < 0) {
+      await cancelRequestBody(request, "invalid request content length");
       throw new HttpLimitError(400, "Invalid Content-Length header.");
     }
-    if (length > maxBytes) throw new HttpLimitError(413, "Request body is too large.");
+    if (length > maxBytes) {
+      await cancelRequestBody(request, "request body limit exceeded");
+      throw new HttpLimitError(413, "Request body is too large.");
+    }
   }
 
   if (!request.body) throw new HttpLimitError(400, "Request body is required.");
@@ -49,6 +57,7 @@ export async function readRequestBytes(request: Request, maxBytes: number): Prom
 export async function readJsonBody(request: Request, maxBytes: number): Promise<unknown> {
   const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
   if (contentType !== "application/json") {
+    await cancelRequestBody(request, "unsupported request content type");
     throw new HttpLimitError(415, "Content-Type must be application/json.");
   }
   try {
@@ -64,7 +73,11 @@ export async function readResponseText(response: Response, maxBytes: number): Pr
   const declaredLength = response.headers.get("content-length");
   if (declaredLength !== null) {
     const length = Number(declaredLength);
-    if (Number.isFinite(length) && length > maxBytes) {
+    if (!Number.isSafeInteger(length) || length < 0) {
+      await response.body.cancel("invalid response content length").catch(() => undefined);
+      throw new HttpLimitError(400, "Remote response has an invalid Content-Length header.");
+    }
+    if (length > maxBytes) {
       await response.body.cancel("response body limit exceeded").catch(() => undefined);
       throw new HttpLimitError(413, "Remote response is too large.");
     }

@@ -7,10 +7,12 @@ import { POST as tailor } from "../app/api/tailor/route";
 import { POST as fetchJob } from "../app/api/fetch-job/route";
 import { POST as importJobs } from "../app/api/jobs/import/route";
 import { POST as parseResume } from "../app/api/parse-resume/route";
+import { POST as onet } from "../app/api/labor-market/onet/route";
+import { POST as blsSeries } from "../app/api/labor-market/bls-series/route";
 
 let directory = "";
 const saved = new Map<string, string | undefined>();
-const names = ["RESUME_FOUNDRY_RATE_LIMIT_DIR", "RESUME_FOUNDRY_TAILOR_LIMIT", "RESUME_FOUNDRY_FETCH_JOB_LIMIT", "RESUME_FOUNDRY_JOBS_IMPORT_LIMIT", "RESUME_FOUNDRY_PARSE_RESUME_LIMIT"];
+const names = ["RESUME_FOUNDRY_RATE_LIMIT_DIR", "RESUME_FOUNDRY_TAILOR_LIMIT", "RESUME_FOUNDRY_FETCH_JOB_LIMIT", "RESUME_FOUNDRY_JOBS_IMPORT_LIMIT", "RESUME_FOUNDRY_PARSE_RESUME_LIMIT", "RESUME_FOUNDRY_LABOR_MARKET_ONET_LIMIT", "RESUME_FOUNDRY_LABOR_MARKET_BLS_SERIES_LIMIT"];
 
 beforeEach(async () => {
   vi.useFakeTimers(); vi.setSystemTime(new Date("2026-07-31T12:00:30Z"));
@@ -21,6 +23,8 @@ beforeEach(async () => {
   process.env.RESUME_FOUNDRY_FETCH_JOB_LIMIT = "1";
   process.env.RESUME_FOUNDRY_JOBS_IMPORT_LIMIT = "1";
   process.env.RESUME_FOUNDRY_PARSE_RESUME_LIMIT = "1";
+  process.env.RESUME_FOUNDRY_LABOR_MARKET_ONET_LIMIT = "1";
+  process.env.RESUME_FOUNDRY_LABOR_MARKET_BLS_SERIES_LIMIT = "1";
 });
 
 afterEach(async () => {
@@ -39,6 +43,8 @@ describe("public route overload boundary", () => {
     ["fetch-job", fetchJob, () => new NextRequest("http://test/api/fetch-job", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })],
     ["jobs-import", importJobs, () => new NextRequest("http://test/api/jobs/import", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })],
     ["parse-resume", parseResume, () => new NextRequest("http://test/api/parse-resume", { method: "POST", headers: { "content-type": "text/plain" }, body: "x" })],
+    ["labor-market-onet", onet, () => new NextRequest("http://test/api/labor-market/onet", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })],
+    ["labor-market-bls-series", blsSeries, () => new NextRequest("http://test/api/labor-market/bls-series", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })],
   ] as const;
 
   it.each(cases)("limits %s before doing a second unit of work", async (_scope, handler, request) => {
