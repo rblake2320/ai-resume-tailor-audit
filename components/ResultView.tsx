@@ -54,6 +54,7 @@ export function ResultView({
 
   return (
     <div className="space-y-6">
+      <p className="sr-only" role="status" aria-live="polite">Tailored documents are ready.</p>
       {/* Scores */}
       <div className="rounded-xl border border-ink-700 bg-ink-900/70 p-5">
         <div className="flex flex-wrap items-center justify-center gap-10">

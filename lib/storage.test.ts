@@ -9,10 +9,13 @@ import {
   loadProfile,
   loadSavePoints,
   loadSession,
+  saveApplications,
   saveJobInbox,
   type Session,
 } from "./storage";
 import { createJobSnapshot } from "./job-inbox";
+import { createApplicationPacket, createApplicationRecord } from "./applications";
+import type { TailorResult } from "./schema";
 
 class MemoryStorage {
   #values = new Map<string, string>();
@@ -80,6 +83,7 @@ describe("local save points", () => {
     ["art:profile", () => loadProfile(), null],
     ["art:session", () => loadSession(), null],
     ["art:save-points", () => loadSavePoints(), []],
+    ["art:job-inbox:v1", () => loadJobInbox(), []],
     ["art:applications:v1", () => loadApplications(), []],
   ] as const)("quarantines malformed persisted data in %s", (key, load, fallback) => {
     localStorage.setItem(key, JSON.stringify([{ unexpected: "private data" }]));
@@ -104,5 +108,20 @@ describe("job inbox persistence", () => {
     });
     saveJobInbox([snapshot]);
     expect(loadJobInbox()).toEqual([snapshot]);
+  });
+
+  it("round-trips a schema-valid immutable application record", async () => {
+    const job = await createJobSnapshot({
+      company: "Acme", title: "Engineer",
+      description: "Build reliable software systems with testing, observability, security, collaboration, documentation, deployment, and customer-focused engineering practices.",
+    });
+    const result: TailorResult = {
+      match_score_before: 50, match_score_after: 70, score_rationale: "Evidence improved alignment.", changes: [],
+      keywords: { matched: [], added: [], not_added: [] }, gap_analysis: [], requirement_evidence: [], ats_checks: [],
+      tailored_resume_markdown: "# Resume", cover_letter_markdown: "Cover",
+    };
+    const record = createApplicationRecord(await createApplicationPacket({ jobSnapshot: job, profile: { resume: "Original", extraInfo: "Evidence" }, result }));
+    saveApplications([record]);
+    expect(loadApplications()).toEqual([record]);
   });
 });

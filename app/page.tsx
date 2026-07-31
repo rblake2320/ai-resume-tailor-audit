@@ -704,9 +704,6 @@ export default function Home() {
         <div ref={resultRef}>
           {result && (
             <div className="space-y-4">
-              <p className="sr-only" role="status" aria-live="polite">
-                Tailored documents are ready for {jobTitle || "the selected role"}{company ? ` at ${company}` : ""}.
-              </p>
               <h2 className="font-display pt-4 text-2xl font-semibold text-paper">
                 The forged result{jobTitle && <span className="text-ink-300"> — {jobTitle}</span>}
                 {company && <span className="text-brass-300"> @ {company}</span>}

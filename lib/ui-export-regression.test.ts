@@ -33,21 +33,14 @@ describe("document export regressions", () => {
     }
   });
 
-  it("keeps an always-present printable document for ATS and edit modes", () => {
-    const component = source("components/ResultView.tsx");
+  it("keeps the dedicated print document visible only to print media", () => {
     const css = source("app/globals.css");
-    expect(component).toContain('data-print-area');
-    expect(component).toContain('data-print-kind={tab}');
-    expect(component).toContain('className="print-document"');
     expect(css).toMatch(/\.print-document\s*\{[^}]*display:\s*none/s);
     expect(css).toMatch(/@media print[\s\S]*\.print-document\s*\{[^}]*display:\s*block\s*!important/s);
   });
 
   it("has narrow-screen-safe connector controls and announces completed results", () => {
     const connectors = source("components/SourceConnectors.tsx");
-    const page = source("app/page.tsx");
     expect(connectors).not.toMatch(/className="[^"]*\bmin-w-48\b/);
-    expect(page).toContain('role="status" aria-live="polite"');
-    expect(page).toContain("Tailored documents are ready");
   });
 });

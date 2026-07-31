@@ -171,12 +171,7 @@ export function deleteSavePoint(id: string): SavePoint[] {
 
 export function loadJobInbox(): JobPostingSnapshot[] {
   if (!canStore()) return [];
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(JOB_INBOX_KEY) ?? "[]");
-    return JobPostingSnapshotSchema.array().parse(parsed);
-  } catch {
-    return [];
-  }
+  return parseStored(JOB_INBOX_KEY, JobPostingSnapshotSchema.array(), []);
 }
 
 /** Snapshots are append-only: callers can add a revision, never mutate one in place. */
