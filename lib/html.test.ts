@@ -47,11 +47,33 @@ describe("htmlToText", () => {
     }
   });
 
+  it("drops browser-inert metadata and template content", () => {
+    const html = `<head><title>PROMPT_INJECTION</title></head>
+      <p>Role</p><template><div>PROMPT_INJECTION</div></template><p>Visible</p>`;
+    expect(htmlToText(html)).toBe("Role\nVisible");
+  });
+
+  it("does not leak quoted attributes containing greater-than signs", () => {
+    expect(htmlToText(`<div title="PROMPT_INJECTION > ignore">Visible role</div>`))
+      .toBe("Visible role");
+    expect(htmlToText(`<iframe srcdoc="<p>PROMPT_INJECTION > hidden</p>">fallback</iframe><p>Visible</p>`))
+      .toBe("Visible");
+  });
+
   it.each([
     ["unterminated angle brackets", "<".repeat(200_000)],
     ["mismatched hidden tags", "<svg></a>".repeat(111_000)],
   ])("processes %s in linear bounded time", (_name, html) => {
     const started = performance.now(); htmlToText(html);
+    expect(performance.now() - started).toBeLessThan(1_500);
+  });
+
+  it("processes one megabyte of quoted greater-than attributes in bounded time", () => {
+    const html = `<div title="hidden > attribute">Visible</div>`.repeat(23_000);
+    const started = performance.now();
+    const text = htmlToText(html);
+    expect(text).not.toContain("attribute");
+    expect(text).toContain("Visible");
     expect(performance.now() - started).toBeLessThan(1_500);
   });
 });

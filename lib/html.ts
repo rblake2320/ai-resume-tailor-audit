@@ -1,6 +1,6 @@
 /** Minimal, dependency-free HTML → text extraction for job postings. */
 
-const DROP_TAGS = ["script", "style", "noscript", "svg", "iframe", "nav", "footer", "aside", "form"];
+const DROP_TAGS = ["script", "style", "noscript", "svg", "iframe", "nav", "footer", "aside", "form", "head", "title", "template"];
 const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
 
 const ENTITIES: Record<string, string> = {
@@ -36,6 +36,19 @@ function safeChar(code: number): string {
   }
 }
 
+/** Find a tag's closing `>` without treating `>` inside a quoted attribute as markup. */
+function findTagEnd(html: string, start: number): number {
+  let quote: '"' | "'" | null = null;
+  for (let index = start; index < html.length; index += 1) {
+    const char = html[index];
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === ">") return index;
+  }
+  return -1;
+}
+
 export function htmlToText(html: string): string {
   const output: string[] = [];
   type OpenElement = { name: string; hides: boolean; previousSame: number | undefined };
@@ -56,7 +69,7 @@ export function htmlToText(html: string): string {
       cursor = commentEnd < 0 ? html.length : commentEnd + 3;
       continue;
     }
-    const close = html.indexOf(">", open + 1);
+    const close = findTagEnd(html, open + 1);
     if (close < 0) {
       if (hiddenDepth === 0) output.push(html.slice(open));
       break;
