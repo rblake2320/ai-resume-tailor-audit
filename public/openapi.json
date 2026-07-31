@@ -812,7 +812,7 @@
         "tags": [
           "Official submissions"
         ],
-        "description": "Human-only approval of an exact final preview; returns a short-lived, exact-content-bound receipt.",
+        "description": "Human-only approval of an exact final preview; returns a short-lived, exact-content-bound receipt. JSON request body is capped at 6,000,000 bytes.",
         "responses": {
           "200": {
             "description": "Signed approval receipt"
@@ -821,6 +821,12 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }
@@ -832,12 +838,21 @@
         "tags": [
           "Official submissions"
         ],
-        "description": "Consumes a one-time approval receipt and calls only an explicitly allowlisted, credentialed official connector.",
+        "description": "Consumes a one-time approval receipt and calls only an explicitly allowlisted, credentialed official connector. JSON request body is capped at 8,000,000 bytes.",
         "responses": {
           "200": {
             "description": "Provider accepted the operation"
           },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
             "$ref": "#/components/responses/Error"
           }
         }

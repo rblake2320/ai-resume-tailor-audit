@@ -5,6 +5,9 @@ import { verifyApplicationPacket, type ApplicationPacket } from "@/lib/applicati
 import { consumeSubmissionApproval } from "@/lib/submission-ledger";
 import { googleOAuthConfig, openConnection } from "@/lib/google-oauth";
 import type { StoredGoogleConnection } from "../../connections/google/callback/route";
+import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
+
+export const SUBMISSION_EXECUTE_BODY_MAX_BYTES = 8_000_000;
 
 function authorized(provider: string, identity: string) {
   return (process.env.RESUME_FOUNDRY_AUTHORIZED_SUBMISSION_PROVIDERS ?? "")
@@ -27,7 +30,7 @@ function approvedIdentity(preview: SubmissionPreview) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const body = await readJsonBody(request, SUBMISSION_EXECUTE_BODY_MAX_BYTES) as Record<string, unknown>;
     const secret = process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET;
     if (!secret) throw new Error("Human approval is not configured.");
 
@@ -71,6 +74,9 @@ export async function POST(request: Request) {
     await consumeSubmissionApproval(use);
     return NextResponse.json(await createGmailDraft({ accessToken: connection.tokens.access_token, receipt, approvalSecret: secret }));
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Submission failed." }, { status: 403 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Submission failed." },
+      { status: error instanceof HttpLimitError ? error.status : 403 },
+    );
   }
 }

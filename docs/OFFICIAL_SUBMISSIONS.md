@@ -8,6 +8,11 @@ Direct submission is disabled unless three independent gates all pass:
 
 Approval receipts are exact-preview-bound, expire after ten minutes, and are durably consumed before network transmission. A consumed approval cannot be replayed; after an uncertain provider failure the user must review and approve again rather than risk a duplicate application.
 
+Approval and execution accept JSON only and stream-read bounded request bodies
+(6,000,000 and 8,000,000 bytes respectively) before parsing. Invalid declared
+lengths, unsupported media types, and oversized requests fail before approval,
+packet verification, nonce consumption, or provider I/O.
+
 Greenhouse retrieves the live job-specific question schema and validates every required field before submission because Greenhouse explicitly warns that its submission endpoint may not reject missing required fields. Lever requires an employer administrator to supply both the API key and customized required-field list. Rate-limited provider responses retry within a finite budget. Gmail creates a draft using `gmail.compose`; it does not silently send it.
 
 Public documentation:
