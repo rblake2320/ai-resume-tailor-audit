@@ -41,10 +41,13 @@ const normalize = (s: string) => s.toLowerCase().normalize("NFKD");
 // matched span. Broad sentence/document polarity caused unrelated honest
 // evidence to be rejected (for example "No Kubernetes; built CI pipelines").
 const DIRECT_NEGATION =
-  /\b(?:no|not|never|without|lacks?|lacking|zero|none|unfamiliar(?:\s+with)?|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t)\s+(?:(?!(?:and|but|however|though|while|yet|although)\b)[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
-const FALSE_NEGATION = /\b(?:not\s+only|no\s+(?:less|fewer)\s+than)\s+(?:[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
+  /\b(?:no|not|never|without|lacks?|lacking|zero|none|unfamiliar(?:\s+with)?|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t)\s+(?:yet\s+)?(?:(?!(?:and|but|however|though|while|although)\b)[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
+// These are affirmative constructions only when they end immediately before
+// the cited span. Broader exceptions admitted real denials such as "not only
+// lacking Kubernetes".
+const FALSE_NEGATION = /\b(?:not\s+only|no\s+(?:less|fewer)\s+than)\s*$/iu;
 const NONE_OF = /\bnone\s+of\s*:\s*$/iu;
-const DIRECT_QUALIFIER = /\b(?:only\s+evaluated|beginner\s+in|exposure\s+to|aspiring\s+to(?:\s+be)?|hope\s+to\s+become|failed\s+to\s+become|minimal|limited)\s*$/iu;
+const DIRECT_QUALIFIER = /\b(?:only\s+evaluated|beginner\s+in|exposure\s+to|aspiring\s+to(?:\s+be)?|hope\s+to\s+become|failed\s+to\s+become|seeking\s+to\s+learn)\s*$/iu;
 
 /**
  * Inputs are already normalized by the caller. True when at least one exact

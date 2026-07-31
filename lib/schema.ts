@@ -11,8 +11,8 @@ export const RequirementEvidenceSchema = z.strictObject({
   requirement: z.string().min(1),
   category: z.enum(["mandatory", "preferred", "responsibility", "logistics"]),
   state: EvidenceStateSchema,
-  evidence: z.array(z.string()).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
-  tailoredText: z.array(z.string()).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
+  evidence: z.array(z.string().max(2_000)).max(10).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
+  tailoredText: z.array(z.string().max(2_000)).max(20).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
   recommendation: z.string().describe("Honest next step, clarification, adjacent skill, portfolio task, training, or omission rationale"),
 }).superRefine((item, context) => {
   if (item.state === "unsupported" && (item.evidence.length > 0 || item.tailoredText.length > 0)) {
@@ -84,7 +84,7 @@ export const TailorResultSchema = z.strictObject({
     )
     .describe("Honest gaps the candidate should know about"),
   requirement_evidence: z
-    .array(RequirementEvidenceSchema)
+    .array(RequirementEvidenceSchema).max(100)
     .describe("Auditable mapping of each material job requirement to source résumé evidence and resulting tailored text"),
   ats_checks: z
     .array(
@@ -156,24 +156,82 @@ const comparableOutput = (value: string) => comparableText(mdToAtsText(value));
 
 const qualifiedRatherThanProven = (evidence: string): boolean => {
   const text = comparableSource(evidence);
-  return /^(?:only evaluated|beginner in|exposure to|aspiring to(?: be)?|hope to become|failed to become)\b/u.test(text)
+  return /^(?:no|not|never|zero|without|lacks?|lacking|unfamiliar(?: with)?|only evaluated|beginner in|exposure to|aspiring to(?: be)?|hope to become|failed to become|seeking to learn)\b/u.test(text)
     || /\b(?:minimal|limited)\b.{0,60}\b(?:experience|proficiency|knowledge|familiarity|exposure)\b/u.test(text)
     || /\bevaluated\b.{0,40}\b(?:but\s+)?did\s+not\s+deploy\b/u.test(text);
 };
 
+const CONTINUATION_END = /\b(?:a|an|and|as|at|by|for|from|in|of|on|or|the|to|with|across|cutting)$/iu;
+
+/**
+ * Reconstruct likely logical lines from PDF visual-line output without
+ * joining separate bullets, headings, pages, or short record-like rows.
+ * This is deliberately conservative: a long sentence or an explicit
+ * continuation may cross a visual wrap; structural boundaries never do.
+ */
+const sourceEvidenceSegments = (source: string): string[] => {
+  const segments: string[] = [];
+  let current = "";
+  let bullet = false;
+  const flush = () => {
+    const normalized = comparableSource(current);
+    if (normalized) segments.push(normalized);
+    current = "";
+    bullet = false;
+  };
+
+  for (const raw of source.replace(/[\v\f\u2028\u2029]/gu, "\n\n").split(/\r?\n/u)) {
+    const line = raw.trim();
+    if (!line || /^(?:[-*_]{3,}|[\u2010-\u2015\u2212])$/u.test(line) || /^#{1,6}\s/u.test(line)) {
+      flush();
+      continue;
+    }
+    const bulletMatch = line.match(/^[-*+\u2022]\s+(.+)$/u);
+    if (bulletMatch) {
+      flush();
+      // Preserve the literal source line as an alternate exact span for
+      // résumés where a leading marker is meaningful text, while building a
+      // marker-free logical record for ordinary model citations and wraps.
+      segments.push(comparableSource(line));
+      current = bulletMatch[1];
+      bullet = true;
+      continue;
+    }
+    if (!current) {
+      current = line;
+      continue;
+    }
+    const currentWords = current.trim().split(/\s+/u).length;
+    const isContinuation = bullet
+      || currentWords >= 4
+      || CONTINUATION_END.test(current)
+      || /^[\p{Ll}\p{N},.;:)]/u.test(line);
+    if (isContinuation) current += ` ${line}`;
+    else {
+      flush();
+      current = line;
+    }
+  }
+  flush();
+  return segments;
+};
+
 /** Deterministic post-generation boundary for structured evidence references. */
 export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
-  // A citation must fit inside one source line. Collapsing the full document
-  // would let separate bullets, headings, employers, or blank-line sections be
-  // welded into a fact that never appeared in the résumé.
-  const sourceLines = originalResume.split(/\r?\n/u).map(comparableSource).filter(Boolean);
+  const sourceLines = sourceEvidenceSegments(originalResume);
   const output = comparableOutput(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
   const violations: string[] = [];
+  const supportCache = new Map<string, boolean>();
   for (const requirement of result.requirement_evidence) {
     for (const evidence of requirement.evidence) {
       const cited = comparableSource(evidence);
-      const supported = sourceLines.some((line) => line.includes(cited)
-        && affirmativelyPresent(line, cited, requirement.state === "proven"));
+      const cacheKey = `${requirement.state === "proven" ? "1" : "0"}\u0000${cited}`;
+      let supported = supportCache.get(cacheKey);
+      if (supported === undefined) {
+        supported = sourceLines.some((line) => line.includes(cited)
+          && affirmativelyPresent(line, cited, requirement.state === "proven"));
+        supportCache.set(cacheKey, supported);
+      }
       const overclaimed = requirement.state === "proven" && qualifiedRatherThanProven(evidence);
       if (!supported || overclaimed) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
     }
