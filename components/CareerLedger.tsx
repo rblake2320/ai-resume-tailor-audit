@@ -5,7 +5,7 @@ import {
   appendCareerEvent, createCareerLedger, exportEncryptedCareerLedger, importEncryptedCareerLedger,
   currentCareerEvents, deleteCareerEvent, type CareerLedger as Ledger,
 } from "@/lib/career-ledger";
-import { deleteCareerLedger, hasCareerLedger, loadCareerLedger, saveCareerLedger } from "@/lib/career-vault";
+import { deleteCareerLedger, hasCareerLedger, loadCareerLedger, migrateLegacyPlaintextCareerLedger, saveCareerLedger } from "@/lib/career-vault";
 import { ToolButton } from "@/components/ui";
 
 export function CareerLedger() {
@@ -13,6 +13,7 @@ export function CareerLedger() {
   const [title, setTitle] = useState(""); const [description, setDescription] = useState("");
   const [category, setCategory] = useState<"project" | "coursework" | "paid_work" | "volunteering" | "other">("project");
   const [passphrase, setPassphrase] = useState(""); const [status, setStatus] = useState("Checking encrypted career vault…");
+  const [legacyDetected, setLegacyDetected] = useState(false);
   const [vaultExists, setVaultExists] = useState(false); const [ageBand, setAgeBand] = useState<"minor" | "adult" | "unspecified">("unspecified");
   useEffect(() => { void hasCareerLedger().then((exists) => { setVaultExists(exists); setStatus(exists ? "Encrypted ledger found. Enter its passphrase to unlock." : "No ledger yet. Choose a passphrase to create one."); }).catch((error: unknown) => setStatus(error instanceof Error ? error.message : "Vault unavailable.")); }, []);
 
@@ -22,7 +23,11 @@ export function CareerLedger() {
   }
   async function unlock() {
     try { const saved = await loadCareerLedger(passphrase); setLedger(saved); setStatus(saved ? "Career ledger decrypted and integrity-checked." : "No ledger found."); }
-    catch (error) { setStatus(error instanceof Error ? error.message : "Unlock failed."); }
+    catch (error) { const message = error instanceof Error ? error.message : "Unlock failed."; setLegacyDetected(message.includes("legacy plaintext")); setStatus(message); }
+  }
+  async function migrateLegacy() {
+    try { const saved = await migrateLegacyPlaintextCareerLedger(passphrase); setLedger(saved); setVaultExists(true); setLegacyDetected(false); setStatus("Legacy vault explicitly migrated, encrypted, and integrity-checked."); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Legacy migration failed."); }
   }
   async function add() {
     if (!ledger || !title.trim() || !description.trim()) { setStatus("Create the ledger and enter a title and description first."); return; }
@@ -51,7 +56,7 @@ export function CareerLedger() {
   return <section className="rounded-xl border border-ink-700 bg-ink-900/70 p-4" aria-labelledby="career-ledger-heading">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="career-ledger-heading" className="font-display text-xl font-semibold text-paper">Career ledger</h2><p className="text-[11px] text-ink-400">Keep projects, work, learning, volunteering, caregiving, and evidence for future uses you cannot predict yet.</p></div></div>
     <p role="status" className="mt-2 text-xs text-brass-300">{status}</p>
-    {!ledger && <div className="mt-3 flex flex-wrap items-center gap-2"><input type="password" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} placeholder="Vault passphrase (12+ characters)" aria-label="Career vault passphrase" className="min-w-64 rounded border border-ink-700 bg-ink-950 p-2 text-xs"/>{!vaultExists && <select aria-label="Age privacy setting" value={ageBand} onChange={(event) => setAgeBand(event.target.value as typeof ageBand)} className="rounded border border-ink-700 bg-ink-950 p-2 text-xs"><option value="unspecified">Age not specified</option><option value="minor">Under age of majority</option><option value="adult">Adult</option></select>}<ToolButton onClick={() => void (vaultExists ? unlock() : ensureLedger())}>{vaultExists ? "Unlock ledger" : "Create encrypted ledger"}</ToolButton><label className="cursor-pointer rounded border border-ink-600 px-3 py-2 text-xs text-paper">Restore encrypted backup<input type="file" accept="application/json" className="sr-only" onChange={(event) => void restore(event.target.files?.[0])}/></label></div>}
+    {!ledger && <div className="mt-3 flex flex-wrap items-center gap-2"><input type="password" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} placeholder="Vault passphrase (12+ characters)" aria-label="Career vault passphrase" className="min-w-0 w-full rounded border border-ink-700 bg-ink-950 p-2 text-xs sm:w-auto sm:min-w-64"/>{!vaultExists && <select aria-label="Age privacy setting" value={ageBand} onChange={(event) => setAgeBand(event.target.value as typeof ageBand)} className="max-w-full rounded border border-ink-700 bg-ink-950 p-2 text-xs"><option value="unspecified">Age not specified</option><option value="minor">Under age of majority</option><option value="adult">Adult</option></select>}<ToolButton onClick={() => void (vaultExists ? unlock() : ensureLedger())}>{vaultExists ? "Unlock ledger" : "Create encrypted ledger"}</ToolButton>{legacyDetected && <ToolButton onClick={() => void migrateLegacy()}>Explicitly migrate legacy vault</ToolButton>}<label className="cursor-pointer rounded border border-ink-600 px-3 py-2 text-xs text-paper">Restore encrypted backup<input type="file" accept="application/json" className="sr-only" onChange={(event) => void restore(event.target.files?.[0])}/></label></div>}
     {ledger && <>
       <div className="mt-3 grid gap-2 md:grid-cols-[10rem_1fr_2fr_auto]"><select aria-label="Entry category" value={category} onChange={(event) => setCategory(event.target.value as typeof category)} className="rounded border border-ink-700 bg-ink-950 p-2 text-xs"><option value="project">Project</option><option value="coursework">Coursework</option><option value="paid_work">Paid work</option><option value="volunteering">Volunteering</option><option value="other">Other</option></select><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What happened?" maxLength={300} className="rounded border border-ink-700 bg-ink-950 p-2 text-xs"/><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What did you do, learn, or accomplish?" maxLength={20000} className="rounded border border-ink-700 bg-ink-950 p-2 text-xs"/><ToolButton onClick={() => void add()}>Append entry</ToolButton></div>
       {ledger.privacy.ageBand === "minor" && <p className="mt-3 rounded border border-amber-600/40 p-2 text-xs text-amber-300">Minor privacy mode: private by default, no public profile, optional guardian assistance does not transfer ownership. Control review due {ledger.privacy.ageOfMajorityReviewDueAt ? new Date(ledger.privacy.ageOfMajorityReviewDueAt).toLocaleDateString() : "when adulthood is reached"}.</p>}
