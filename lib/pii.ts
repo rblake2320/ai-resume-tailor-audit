@@ -23,7 +23,7 @@ const PATTERNS: Array<{ kind: PiiMatch["kind"]; pattern: RegExp }> = [
   { kind: "government identifier", pattern: /(?<![\p{L}\p{N}\p{M}])(?:\d{3}-\d{2}-\d{4}|\d{3}[\p{Z}\s]\d{2}[\p{Z}\s]\d{4}|\d{9})(?![\p{L}\p{N}\p{M}])/gu },
   // Infer only well-known profile hosts. Generic URLs may identify an
   // employer, project, portfolio, or documentation page.
-  { kind: "web profile", pattern: /(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in|github\.com|gitlab\.com)\/[^\s)\]}]+/gi },
+  { kind: "web profile", pattern: /(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in\/[A-Z0-9_.%-]+|github\.com\/[A-Z0-9-]+|gitlab\.com\/[A-Z0-9_.-]+)(?![A-Z0-9_.\/-])\/?(?:[?#][^\s)\]}]*)?/gi },
   { kind: "street address", pattern: /\b\d{1,6}\s+[A-Z0-9.' -]{2,50}\s(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way)\b[.,]?/gi },
 ];
 
@@ -48,10 +48,14 @@ function candidateNamePatterns(names: readonly string[]): RegExp[] {
     const identity = name.toLocaleLowerCase().normalize("NFC");
     if (name.length < 2 || name.length > 120 || !/\p{L}/u.test(name) || unique.has(identity)) continue;
     unique.add(identity);
-    for (const form of new Set([name.normalize("NFC"), name.normalize("NFD")])) {
-      const body = form.split(" ").map(escapePattern).join("[\\p{Z}\\s]+");
-      patterns.push(new RegExp(`(?<![\\p{L}\\p{N}\\p{M}])${body}(?![\\p{L}\\p{N}\\p{M}])`, "giu"));
-    }
+    const body = name.split(" ").map((word) => {
+      const graphemes = word.normalize("NFD").match(/\P{M}\p{M}*/gu) ?? [];
+      return graphemes.map((grapheme) => {
+        const variants = [...new Set([grapheme.normalize("NFC"), grapheme.normalize("NFD")])].map(escapePattern);
+        return variants.length === 1 ? variants[0] : `(?:${variants.join("|")})`;
+      }).join("");
+    }).join("[\\p{Z}\\s]+");
+    patterns.push(new RegExp(`(?<![\\p{L}\\p{N}\\p{M}])${body}(?![\\p{L}\\p{N}\\p{M}])`, "giu"));
   }
   return patterns;
 }
@@ -98,7 +102,7 @@ export function restorePii<T>(value: T, matches: PiiMatch[]): T {
       for (const match of matches) {
         restored = restored.replaceAll(match.token, () => {
           const available = remaining.get(match.token) ?? 0;
-          if (available <= 0) return match.token;
+          if (available <= 0) return `[Personal information withheld: unexpected repeated ${match.kind} placeholder]`;
           remaining.set(match.token, available - 1);
           return match.value;
         });
@@ -107,7 +111,14 @@ export function restorePii<T>(value: T, matches: PiiMatch[]): T {
     }
     if (Array.isArray(item)) return item.map(restore);
     if (item && typeof item === "object") {
-      return Object.fromEntries(Object.entries(item).map(([key, nested]) => [key, restore(nested)]));
+      const entries = Object.entries(item);
+      const priority = new Map(["tailored_resume_markdown", "cover_letter_markdown"].map((key, index) => [key, index]));
+      entries.sort(([left], [right]) => {
+        const leftPriority = priority.get(left) ?? Number.MAX_SAFE_INTEGER;
+        const rightPriority = priority.get(right) ?? Number.MAX_SAFE_INTEGER;
+        return leftPriority - rightPriority || (left < right ? -1 : left > right ? 1 : 0);
+      });
+      return Object.fromEntries(entries.map(([key, nested]) => [key, restore(nested)]));
     }
     return item;
   };

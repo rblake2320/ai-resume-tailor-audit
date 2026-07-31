@@ -74,6 +74,16 @@ describe("client-side PII protection", () => {
     expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
   });
 
+  it.each([
+    "JOSÉ NU\u0301N\u0303EZ",
+    "JOSE\u0301 NÚÑEZ",
+  ])("masks mixed per-grapheme NFC/NFD candidate name %s", (name) => {
+    const source = `${name} led delivery.`;
+    const protectedValue = protectPii(source, { candidateNames: ["José Núñez"] });
+    expect(protectedValue.matches.map((match) => match.kind)).toEqual(["candidate name"]);
+    expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
+  });
+
   it.each(["555\u00a0123\u00a04567", "123\u00a045\u00a06789"])(
     "protects non-breaking-space-delimited personal data %s",
     (value) => {
@@ -92,7 +102,9 @@ describe("client-side PII protection", () => {
     expect(restorePii(protectedValue.text, protectedValue.matches)).toBe(source);
 
     const repeatedByModel = `${protectedValue.text} ${protectedValue.matches[0].token}`;
-    expect(restorePii(repeatedByModel, protectedValue.matches)).toBe(`${source} ${protectedValue.matches[0].token}`);
+    expect(restorePii(repeatedByModel, protectedValue.matches)).toBe(
+      `${source} [Personal information withheld: unexpected repeated candidate name placeholder]`,
+    );
   });
 
   it("regenerates a random prefix that already occurs in the source", () => {
@@ -110,5 +122,25 @@ describe("client-side PII protection", () => {
   it("does not classify arbitrary project or employer URLs as personal profiles", () => {
     const source = "https://docs.example.com/project/runbook";
     expect(protectPii(source)).toEqual({ text: source, matches: [] });
+  });
+
+  it("masks only root GitHub/GitLab user profiles, not repositories or groups", () => {
+    for (const profile of ["https://github.com/jane-doe", "https://gitlab.com/jane.doe"]) {
+      expect(protectPii(profile).matches.map((match) => match.kind)).toEqual(["web profile"]);
+    }
+    for (const project of ["https://github.com/jane-doe/resume", "https://gitlab.com/team/project"]) {
+      expect(protectPii(project)).toEqual({ text: project, matches: [] });
+    }
+  });
+
+  it("restores document fields in a deterministic priority and surfaces excess placeholders", () => {
+    const protectedValue = protectPii("Jane Doe", { candidateNames: ["Jane Doe"] });
+    const token = protectedValue.matches[0].token;
+    const first = restorePii({ cover_letter_markdown: token, tailored_resume_markdown: token }, protectedValue.matches);
+    const second = restorePii({ tailored_resume_markdown: token, cover_letter_markdown: token }, protectedValue.matches);
+    const withheld = "[Personal information withheld: unexpected repeated candidate name placeholder]";
+    expect(first).toEqual({ tailored_resume_markdown: "Jane Doe", cover_letter_markdown: withheld });
+    expect(second).toEqual(first);
+    expect(JSON.stringify(first)).not.toContain("[[RF_");
   });
 });

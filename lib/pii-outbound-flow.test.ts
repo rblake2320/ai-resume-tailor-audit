@@ -113,6 +113,18 @@ describe("real browser outbound PII flow", () => {
     expect(String(requests[0].resume)).toContain("Jane@example.com");
   });
 
+  it("Exact mode directly sends the exact text without opening review", async () => {
+    await act(async () => setValue(
+      document.querySelector('[aria-label="Personal information protection mode"]') as HTMLSelectElement,
+      "exact",
+    ));
+    await act(async () => button("Forge my resume").click());
+    expect(requests).toHaveLength(1);
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(String(requests[0].resume)).toContain("Jane Doe");
+    expect(String(requests[0].resume)).toContain("Jane@example.com");
+  });
+
   it("clears visible PII even when encrypted-vault deletion reports a failure", async () => {
     await act(async () => root.unmount());
     document.body.replaceChildren();
