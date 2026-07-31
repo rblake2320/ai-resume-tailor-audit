@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as tailor } from "../app/api/tailor/route";
 import { POST as fetchJob } from "../app/api/fetch-job/route";
 import { POST as importJobs } from "../app/api/jobs/import/route";
@@ -13,6 +13,7 @@ const saved = new Map<string, string | undefined>();
 const names = ["RESUME_FOUNDRY_RATE_LIMIT_DIR", "RESUME_FOUNDRY_TAILOR_LIMIT", "RESUME_FOUNDRY_FETCH_JOB_LIMIT", "RESUME_FOUNDRY_JOBS_IMPORT_LIMIT", "RESUME_FOUNDRY_PARSE_RESUME_LIMIT"];
 
 beforeEach(async () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2026-07-31T12:00:30Z"));
   directory = await mkdtemp(path.join(tmpdir(), "rf-route-limit-"));
   for (const name of names) saved.set(name, process.env[name]);
   process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = directory;
@@ -23,6 +24,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.useRealTimers();
   for (const name of names) {
     const value = saved.get(name);
     if (value === undefined) delete process.env[name]; else process.env[name] = value;

@@ -3,13 +3,14 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { configuredPublicRateLimiter, createDurableFixedWindowLimiter, enforcePublicRateLimit } from "./durable-rate-limit";
 
 const run = promisify(execFile);
 const roots: string[] = [];
 async function root() { const value = await mkdtemp(path.join(tmpdir(), "rf-rate-limit-")); roots.push(value); return value; }
-afterEach(async () => { await Promise.all(roots.splice(0).map((value) => rm(value, { recursive: true, force: true }))); });
+afterEach(async () => { vi.useRealTimers(); await Promise.all(roots.splice(0).map((value) => rm(value, { recursive: true, force: true }))); });
 
 describe("durable fixed-window rate limit", () => {
   it("admits only configured capacity and returns a stable retry time", async () => {
@@ -50,6 +51,8 @@ describe("durable fixed-window rate limit", () => {
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "", limit: 1, windowMs: 60_000 })).toThrow(/scope/);
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 0, windowMs: 60_000 })).toThrow(/capacity/);
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1, windowMs: 999 })).toThrow(/window/);
+    expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1_001, windowMs: 60_000 })).toThrow(/capacity/);
+    expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1, windowMs: 86_400_001 })).toThrow(/window/);
   });
 
   it("fails closed when production has no shared rate-limit directory", () => {
@@ -67,6 +70,7 @@ describe("durable fixed-window rate limit", () => {
   });
 
   it("returns 429 with Retry-After and fails closed on bad production configuration", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-07-31T12:00:30Z"));
     const directory = await root();
     const prior = { directory: process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR, limit: process.env.RESUME_FOUNDRY_TAILOR_LIMIT, node: process.env.NODE_ENV };
     try {
@@ -85,5 +89,32 @@ describe("durable fixed-window rate limit", () => {
       if (prior.limit === undefined) delete process.env.RESUME_FOUNDRY_TAILOR_LIMIT; else process.env.RESUME_FOUNDRY_TAILOR_LIMIT = prior.limit;
       Object.assign(process.env, { NODE_ENV: prior.node });
     }
+  });
+
+  it.each([" 10", "10 ", "0x10", "1e3", "+10", "01"])("rejects non-decimal environment value %s", async (raw) => {
+    const directory = await root(); const priorDirectory = process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR; const priorLimit = process.env.RESUME_FOUNDRY_TAILOR_LIMIT;
+    try {
+      process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = directory; process.env.RESUME_FOUNDRY_TAILOR_LIMIT = raw;
+      const response = enforcePublicRateLimit("tailor", { limit: 10, windowMs: 60_000 })!;
+      expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ code: "RATE_LIMIT_UNAVAILABLE" });
+    } finally {
+      if (priorDirectory === undefined) delete process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR; else process.env.RESUME_FOUNDRY_RATE_LIMIT_DIR = priorDirectory;
+      if (priorLimit === undefined) delete process.env.RESUME_FOUNDRY_TAILOR_LIMIT; else process.env.RESUME_FOUNDRY_TAILOR_LIMIT = priorLimit;
+    }
+  });
+});
+
+describe("rate-limit contract", () => {
+  it("documents code and Retry-After for every protected public route", async () => {
+    const spec = JSON.parse(await readFile(path.resolve("public/openapi.json"), "utf8")) as {
+      paths: Record<string, { post?: { responses?: Record<string, { $ref?: string }> } }>;
+      components: { responses: Record<string, { headers?: Record<string, { required?: boolean }> }> };
+    };
+    for (const route of ["/api/fetch-job", "/api/jobs/import", "/api/parse-resume", "/api/tailor"]) {
+      expect(spec.paths[route]?.post?.responses?.["429"]?.$ref).toBe("#/components/responses/RateLimited");
+      expect(spec.paths[route]?.post?.responses?.["503"]?.$ref).toBe("#/components/responses/RateLimitUnavailable");
+    }
+    expect(spec.components.responses.RateLimited.headers?.["Retry-After"]?.required).toBe(true);
+    expect(spec.components.responses.RateLimitUnavailable.headers?.["Retry-After"]?.required).toBe(true);
   });
 });

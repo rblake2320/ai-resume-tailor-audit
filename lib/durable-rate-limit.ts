@@ -17,8 +17,8 @@ export type DurableFixedWindowOptions = {
 export function createDurableFixedWindowLimiter(options: DurableFixedWindowOptions) {
   if (!path.isAbsolute(options.directory)) throw new Error("Rate-limit directory must be absolute.");
   if (!options.scope.trim()) throw new Error("Rate-limit scope is required.");
-  if (!Number.isSafeInteger(options.limit) || options.limit < 1 || options.limit > 10_000) throw new Error("Rate-limit capacity must be an integer from 1 to 10000.");
-  if (!Number.isSafeInteger(options.windowMs) || options.windowMs < 1_000) throw new Error("Rate-limit window must be at least one second.");
+  if (!Number.isSafeInteger(options.limit) || options.limit < 1 || options.limit > 1_000) throw new Error("Rate-limit capacity must be an integer from 1 to 1000.");
+  if (!Number.isSafeInteger(options.windowMs) || options.windowMs < 1_000 || options.windowMs > 86_400_000) throw new Error("Rate-limit window must be an integer from one second through one day.");
   const now = options.now ?? Date.now;
   const scope = createHash("sha256").update(options.scope).digest("hex");
   const scopeDirectory = path.join(options.directory, scope);
@@ -54,8 +54,13 @@ export function configuredPublicRateLimiter(scope: string, defaults: { limit: nu
   const prefix = `RESUME_FOUNDRY_${scope.toUpperCase().replaceAll(/[^A-Z0-9]/gu, "_")}`;
   const rawLimit = process.env[`${prefix}_LIMIT`];
   const rawWindow = process.env[`${prefix}_WINDOW_MS`];
-  const limit = rawLimit === undefined ? defaults.limit : Number(rawLimit);
-  const windowMs = rawWindow === undefined ? defaults.windowMs : Number(rawWindow);
+  const parseDecimal = (raw: string | undefined, fallback: number, label: string) => {
+    if (raw === undefined) return fallback;
+    if (!/^[1-9]\d*$/u.test(raw)) throw new Error(`${label} must be a positive base-10 integer.`);
+    return Number(raw);
+  };
+  const limit = parseDecimal(rawLimit, defaults.limit, `${prefix}_LIMIT`);
+  const windowMs = parseDecimal(rawWindow, defaults.windowMs, `${prefix}_WINDOW_MS`);
   const fallbackDirectory = process.env.NODE_ENV === "test"
     ? path.join(tmpdir(), `resume-foundry-rate-limits-test-${process.pid}`)
     : path.join(tmpdir(), "resume-foundry-rate-limits");
