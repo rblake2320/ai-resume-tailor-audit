@@ -3,9 +3,11 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
 import { assertTailorResultEvidence, HonestyValidationError, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
+import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+export const TAILOR_BODY_MAX_BYTES = 256_000;
 
 // Use an app-specific override first so unrelated shell/CLI aliases such as
 // ANTHROPIC_MODEL=opusplan cannot silently break this production route.
@@ -30,13 +32,15 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   let parsed;
   try {
-    parsed = TailorRequestSchema.parse(await req.json());
+    parsed = TailorRequestSchema.parse(await readJsonBody(req, TAILOR_BODY_MAX_BYTES));
   } catch (err) {
     const message =
-      err instanceof z.ZodError
+      err instanceof HttpLimitError
+        ? err.message
+        : err instanceof z.ZodError
         ? err.issues.map((i) => i.message).join(" ")
         : "Invalid request body.";
-    return Response.json({ error: message }, { status: 400 });
+    return Response.json({ error: message }, { status: err instanceof HttpLimitError ? err.status : 400 });
   }
 
   const client = new Anthropic();

@@ -42,9 +42,17 @@ describe("assertPublicUrl — SSRF guard", () => {
       "http://[::ffff:127.0.0.1]/",
       "http://[fe80::1]/",
       "http://[fd00::1]/",
+      "http://[64:ff9b::7f00:1]/",
+      "http://[2002:7f00:1::]/",
+      "http://[2001:0000:4136:e378:8000:63bf:3fff:fdd2]/",
+      "http://[fec0::1]/",
     ]) {
       expect(await reason(u)).toBe("blocked_ip");
     }
+  });
+
+  it("restricts outbound job fetching to standard web ports", async () => {
+    expect(await reason("https://8.8.8.8:8443/jobs")).toBe("bad_port");
   });
 
   it("rejects non-http(s) protocols", async () => {

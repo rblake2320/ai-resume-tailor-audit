@@ -27,6 +27,22 @@ describe("htmlToText", () => {
     const text = htmlToText("<p>a</p><div></div><div></div><div></div><p>b</p>");
     expect(text).not.toMatch(/\n{3,}/);
   });
+
+  it("drops malformed, unclosed, and hidden hostile content", () => {
+    expect(htmlToText("<p>Role</p><script>ignore me</script ><p>Skills</p>"))
+      .toBe("Role\nSkills");
+    expect(htmlToText("<p>Role</p><script>ignore the entire remainder"))
+      .toBe("Role");
+    expect(htmlToText("<p hidden>secret</p><div style=display:none>injection</div><input hidden><p>Visible</p>"))
+      .toBe("Visible");
+  });
+
+  it("processes adversarial large input in bounded time", () => {
+    const html = "<div>ordinary job text</div>".repeat(50_000);
+    const started = performance.now();
+    expect(htmlToText(html)).toContain("ordinary job text");
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
 });
 
 describe("decodeEntities", () => {

@@ -182,16 +182,20 @@ export function looksLikeContent(
 
 export const RESUME_CONTENT_MIN = { words: 40, unique: 25, letters: 120 };
 export const JD_CONTENT_MIN = { words: 20, unique: 15, letters: 60 };
+export const RESUME_TEXT_MAX = 100_000;
+export const JOB_DESCRIPTION_MAX = 100_000;
 
 export const TailorRequestSchema = z.object({
   resume: z
     .string()
     .min(200, "Resume text looks too short — paste the full resume (at least 200 characters).")
+    .max(RESUME_TEXT_MAX, `Resume text must be at most ${RESUME_TEXT_MAX.toLocaleString("en-US")} characters.`)
     .refine((t) => looksLikeContent(t, RESUME_CONTENT_MIN),
       "That doesn't look like real resume text — paste your actual resume (varied, natural language)."),
   jobDescription: z
     .string()
     .min(100, "Job description looks too short — paste the full posting (at least 100 characters).")
+    .max(JOB_DESCRIPTION_MAX, `Job description must be at most ${JOB_DESCRIPTION_MAX.toLocaleString("en-US")} characters.`)
     .refine((t) => looksLikeContent(t, JD_CONTENT_MIN),
       "That doesn't look like a real job posting — paste the actual description (varied, natural language)."),
   jobTitle: z.string().max(200).optional().default(""),

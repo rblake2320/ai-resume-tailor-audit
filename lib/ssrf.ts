@@ -67,6 +67,13 @@ function blockedV6(raw: string): boolean {
   if (b[0] === 0xfe && (b[1] & 0xc0) === 0x80) return true; // fe80::/10 link-local
   if ((b[0] & 0xfe) === 0xfc) return true; // fc00::/7 unique-local
   if (b[0] === 0xff) return true; // multicast
+  if (b[0] === 0x20 && b[1] === 0x02) return true; // 2002::/16 6to4 embeds IPv4
+  if (b[0] === 0x20 && b[1] === 0x01 && b[2] === 0x00 && b[3] === 0x00) return true; // Teredo
+  if (b[0] === 0xfe && (b[1] & 0xc0) === 0xc0) return true; // deprecated site-local fec0::/10
+  const nat64Prefix = [0x00, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0];
+  if (b.slice(0, 12).every((value, index) => value === nat64Prefix[index])) {
+    return blockedV4(b.slice(12).join("."));
+  }
   // v4-mapped (::ffff:a.b.c.d) or v4-compatible (::a.b.c.d): validate embedded v4.
   if (allZeroBut(10) && b[10] === 0xff && b[11] === 0xff) {
     return blockedV4(b.slice(12).join("."));
@@ -113,6 +120,8 @@ export async function assertPublicUrl(raw: string): Promise<{ url: URL; ips: str
   for (const ip of ips) {
     if (blockedIp(ip)) throw new SsrfError("blocked_ip");
   }
+  const port = url.port || (url.protocol === "https:" ? "443" : "80");
+  if (port !== "80" && port !== "443") throw new SsrfError("bad_port");
   return { url, ips };
 }
 
@@ -133,6 +142,7 @@ export async function safeFetch(
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get("location");
       if (!location) return res;
+      await res.body?.cancel("redirect response not consumed").catch(() => undefined);
       current = new URL(location, url).href; // resolve relative redirects
       continue;
     }
