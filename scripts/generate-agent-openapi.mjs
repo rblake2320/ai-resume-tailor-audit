@@ -16,4 +16,10 @@ spec.components.securitySchemes = { ...(spec.components.securitySchemes ?? {}), 
 spec.components.schemas.AgentOperationRequest = { type: "object", additionalProperties: false, properties: { input: { type: "object", additionalProperties: true }, actor: { type: "string" }, piiApproved: { type: "boolean", default: false } } };
 spec.paths["/api/submissions/approve"] = { post: { operationId: "approveSubmissionPreview", tags: ["Official submissions"], description: "Human-only approval of an exact final preview; returns a short-lived, exact-content-bound receipt.", responses: { "200": { description: "Signed approval receipt" }, "400": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } } };
 spec.paths["/api/submissions/execute"] = { post: { operationId: "executeAuthorizedSubmission", tags: ["Official submissions"], description: "Consumes a one-time approval receipt and calls only an explicitly allowlisted, credentialed official connector.", responses: { "200": { description: "Provider accepted the operation" }, "403": { $ref: "#/components/responses/Error" } } } };
+for (const path of ["/api/fetch-job", "/api/parse-resume", "/api/tailor"]) {
+  const responses = spec.paths[path]?.post?.responses;
+  if (!responses) throw new Error(`Public OpenAPI path ${path} is missing.`);
+  responses["429"] = { $ref: "#/components/responses/Error" };
+  responses["503"] = { $ref: "#/components/responses/Error" };
+}
 await writeFile(file, `${JSON.stringify(spec, null, 2)}\n`);
