@@ -1,5 +1,6 @@
 import type { TailorResult } from "./schema";
 import type { PrivacyMode } from "./pii";
+import { JobPostingSnapshotSchema, type JobPostingSnapshot } from "./schema";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -91,6 +92,7 @@ export interface SavePoint {
 const SESSION_KEY = "art:session";
 const SAVE_POINTS_KEY = "art:save-points";
 const SAVE_POINTS_LIMIT = 12;
+const JOB_INBOX_KEY = "art:job-inbox:v1";
 
 export function loadSession(): Partial<Session> | null {
   if (!canStore()) return null;
@@ -146,10 +148,35 @@ export function deleteSavePoint(id: string): SavePoint[] {
   return next;
 }
 
+export function loadJobInbox(): JobPostingSnapshot[] {
+  if (!canStore()) return [];
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(JOB_INBOX_KEY) ?? "[]");
+    return JobPostingSnapshotSchema.array().parse(parsed);
+  } catch {
+    return [];
+  }
+}
+
+/** Snapshots are append-only: callers can add a revision, never mutate one in place. */
+export function saveJobInbox(jobs: readonly JobPostingSnapshot[]): void {
+  if (!canStore()) return;
+  JobPostingSnapshotSchema.array().parse(jobs);
+  localStorage.setItem(JOB_INBOX_KEY, JSON.stringify(jobs));
+}
+
+export function deleteJobSnapshot(id: string): JobPostingSnapshot[] {
+  const next = loadJobInbox().filter((job) => job.id !== id);
+  saveJobInbox(next);
+  return next;
+}
+
 export function clearAllData(): void {
   if (!canStore()) return;
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(HISTORY_KEY);
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(SAVE_POINTS_KEY);
+  localStorage.removeItem(JOB_INBOX_KEY);
+  window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
 }
