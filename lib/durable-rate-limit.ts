@@ -17,7 +17,9 @@ export type DurableFixedWindowOptions = {
 export function createDurableFixedWindowLimiter(options: DurableFixedWindowOptions) {
   if (!path.isAbsolute(options.directory)) throw new Error("Rate-limit directory must be absolute.");
   if (!options.scope.trim()) throw new Error("Rate-limit scope is required.");
-  if (!Number.isSafeInteger(options.limit) || options.limit < 1 || options.limit > 1_000) throw new Error("Rate-limit capacity must be an integer from 1 to 1000.");
+  // Admission probes existing atomic slot files. Keep the supported ceiling
+  // deliberately small so worst-case synchronous filesystem work is bounded.
+  if (!Number.isSafeInteger(options.limit) || options.limit < 1 || options.limit > 100) throw new Error("Rate-limit capacity must be an integer from 1 to 100.");
   if (!Number.isSafeInteger(options.windowMs) || options.windowMs < 1_000 || options.windowMs > 86_400_000) throw new Error("Rate-limit window must be an integer from one second through one day.");
   const now = options.now ?? Date.now;
   const scope = createHash("sha256").update(options.scope).digest("hex");
@@ -33,7 +35,9 @@ export function createDurableFixedWindowLimiter(options: DurableFixedWindowOptio
       try {
         const handle = openSync(marker, "wx", 0o600);
         closeSync(handle);
-        prune(scopeDirectory, window);
+        // Slot zero has exactly one winner across all processes, so cleanup
+        // runs once per scope/window rather than after every admission.
+        if (slot === 0) prune(scopeDirectory, window);
         return { allowed: true, retryAfterSeconds: 0, remaining: options.limit - slot - 1 };
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;

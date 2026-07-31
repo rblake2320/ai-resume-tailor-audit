@@ -51,8 +51,18 @@ describe("durable fixed-window rate limit", () => {
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "", limit: 1, windowMs: 60_000 })).toThrow(/scope/);
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 0, windowMs: 60_000 })).toThrow(/capacity/);
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1, windowMs: 999 })).toThrow(/window/);
-    expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1_001, windowMs: 60_000 })).toThrow(/capacity/);
+    expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 101, windowMs: 60_000 })).toThrow(/capacity/);
+    expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1_000, windowMs: 60_000 })).toThrow(/capacity/);
     expect(() => createDurableFixedWindowLimiter({ directory: path.resolve("x"), scope: "x", limit: 1, windowMs: 86_400_001 })).toThrow(/window/);
+  });
+
+  it("fills the maximum supported window with bounded synchronous work", async () => {
+    const directory = await root();
+    const limiter = createDurableFixedWindowLimiter({ directory, scope: "bounded-max", limit: 100, windowMs: 60_000, now: () => 1_000 });
+    const started = performance.now();
+    for (let index = 0; index < 100; index += 1) expect(limiter.take().allowed).toBe(true);
+    expect(limiter.take().allowed).toBe(false);
+    expect(performance.now() - started).toBeLessThan(5_000);
   });
 
   it("fails closed when production has no shared rate-limit directory", () => {
