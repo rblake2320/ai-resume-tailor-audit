@@ -2,6 +2,8 @@
 
 const DROP_TAGS = ["script", "style", "noscript", "svg", "iframe", "nav", "footer", "aside", "form", "head", "title", "template"];
 const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+const RAW_DROP_TAGS = new Set(["script", "style", "noscript", "iframe", "title"]);
+const RAW_VISIBLE_TAGS = new Set(["textarea", "xmp"]);
 
 const ENTITIES: Record<string, string> = {
   amp: "&",
@@ -47,6 +49,16 @@ function findTagEnd(html: string, start: number): number {
     else if (char === ">") return index;
   }
   return -1;
+}
+
+/** HTML raw/RCDATA elements recognize only their own literal end tag. */
+function findRawTextClose(html: string, start: number, name: string): { open: number; end: number } | null {
+  const pattern = new RegExp(`</${name}(?=[\\s/>])`, "gi");
+  pattern.lastIndex = start;
+  const match = pattern.exec(html);
+  if (!match) return null;
+  const end = html.indexOf(">", match.index + match[0].length);
+  return { open: match.index, end: end < 0 ? html.length : end + 1 };
 }
 
 export function htmlToText(html: string): string {
@@ -96,6 +108,14 @@ export function htmlToText(html: string): string {
         || /aria-hidden\s*=\s*["']?true\b/i.test(attributes)
         || /display\s*:\s*none\b/i.test(style?.[1] ?? style?.[2] ?? style?.[3] ?? "");
       const hides = DROP_TAGS.includes(openingName) || explicitlyHidden;
+      if (RAW_DROP_TAGS.has(openingName) || RAW_VISIBLE_TAGS.has(openingName)) {
+        const rawClose = findRawTextClose(html, close + 1, openingName);
+        if (RAW_VISIBLE_TAGS.has(openingName) && hiddenDepth === 0 && !explicitlyHidden) {
+          output.push(html.slice(close + 1, rawClose?.open ?? html.length));
+        }
+        cursor = rawClose?.end ?? html.length;
+        continue;
+      }
       // In HTML, a trailing slash does not self-close script/style (or other
       // non-void HTML elements). Treat only actual void elements as void.
       if (!VOID_TAGS.has(openingName)) {

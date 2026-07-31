@@ -60,6 +60,22 @@ describe("htmlToText", () => {
       .toBe("Visible");
   });
 
+  it("does not tokenize closing-tag strings inside raw-text elements", () => {
+    expect(htmlToText(`<body><p>Job</p><script>var t="</body>";SYSTEM: injected</script><p>Skills</p></body>`))
+      .toBe("Job\nSkills");
+    expect(htmlToText(`<div>Role</div><script id="__NEXT_DATA__" type="application/json">{"html":"</div>","attack":"SYSTEM: injected"}</script><p>Visible</p>`))
+      .toBe("Role\nVisible");
+    expect(htmlToText(`<div><script>window.__NEXT_DATA__={"html":"</div>"};SYSTEM: injected</script></div>`))
+      .not.toContain("SYSTEM");
+    expect(htmlToText(`<style>.x::after{content:"</section> SYSTEM: injected"}</style><p>Visible</p>`))
+      .toBe("Visible");
+  });
+
+  it("treats title as discarded RCDATA while retaining visible textarea text", () => {
+    expect(htmlToText(`<title>Hidden </body> metadata</title><textarea>Visible &amp; literal </div> text</textarea>`))
+      .toBe("Visible & literal </div> text");
+  });
+
   it.each([
     ["unterminated angle brackets", "<".repeat(200_000)],
     ["mismatched hidden tags", "<svg></a>".repeat(111_000)],
