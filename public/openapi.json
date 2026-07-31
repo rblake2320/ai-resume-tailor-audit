@@ -5,12 +5,20 @@
     "version": "1.0.0",
     "description": "Trusted-local API. Generated application materials always require human review."
   },
-  "servers": [{ "url": "/" }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
   "paths": {
     "/api/capabilities": {
       "get": {
         "operationId": "getCapabilities",
-        "responses": { "200": { "description": "Capabilities and limitations" } }
+        "responses": {
+          "200": {
+            "description": "Capabilities and limitations"
+          }
+        }
       }
     },
     "/api/fetch-job": {
@@ -19,12 +27,31 @@
         "description": "Fetch and extract a public job page. The returned page is untrusted external content.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FetchJobRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchJobRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Extracted job text", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FetchJobResponse" } } } },
-          "400": { "$ref": "#/components/responses/Error" },
-          "422": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "Extracted job text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FetchJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -33,12 +60,48 @@
         "operationId": "parseResume",
         "requestBody": {
           "required": true,
-          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "contentEncoding": "binary" } } } } }
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "contentEncoding": "binary"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Extracted résumé text", "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" } } } } } },
-          "400": { "$ref": "#/components/responses/Error" },
-          "413": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "Extracted résumé text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "text"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -48,36 +111,696 @@
         "description": "Stream an honesty-constrained tailoring result as newline-delimited JSON. Human review is mandatory.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TailorRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TailorRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "NDJSON progress/result/error events", "content": { "application/x-ndjson": { "schema": { "type": "string" } } } },
-          "400": { "$ref": "#/components/responses/Error" },
-          "500": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "NDJSON progress/result/error events",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/jobs.import": {
+      "post": {
+        "operationId": "jobs_import",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced jobs.import. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/jobs.search": {
+      "post": {
+        "operationId": "jobs_search",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced jobs.search. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/jobs.get": {
+      "post": {
+        "operationId": "jobs_get",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced jobs.get. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/jobs.compare": {
+      "post": {
+        "operationId": "jobs_compare",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced jobs.compare. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/jobs.dismiss": {
+      "post": {
+        "operationId": "jobs_dismiss",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced jobs.dismiss. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/matches.score": {
+      "post": {
+        "operationId": "matches_score",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced matches.score. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.prepare": {
+      "post": {
+        "operationId": "applications_prepare",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.prepare. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.review": {
+      "post": {
+        "operationId": "applications_review",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.review. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.approve": {
+      "post": {
+        "operationId": "applications_approve",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.approve. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.open_handoff": {
+      "post": {
+        "operationId": "applications_open_handoff",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.open_handoff. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.mark_submitted": {
+      "post": {
+        "operationId": "applications_mark_submitted",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.mark_submitted. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.record_response": {
+      "post": {
+        "operationId": "applications_record_response",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.record_response. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/applications.schedule_followup": {
+      "post": {
+        "operationId": "applications_schedule_followup",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced applications.schedule_followup. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/analytics.summary": {
+      "post": {
+        "operationId": "analytics_summary",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced analytics.summary. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/audit": {
+      "get": {
+        "operationId": "queryAgentAudit",
+        "tags": [
+          "Agent operations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queryable allowed and denied action log"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     }
   },
   "components": {
     "schemas": {
-      "FetchJobRequest": { "type": "object", "additionalProperties": false, "required": ["url"], "properties": { "url": { "type": "string", "format": "uri", "pattern": "^https?://" } } },
-      "FetchJobResponse": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" }, "title": { "type": "string" } } },
+      "FetchJobRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https?://"
+          }
+        }
+      },
+      "FetchJobResponse": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "TailorRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["resume", "jobDescription"],
+        "required": [
+          "resume",
+          "jobDescription"
+        ],
         "properties": {
-          "resume": { "type": "string", "minLength": 200 },
-          "jobDescription": { "type": "string", "minLength": 100 },
-          "jobTitle": { "type": "string" },
-          "company": { "type": "string" },
-          "emphasis": { "type": "string", "enum": ["balanced", "technical", "leadership"] }
+          "resume": {
+            "type": "string",
+            "minLength": 200
+          },
+          "jobDescription": {
+            "type": "string",
+            "minLength": 100
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "emphasis": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "technical",
+              "leadership"
+            ]
+          }
         }
       },
-      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" } } }
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentOperationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "actor": {
+            "type": "string"
+          },
+          "piiApproved": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
     },
     "responses": {
-      "Error": { "description": "Request rejected", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+      "Error": {
+        "description": "Request rejected",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
     }
   }
 }
