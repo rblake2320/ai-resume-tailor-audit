@@ -39,10 +39,59 @@ export function submissionDestination(target: SubmissionTarget): string {
   }
 }
 
-/** The personal-data categories actually present in the outgoing fields. */
-export function outgoingDataCategories(fields: Record<string, unknown>): string[] {
-  const text = Object.values(fields).filter((value) => typeof value === "string").join("\n");
-  return [...new Set(protectPii(text).matches.map((match) => match.kind))].sort();
+/**
+ * What a field *is*, independent of whether its value matches a pattern.
+ *
+ * Pattern matching alone is not a consent record: `name: "Ada Lovelace"`,
+ * a résumé, and a cover letter contain no email or SSN shape, so a regex-only
+ * derivation reported zero categories while transmitting the applicant's legal
+ * name and full employment history. Field semantics are the primary signal;
+ * `protectPii` then adds identifiers that appear inside free text.
+ */
+const FIELD_CATEGORIES: ReadonlyArray<{ category: string; match: RegExp }> = [
+  { category: "name", match: /^(?:name|first_name|last_name|middle_name|full_name|preferred_name|legal_name)$/u },
+  { category: "email", match: /^(?:email|email_address)$/u },
+  { category: "phone", match: /^(?:phone|phone_number|telephone|mobile)$/u },
+  { category: "street address", match: /^(?:address|street_address|address_line_?\d*|city|region|postal_code|zip)$/u },
+  { category: "web profile", match: /^(?:website|linkedin|github|portfolio|url)$/u },
+  { category: "resume", match: /^(?:resume|resume_text|resume_content|cv|cv_text)$/u },
+  { category: "cover letter", match: /^(?:cover_letter|cover_letter_text|coverletter|letter)$/u },
+  { category: "written responses", match: /^(?:question_.*|screening.*|answers?)$/u },
+  { category: "message body", match: /^(?:raw_?message|message|body)$/u },
+];
+
+const normaliseFieldName = (key: string) => key.trim().toLowerCase().replace(/[\s-]+/gu, "_");
+
+/**
+ * The personal-data categories actually leaving the app for a submission.
+ *
+ * Covers both the provider fields and, for Gmail, the drafted message body —
+ * which is the entire payload for that provider and was previously not
+ * considered at all.
+ */
+export function outgoingDataCategories(fields: Record<string, unknown>, target?: SubmissionTarget): string[] {
+  const categories = new Set<string>();
+  const freeText: string[] = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (typeof value !== "string" || value.trim() === "") continue;
+    freeText.push(value);
+    const name = normaliseFieldName(key);
+    const matched = FIELD_CATEGORIES.filter(({ match }) => match.test(name));
+    for (const { category } of matched) categories.add(category);
+    // Employers define arbitrary field names, so a fixed list can never be
+    // exhaustive. An unrecognised field still carries applicant-authored text,
+    // and under-declaring a disclosure is worse than over-declaring one.
+    if (matched.length === 0) categories.add("written responses");
+  }
+
+  if (target?.provider === "gmail") {
+    categories.add("message body");
+    freeText.push(target.rawMessage);
+  }
+
+  for (const match of protectPii(freeText.join("\n")).matches) categories.add(match.kind);
+  return [...categories].sort();
 }
 
 const SHA256_HEX = /^[a-f0-9]{64}$/;
@@ -68,7 +117,7 @@ export const SubmissionPreviewSchema = z.strictObject({
   }
   // Declared personal-data categories must be the ones actually being sent, so
   // the disclosure the applicant consents to is the disclosure that happens.
-  const actual = outgoingDataCategories(value.fields);
+  const actual = outgoingDataCategories(value.fields, value.target);
   const declared = [...new Set(value.personalDataCategories)].sort();
   if (declared.join("|") !== actual.join("|")) {
     context.addIssue({ code: "custom", message: `Declared personal-data categories must match the outgoing fields (${actual.join(", ") || "none"}).` });

@@ -9,12 +9,14 @@ const targets: Record<SubmissionPreview["provider"], SubmissionTarget> = {
   gmail: { provider: "gmail", rawMessage: "To: jobs@example.com\r\nSubject: Application\r\n\r\nHello" },
 };
 
+const FIELDS = { first_name: "Ada", last_name: "Lovelace", name: "Ada Lovelace", email: "ada@example.com", resume_text: "APPROVED RESUME" };
+
 const preview = (provider: "greenhouse" | "lever" | "gmail"): SubmissionPreview => ({
   applicationId: "app-1", provider, company: "Acme", role: "Engineer",
   destination: submissionDestination(targets[provider]), packetVersion: 2,
   resumeChecksum: "a".repeat(64), coverLetterChecksum: "b".repeat(64), packetChecksum: "c".repeat(64),
-  personalDataCategories: ["email"],
-  fields: { first_name: "Ada", last_name: "Lovelace", name: "Ada Lovelace", email: "ada@example.com", resume_text: "APPROVED RESUME" },
+  personalDataCategories: outgoingDataCategories(FIELDS, targets[provider]),
+  fields: { ...FIELDS },
   createdAt: "2026-01-01T00:00:00.000Z", target: structuredClone(targets[provider]),
 });
 
@@ -121,10 +123,37 @@ describe("authorized submission connectors", () => {
     expect(() => issueSubmissionApproval(over, secret)).toThrow(/personal-data categories/);
   });
 
-  it("derives personal-data categories from the fields actually being sent", () => {
-    expect(outgoingDataCategories({ email: "ada@example.com" })).toEqual(["email"]);
-    expect(outgoingDataCategories({ a: "ssn 555-00-1234", b: "ada@example.com" }).sort()).toEqual(["email", "government identifier"]);
-    expect(outgoingDataCategories({ name: "Ada Lovelace" })).toEqual([]);
+  it("derives personal-data categories from what a field IS, not only what it matches", () => {
+    // Regression: derivation was regex-only, so a plain legal name, a résumé,
+    // and a cover letter reported ZERO categories while being transmitted — the
+    // consent record said "no personal data" about the most personal payload
+    // the app sends.
+    expect(outgoingDataCategories({ name: "Ada Lovelace" })).toEqual(["name"]);
+    expect(outgoingDataCategories({ first_name: "Ada", last_name: "Lovelace" })).toEqual(["name"]);
+    expect(outgoingDataCategories({ resume_text: "Built systems at Acme." })).toEqual(["resume"]);
+    expect(outgoingDataCategories({ cover_letter: "Dear hiring manager." })).toEqual(["cover letter"]);
+    expect(outgoingDataCategories({ question_12345: "I have five years." })).toEqual(["written responses"]);
+    expect(outgoingDataCategories({ "Phone-Number": "n/a" })).toEqual(["phone"]);
+    expect(outgoingDataCategories({ city: "Austin" })).toEqual(["street address"]);
+  });
+
+  it("still detects identifiers hiding inside free text", () => {
+    expect(outgoingDataCategories({ q1: "reach me at ada@example.com" })).toEqual(["email", "written responses"]);
+    expect(outgoingDataCategories({ notes: "ssn 555-00-1234" })).toEqual(["government identifier", "written responses"]);
+  });
+
+  it("counts the Gmail message body, which is that provider's entire payload", () => {
+    expect(outgoingDataCategories({}, targets.gmail)).toEqual(["email", "message body"]);
+  });
+
+  it("declares an unrecognised field rather than silently omitting it", () => {
+    // Employers define arbitrary field names, so under-declaring is the failure
+    // mode to avoid: an unknown field still carries applicant-authored text.
+    expect(outgoingDataCategories({ tell_us_about_yourself: "I build systems." })).toEqual(["written responses"]);
+  });
+
+  it("ignores empty and non-string field values", () => {
+    expect(outgoingDataCategories({ name: "   ", resume_text: "", count: 3 })).toEqual([]);
   });
 
   it("discovers and enforces Greenhouse job-specific required fields before submit", async () => {
