@@ -41,14 +41,37 @@ function safeChar(code: number): string {
 /** Find a tag's closing `>` without treating `>` inside a quoted attribute as markup. */
 function findTagEnd(html: string, start: number): number {
   let quote: '"' | "'" | null = null;
+  let valueState: "between" | "after-equals" | "unquoted" = "between";
   for (let index = start; index < html.length; index += 1) {
     const char = html[index];
     if (quote) {
       if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") quote = char;
-    else if (char === ">") return index;
+      continue;
+    }
+    if (char === ">") return index;
+    if (valueState === "after-equals") {
+      if (/\s/u.test(char)) continue;
+      if (char === '"' || char === "'") {
+        quote = char;
+        valueState = "between";
+      } else {
+        valueState = "unquoted";
+      }
+      continue;
+    }
+    if (valueState === "unquoted") {
+      if (/\s/u.test(char)) valueState = "between";
+      continue;
+    }
+    if (char === "=") valueState = "after-equals";
   }
   return -1;
+}
+
+function looksLikeMarkup(html: string, open: number): boolean {
+  const next = html[open + 1] ?? "";
+  if (/[a-z!?]/iu.test(next)) return true;
+  return next === "/" && /[a-z]/iu.test(html[open + 2] ?? "");
 }
 
 /** HTML raw/RCDATA elements recognize only their own literal end tag. */
@@ -81,9 +104,16 @@ export function htmlToText(html: string): string {
       cursor = commentEnd < 0 ? html.length : commentEnd + 3;
       continue;
     }
+    if (!looksLikeMarkup(html, open)) {
+      if (hiddenDepth === 0) output.push("<");
+      cursor = open + 1;
+      continue;
+    }
     const close = findTagEnd(html, open + 1);
     if (close < 0) {
-      if (hiddenDepth === 0) output.push(html.slice(open));
+      // HTML tokenization discards an unfinished tag at EOF. Emitting it as
+      // text would expose raw script/hidden content whenever a quoted
+      // attribute is unterminated.
       break;
     }
     const rawTag = html.slice(open + 1, close);
