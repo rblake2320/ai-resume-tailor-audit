@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { mdToAtsText } from "./markdown.ts";
+import { affirmativelyPresent } from "./ats.ts";
 
 export const EvidenceStateSchema = z.enum([
   "proven", "partially_supported", "unsupported", "needs_clarification", "intentionally_omitted",
@@ -9,8 +11,8 @@ export const RequirementEvidenceSchema = z.strictObject({
   requirement: z.string().min(1),
   category: z.enum(["mandatory", "preferred", "responsibility", "logistics"]),
   state: EvidenceStateSchema,
-  evidence: z.array(z.string()).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
-  tailoredText: z.array(z.string()).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
+  evidence: z.array(z.string().max(2_000)).max(10).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
+  tailoredText: z.array(z.string().max(2_000)).max(20).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
   recommendation: z.string().describe("Honest next step, clarification, adjacent skill, portfolio task, training, or omission rationale"),
 }).superRefine((item, context) => {
   if (item.state === "unsupported" && (item.evidence.length > 0 || item.tailoredText.length > 0)) {
@@ -82,7 +84,7 @@ export const TailorResultSchema = z.strictObject({
     )
     .describe("Honest gaps the candidate should know about"),
   requirement_evidence: z
-    .array(RequirementEvidenceSchema)
+    .array(RequirementEvidenceSchema).max(100)
     .describe("Auditable mapping of each material job requirement to source résumé evidence and resulting tailored text"),
   ats_checks: z
     .array(
@@ -110,29 +112,191 @@ export const TailorResultSchema = z.strictObject({
 export type TailorResult = z.infer<typeof TailorResultSchema>;
 
 export class HonestyValidationError extends Error {
-  constructor(public readonly violations: readonly string[]) {
+  public readonly violations: readonly string[];
+
+  constructor(violations: readonly string[]) {
     super(`Generated content failed evidence validation: ${violations.join(" ")}`);
     this.name = "HonestyValidationError";
+    this.violations = violations;
   }
 }
 
-const comparable = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/\s+/gu, " ").trim();
+export type HonestyViolationSummary = {
+  sourceCitationMismatch: number;
+  outputReferenceMismatch: number;
+  addedKeywordMismatch: number;
+};
+
+/** Content-free operational diagnostics: counts rule classes without logging résumé or job text. */
+export function summarizeHonestyViolations(violations: readonly string[]): HonestyViolationSummary {
+  return {
+    sourceCitationMismatch: violations.filter((item) => item.includes("cites evidence absent")).length,
+    outputReferenceMismatch: violations.filter((item) => item.includes("references tailored text absent")).length,
+    addedKeywordMismatch: violations.filter((item) => item.startsWith("Added keyword ")).length,
+  };
+}
+
+const comparableText = (value: string) => value
+  .replaceAll("&amp;", "&")
+  .replaceAll("&lt;", "<")
+  .replaceAll("&gt;", ">")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en-US")
+  .replace(/[\u2010-\u2015\u2212]/gu, "-")
+  .replace(/[\u2018\u2019]/gu, "'")
+  .replace(/[\u201c\u201d]/gu, '"')
+  .replace(/\s+/gu, " ")
+  .trim();
+
+// Résumés and evidence are plain text. Generated documents are Markdown.
+// Keeping those paths separate prevents Markdown-shaped source text (for
+// example a footnote beginning with "*") from being rewritten asymmetrically.
+const comparableSource = (value: string) => comparableText(value);
+const comparableOutput = (value: string) => comparableText(mdToAtsText(value));
+
+const qualifiedRatherThanProven = (evidence: string): boolean => {
+  const text = comparableSource(evidence);
+  return /^(?:no|not|never|zero|without|lacks?|lacking|unfamiliar(?: with)?|only evaluated|beginner in|exposure to|aspiring to(?: be)?|hope to become|failed to become|seeking to learn)\b/u.test(text)
+    || /\b(?:minimal|limited)\b.{0,60}\b(?:experience|proficiency|knowledge|familiarity|exposure)\b/u.test(text)
+    || /\bevaluated\b.{0,40}\b(?:but\s+)?did\s+not\s+deploy\b/u.test(text);
+};
+
+// A line ending in one of these cannot end a résumé record: the sentence is
+// grammatically incomplete, so the next visual line is always a wrap.
+const CONTINUATION_END =
+  /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|with|within|across|among|between|covering|cutting|during|including|spanning|supporting|through|throughout|under|using|via)$/iu;
+const SENTENCE_END = /[.!?;:]$/u;
+const ABBREVIATION_END = /\b(?:[a-z]|inc|ltd|llc|corp|co|dept|est|no|vs|approx|pct|e\.g|i\.e|u\.s|u\.k|ph\.d|m\.s|b\.s|m\.d|jr|sr|mr|mrs|ms|dr|st|ave)\.$/iu;
+/** Words carrying no prose signal, so a record header may contain them. */
+const HEADER_STOPWORDS = new Set(["a", "an", "and", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "with", "&"]);
+/** A line that is essentially only a date or a date range. */
+const DATE_ONLY = /^[^\p{L}]*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*(?:[-–—]|to)?\s*(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?(?:(?:19|20)\d{2}|present|current|now)?[^\p{L}]*$/iu;
+
+/**
+ * True when the line reads as running prose rather than a record header.
+ *
+ * This is the discriminator that separates a wrapped sentence from a new
+ * résumé record. `Identity and fraud domains` continues a bullet; `Initech
+ * Corp — Staff Engineer` starts one. Both begin with a capital letter, so
+ * neither line position nor the first word can tell them apart — but a header
+ * capitalises every significant word and prose does not.
+ */
+const readsAsProse = (line: string): boolean =>
+  line
+    .split(/\s+/u)
+    .slice(1)
+    .some((word) => {
+      const bare = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+      return bare.length > 0 && !HEADER_STOPWORDS.has(bare.toLowerCase()) && /^\p{Ll}/u.test(bare);
+    });
+
+/**
+ * A capitalised past-tense verb opening a line starts a new achievement, not a
+ * wrap. Résumé bullets conventionally open with such a verb, so when a marker
+ * is lost in PDF extraction this is the only remaining signal that two
+ * achievements are separate. Irregular forms are listed; the rest are `-ed`.
+ */
+const ACHIEVEMENT_OPENER =
+  /^(?:built|led|ran|grew|cut|drove|oversaw|rewrote|rebuilt|won|wrote|took|made|set|sold|held|kept|sent|spent|chose|began|brought|taught|found|gave|met|saw|told|left|paid|beat|broke|drew|knew|ran|rose|spoke)\b|^\p{Lu}\p{Ll}+ed\b/u;
+
+/** A new résumé record: a heading, a date row, a company/title row, a skills list, or a new achievement. */
+const startsRecord = (line: string): boolean =>
+  (/\p{L}/u.test(line) && line === line.toLocaleUpperCase("en-US"))
+  || DATE_ONLY.test(line)
+  || !readsAsProse(line)
+  || (/^\p{Lu}/u.test(line) && ACHIEVEMENT_OPENER.test(line));
+
+/**
+ * Reconstruct likely logical lines from PDF visual-line output without
+ * joining separate bullets, headings, pages, or short record-like rows.
+ * This is deliberately conservative: a long sentence or an explicit
+ * continuation may cross a visual wrap; structural boundaries never do.
+ */
+const sourceEvidenceSegments = (source: string): string[] => {
+  const segments: string[] = [];
+  let current = "";
+  const flush = () => {
+    const normalized = comparableSource(current);
+    if (normalized) segments.push(normalized);
+    current = "";
+  };
+
+  for (const raw of source.replace(/[\v\f\u2028\u2029]/gu, "\n\n").split(/\r?\n/u)) {
+    const line = raw.trim();
+    if (!line || /^(?:[-*_]{3,}|[\u2010-\u2015\u2212])$/u.test(line) || /^#{1,6}\s/u.test(line)) {
+      flush();
+      continue;
+    }
+    const bulletMatch = line.match(/^[-*+\u2022]\s+(.+)$/u);
+    if (bulletMatch) {
+      flush();
+      // Preserve the literal source line as an alternate exact span for
+      // résumés where a leading marker is meaningful text, while building a
+      // marker-free logical record for ordinary model citations and wraps.
+      segments.push(comparableSource(line));
+      current = bulletMatch[1];
+      continue;
+    }
+    if (!current) {
+      current = line;
+      continue;
+    }
+    // Affirmative continuation signals, strongest first. Earlier revisions asked
+    // "is this a continuation?" and defaulted to joining, which welded separate
+    // records; then "is the next line record-shaped?" and defaulted to breaking,
+    // which split wrapped bullets. A line now joins only when something
+    // positively indicates a wrap.
+    // A heading or date row closes its record: it must never absorb the body
+    // line beneath it.
+    const endsSentence = (SENTENCE_END.test(current) && !ABBREVIATION_END.test(current))
+      || (/\p{L}/u.test(current) && current === current.toLocaleUpperCase("en-US"))
+      || DATE_ONLY.test(current);
+    const isContinuation =
+      // An incomplete sentence cannot end a record, whatever follows it.
+      (CONTINUATION_END.test(current) && !endsSentence)
+      // No résumé record begins with a lowercase word or with punctuation. A
+      // bare date row is the exception: it opens a record even though it starts
+      // with a numeral, so "…40%" ⏎ "2015-2019" must not fuse while
+      // "…platform" ⏎ "2021 saw 40% growth" still wraps.
+      || (/^[\p{Ll}\p{N},.;:)\]]/u.test(line) && !DATE_ONLY.test(line))
+      // Otherwise the next line must read as prose and the previous line must
+      // not have closed a sentence.
+      || (!startsRecord(line) && !endsSentence);
+    if (isContinuation) current += ` ${line}`;
+    else {
+      flush();
+      current = line;
+    }
+  }
+  flush();
+  return segments;
+};
 
 /** Deterministic post-generation boundary for structured evidence references. */
 export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
-  const source = comparable(originalResume);
-  const output = comparable(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
+  const sourceLines = sourceEvidenceSegments(originalResume);
+  const output = comparableOutput(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
   const violations: string[] = [];
+  const supportCache = new Map<string, boolean>();
   for (const requirement of result.requirement_evidence) {
     for (const evidence of requirement.evidence) {
-      if (!source.includes(comparable(evidence))) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
+      const cited = comparableSource(evidence);
+      const cacheKey = `${requirement.state === "proven" ? "1" : "0"}\u0000${cited}`;
+      let supported = supportCache.get(cacheKey);
+      if (supported === undefined) {
+        supported = sourceLines.some((line) => line.includes(cited)
+          && affirmativelyPresent(line, cited, requirement.state === "proven"));
+        supportCache.set(cacheKey, supported);
+      }
+      const overclaimed = requirement.state === "proven" && qualifiedRatherThanProven(evidence);
+      if (!supported || overclaimed) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
     }
     for (const text of requirement.tailoredText) {
-      if (!output.includes(comparable(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
+      if (!output.includes(comparableSource(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
     }
   }
   for (const keyword of result.keywords.added) {
-    if (!output.includes(comparable(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
+    if (!output.includes(comparableSource(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
   }
   if (violations.length) throw new HonestyValidationError([...new Set(violations)]);
 }

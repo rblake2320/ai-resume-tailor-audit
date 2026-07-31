@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
-import { assertTailorResultEvidence, HonestyValidationError, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
+import { assertTailorResultEvidence, HonestyValidationError, summarizeHonestyViolations, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 import { resolveModel } from "@/lib/anthropic-model";
@@ -16,7 +16,7 @@ type StreamEvent =
   | { type: "thinking"; text: string }
   | { type: "progress"; chars: number }
   | { type: "result"; data: unknown }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED"; validation?: ReturnType<typeof summarizeHonestyViolations> };
 
 export async function POST(req: NextRequest): Promise<Response> {
   const limited = enforcePublicRateLimit("tailor", { limit: 10, windowMs: 60_000 });
@@ -103,7 +103,13 @@ export async function POST(req: NextRequest): Promise<Response> {
           send({ type: "result", data: result });
         }
       } catch (err) {
-        send({ type: "error", message: describeError(err) });
+        if (err instanceof HonestyValidationError) {
+          const validation = summarizeHonestyViolations(err.violations);
+          console.warn("Tailor evidence validation failed", { reasonCode: "EVIDENCE_VALIDATION_FAILED", ...validation });
+          send({ type: "error", reasonCode: "EVIDENCE_VALIDATION_FAILED", validation, message: describeError(err) });
+        } else {
+          send({ type: "error", message: describeError(err) });
+        }
       } finally {
         controller.close();
       }
