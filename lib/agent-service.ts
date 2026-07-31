@@ -1,8 +1,9 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { withFileLock } from "./file-lock.ts";
+import { appendAuthenticatedAudit, assertAgentAuditConfigured, verifyAuthenticatedAudit, type AgentAuditEntry } from "./agent-audit.ts";
 
 export const AGENT_OPERATIONS = [
   "jobs.import", "jobs.search", "jobs.get", "jobs.compare", "jobs.dismiss", "matches.score",
@@ -20,9 +21,10 @@ export type AgentRequest = z.input<typeof AgentRequestSchema>;
 
 type StoredJob = { id: string; title: string; company: string; description: string; url: string; dismissed: boolean; importedAt: string };
 type StoredApplication = { id: string; jobId: string; state: "prepared" | "approved" | "handoff_opened" | "submitted"; packet: Record<string, unknown>; approvedAt: string | null; submittedAt: string | null; /** First outward disclosure; consumes one unit of daily quota. */ disclosedAt?: string | null; responses: unknown[]; followUps: string[] };
-export type AuditEntry = { id: string; at: string; actor: string; operation: AgentOperation; allowed: boolean; reason: string; inputHash: string; resultId: string | null };
+export type AuditEntry = AgentAuditEntry;
 type Store = { version: 1; jobs: StoredJob[]; applications: StoredApplication[]; audit: AuditEntry[] };
 const emptyStore = (): Store => ({ version: 1, jobs: [], applications: [], audit: [] });
+export const UNAUTHENTICATED_DENIALS_PER_UTC_DAY = 32;
 
 const storePath = () => {
   const configured = process.env.RESUME_FOUNDRY_AGENT_STORE?.trim();
@@ -32,9 +34,12 @@ const storePath = () => {
   if (!path.isAbsolute(configured)) throw new Error("RESUME_FOUNDRY_AGENT_STORE must be an absolute path on durable storage.");
   return configured;
 };
-async function loadStore(): Promise<Store> { try { return JSON.parse(await readFile(storePath(), "utf8")) as Store; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyStore(); throw error; } }
+async function loadStore(): Promise<Store> { try { const store = JSON.parse(await readFile(storePath(), "utf8")) as Store; verifyAuthenticatedAudit(store.audit); return store; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyStore(); throw error; } }
 async function saveStore(store: Store) { const target = storePath(); await mkdir(path.dirname(target), { recursive: true }); const temp = `${target}.${process.pid}.${randomUUID()}.tmp`; await writeFile(temp, JSON.stringify(store, null, 2), { encoding: "utf8", mode: 0o600 }); await rename(temp, target); }
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+function addAudit(store: Store, entry: Omit<AuditEntry, "id" | "at" | "previousMac" | "mac">, now = new Date().toISOString()) {
+  store.audit.push(appendAuthenticatedAudit(store.audit, { id: randomUUID(), at: now, ...entry }));
+}
 const text = (value: unknown, name: string, minimum = 1) => { if (typeof value !== "string" || value.trim().length < minimum) throw new Error(`${name} is required.`); return value.trim(); };
 
 /**
@@ -85,6 +90,8 @@ async function executeAgentOperationInner(raw: AgentRequest) {
   // corrupt store escaped to the route and returned the durable store's
   // absolute filesystem path to the caller in `error.message`.
   let store: Store;
+  try { assertAgentAuditConfigured(); }
+  catch { return { ok: false, operation: request.operation, error: "The authenticated agent audit is unavailable." }; }
   try { store = await loadStore(); }
   catch { return { ok: false, operation: request.operation, error: "The agent durable store is unavailable." }; }
   const permission = decision(request.operation, request); let result: unknown = null; let resultId: string | null = null;
@@ -107,10 +114,10 @@ async function executeAgentOperationInner(raw: AgentRequest) {
       case "applications.schedule_followup": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application) throw new Error("Application not found."); const dueAt = text(input.dueAt, "dueAt"); if (!Number.isFinite(new Date(dueAt).getTime())) throw new Error("dueAt must be an ISO date."); application.followUps.push(new Date(dueAt).toISOString()); result = application; resultId = application.id; break; }
       case "analytics.summary": result = { jobs: store.jobs.length, activeJobs: store.jobs.filter((job) => !job.dismissed).length, applications: store.applications.length, submitted: store.applications.filter((item) => item.submittedAt).length }; break;
     }
-    store.audit.push({ id: randomUUID(), at: now, actor: request.actor, operation: request.operation, allowed: true, reason: permission.reason, inputHash: hash(request.input), resultId });
+    addAudit(store, { actor: request.actor, operation: request.operation, allowed: true, reasonCode: "POLICY_SATISFIED", inputHash: hash(request.input), resultId }, now);
     await saveStore(store); return { ok: true, operation: request.operation, result };
   } catch (error) {
-    store.audit.push({ id: randomUUID(), at: now, actor: request.actor, operation: request.operation, allowed: false, reason: error instanceof Error ? error.message : "Operation denied.", inputHash: hash(request.input), resultId: null });
+    addAudit(store, { actor: request.actor, operation: request.operation, allowed: false, reasonCode: "OPERATION_DENIED", inputHash: hash(request.input), resultId: null }, now);
     // This save previously ran unguarded inside the failure path, so a rename
     // race surfaced as an uncaught EPERM that killed the process.
     await saveStore(store).catch(() => undefined);
@@ -150,9 +157,46 @@ export async function executeAgentOperation(raw: AgentRequest) {
  * the first-run case — so the audit trail would come back empty rather than
  * missing, which is the more dangerous of the two failures.
  */
-export async function queryAuditLog(): Promise<AuditEntry[]> {
-  const read = async () => (await loadStore()).audit.map((entry) => ({ ...entry }));
+export type AuditPage = { entries: AuditEntry[]; nextCursor: string | null };
+export async function queryAuditLog(options: { limit?: number; cursor?: string } = {}): Promise<AuditPage> {
+  const limit = options.limit ?? 50;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Audit page limit must be an integer from 1 through 100.");
+  const read = async () => {
+    const audit = (await loadStore()).audit;
+    const start = options.cursor ? audit.findIndex((entry) => entry.id === options.cursor) + 1 : 0;
+    if (options.cursor && start === 0) throw new Error("Invalid audit cursor.");
+    const entries = audit.slice(start, start + limit).map((entry) => ({ ...entry }));
+    return { entries, nextCursor: start + limit < audit.length ? entries.at(-1)!.id : null };
+  };
   let lockPath: string | null = null;
   try { lockPath = `${storePath()}.lock`; } catch { lockPath = null; }
   return lockPath ? withFileLock(lockPath, read) : read();
+}
+
+export async function recordAgentDenial(entry: { actor: string; operation: string; reasonCode: string; input?: unknown }) {
+  if (entry.actor === "unauthenticated" && entry.reasonCode === "AUTHENTICATION_REQUIRED") {
+    const directory = `${storePath()}.auth-denials.${new Date().toISOString().slice(0, 10)}`;
+    await mkdir(directory, { recursive: true });
+    let admitted = false;
+    for (let slot = 0; slot < UNAUTHENTICATED_DENIALS_PER_UTC_DAY; slot += 1) {
+      try {
+        const handle = await open(path.join(directory, String(slot)), "wx", 0o600);
+        await handle.close();
+        admitted = true;
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      }
+    }
+    // Authentication still fails closed, but requests beyond the durable
+    // daily admission bound never read or rewrite the growing audit store.
+    if (!admitted) return false;
+  }
+  const write = async () => {
+    const store = await loadStore();
+    addAudit(store, { actor: entry.actor.slice(0, 200), operation: entry.operation.slice(0, 200), allowed: false, reasonCode: entry.reasonCode, inputHash: hash(entry.input ?? {}), resultId: null });
+    await saveStore(store);
+  };
+  await withFileLock(`${storePath()}.lock`, write);
+  return true;
 }

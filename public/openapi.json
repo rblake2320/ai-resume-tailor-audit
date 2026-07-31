@@ -796,9 +796,31 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Queryable allowed and denied action log"
+            "description": "HMAC-authenticated, cursor-paginated allowed and denied action log"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -1146,9 +1168,6 @@
           "input": {
             "type": "object",
             "additionalProperties": true
-          },
-          "actor": {
-            "type": "string"
           },
           "piiApproved": {
             "type": "boolean",

@@ -38,7 +38,7 @@ export function createResumeFoundryMcpServer() {
       description: `Resume Foundry operation ${operation}. Runs through the same executeAgentOperation policy boundary as HTTP. Approval-gated and PII-bearing operations are not exposed over stdio.`,
       // No `humanApprovalSecret` and no `piiApproved`: neither may originate
       // from the model. Operations needing them are not registered here.
-      inputSchema: { input: z.record(z.string(), z.unknown()).default({}), actor: z.string().default("mcp-agent") },
+      inputSchema: { input: z.record(z.string(), z.unknown()).default({}) },
     },
     async (arguments_) => {
       // Fields are passed explicitly rather than spread, so a future schema
@@ -47,7 +47,7 @@ export function createResumeFoundryMcpServer() {
       const result = await executeAgentOperation({
         operation,
         input: arguments_.input ?? {},
-        actor: arguments_.actor ?? "mcp-agent",
+        actor: "mcp:local-stdio",
       });
       return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
     });
