@@ -65,7 +65,11 @@ export function mdToAtsText(md: string): string {
       let visible = line
         .replace(/^#{1,4}\s+/, "")
         .replace(/^\s*[-*•]\s+/, "• ")
-        .replace(/^---$/, "");
+        .replace(/^---$/, "")
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+        .replace(/\[([^\]]+)\]\[[^\]]*\]/g, "$1")
+        .replace(/`([^`\n]+)`/g, "$1");
       // Two passes unwrap nested emphasis such as **Built *CI* pipelines**.
       for (let pass = 0; pass < 2; pass += 1) {
         visible = visible

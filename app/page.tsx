@@ -304,11 +304,26 @@ export default function Home() {
             | { type: "thinking"; text: string }
             | { type: "progress"; chars: number }
             | { type: "result"; data: TailorResult }
-            | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED" };
+            | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED"; validation?: {
+              sourceCitationMismatch: number;
+              outputReferenceMismatch: number;
+              addedKeywordMismatch: number;
+            } };
           if (generationId !== activeGenerationRef.current) return;
           if (event.type === "thinking") setThinking((t) => t + event.text);
           else if (event.type === "progress") setProgressChars(event.chars);
-          else if (event.type === "error") throw new Error(event.message);
+          else if (event.type === "error") {
+            if (event.reasonCode === "EVIDENCE_VALIDATION_FAILED") {
+              const blockedReferences = event.validation
+                ? Object.values(event.validation).reduce((total, count) => total + count, 0)
+                : 0;
+              const detail = blockedReferences > 0
+                ? ` ${blockedReferences} evidence reference${blockedReferences === 1 ? "" : "s"} could not be verified.`
+                : "";
+              throw new Error(`${event.message}${detail}`);
+            }
+            throw new Error(event.message);
+          }
           else if (event.type === "result") {
             const restoredResult = restorePii(event.data, restorationMap);
             setResult(restoredResult);

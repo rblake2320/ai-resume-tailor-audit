@@ -99,6 +99,26 @@ describe("deterministic evidence boundary", () => {
     });
     expect(() => assertTailorResultEvidence(result, "Not proficient in Kubernetes.")).toThrow(/failed evidence validation/);
   });
+  it("rejects a citation found only inside a no-experience disclaimer", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: [{ id: "production", requirement: "Production", category: "mandatory", state: "proven",
+        evidence: ["production experience"], tailoredText: ["production experience"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nproduction experience",
+    });
+    expect(() => assertTailorResultEvidence(result, "Familiar with Rust but no production experience.")).toThrow(/failed evidence validation/);
+  });
+  it("keeps an affirmative citation valid when another clause is negated", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines"], tailoredText: ["Built CI pipelines"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nBuilt CI pipelines",
+    });
+    expect(() => assertTailorResultEvidence(result, "Built CI pipelines. Did not use Kubernetes.")).not.toThrow();
+  });
   it("does not treat Markdown-shaped plain source text asymmetrically", () => {
     const result = TailorResultSchema.parse({
       ...VALID_RESULT,
@@ -109,6 +129,20 @@ describe("deterministic evidence boundary", () => {
     });
     expect(() => assertTailorResultEvidence(result, "Experience\n* operated the deployment process")).not.toThrow();
   });
+  it.each([
+    ["section separator", "Senior Engineer at Acme, 2019 - 2024\n---\nCertifications: AWS Solutions Architect (2024)", "Senior Engineer at Acme, 2019 - 2024 Certifications: AWS Solutions Architect (2024)"],
+    ["different bullet markers", "* Python\n- Kubernetes (evaluated only)", "Python • Kubernetes (evaluated only)"],
+    ["heading boundary", "## SKILLS\nPython, SQL\n\n## CERTIFICATIONS\nAWS Solutions Architect", "Python, SQL CERTIFICATIONS AWS Solutions Architect"],
+  ])("does not splice evidence across a %s", (_label, resume, stitchedEvidence) => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: [{ id: "boundary", requirement: "Boundary", category: "mandatory", state: "proven",
+        evidence: [stitchedEvidence], tailoredText: ["Supported claim"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nSupported claim",
+    });
+    expect(() => assertTailorResultEvidence(result, resume)).toThrow(/failed evidence validation/);
+  });
   it("matches visible text through nested Markdown emphasis", () => {
     const result = TailorResultSchema.parse({
       ...VALID_RESULT,
@@ -118,6 +152,26 @@ describe("deterministic evidence boundary", () => {
       tailored_resume_markdown: "# Jane Doe\n**Built *CI* pipelines**",
     });
     expect(() => assertTailorResultEvidence(result, "Built CI pipelines")).not.toThrow();
+  });
+  it("matches visible text through Markdown links and inline code", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: ["Kubernetes"] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines with Kubernetes at Acme"], tailoredText: ["Built CI pipelines with Kubernetes at Acme"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nBuilt CI pipelines with `Kubernetes` at [Acme](https://acme.example).",
+    });
+    expect(() => assertTailorResultEvidence(result, "Built CI pipelines with Kubernetes at Acme")).not.toThrow();
+  });
+  it("compares output text without treating a mid-line hyphen as a Markdown bullet", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: [] },
+      requirement_evidence: [{ id: "sales", requirement: "Sales", category: "mandatory", state: "proven",
+        evidence: ["Sales operations"], tailoredText: ["- Sales operations"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nRegional Manager - Sales operations lead for the west region",
+    });
+    expect(() => assertTailorResultEvidence(result, "Sales operations")).not.toThrow();
   });
   it("summarizes failures without copying requirement ids, keywords, or document text", () => {
     const summary = summarizeHonestyViolations([

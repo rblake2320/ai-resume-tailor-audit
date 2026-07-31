@@ -165,11 +165,11 @@ export function assertTailorResultEvidence(result: TailorResult, originalResume:
       if (!source.includes(cited) || !affirmativelyPresent(source, cited)) violations.push(`Requirement ${requirement.id} cites evidence absent from the original résumé.`);
     }
     for (const text of requirement.tailoredText) {
-      if (!output.includes(comparableOutput(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
+      if (!output.includes(comparableSource(text))) violations.push(`Requirement ${requirement.id} references tailored text absent from the generated documents.`);
     }
   }
   for (const keyword of result.keywords.added) {
-    if (!output.includes(comparableOutput(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
+    if (!output.includes(comparableSource(keyword))) violations.push(`Added keyword "${keyword}" is absent from the generated documents.`);
   }
   if (violations.length) throw new HonestyValidationError([...new Set(violations)]);
 }
