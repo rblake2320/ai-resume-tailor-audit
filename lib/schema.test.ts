@@ -191,6 +191,11 @@ describe("deterministic evidence boundary", () => {
     const evidence = "containerized infrastructure Initech Corp Staff Engineer 2015-2019";
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
   });
+  it("accepts a wrapped bullet whose continuation starts with a proper noun", () => {
+    const resume = "• Migrated 200 services to containerized infrastructure using\nKubernetes and Terraform";
+    const evidence = "Migrated 200 services to containerized infrastructure using Kubernetes and Terraform";
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
+  });
   it.each([
     "Node.js at Acme",
     "3.5 years of Python",
@@ -262,6 +267,12 @@ describe("deterministic evidence boundary", () => {
   ])("does not evade a degree qualifier by shortening the citation: %s", (resume, evidence) => {
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence, "partially_supported"), resume)).not.toThrow();
+  });
+  it.each([
+    ["Senior Engineer at Contoso Limited with 9 years of experience shipping payments", "9 years of experience shipping payments"],
+    ["Acme Limited - built CI pipelines cutting deploy time 40%. Skills: Python, SQL", "built CI pipelines cutting deploy time 40%"],
+  ])("does not treat an incorporated employer as a degree qualifier: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
   });
   it.each([
     ["Acme Limited built CI pipelines", "built CI pipelines"],
