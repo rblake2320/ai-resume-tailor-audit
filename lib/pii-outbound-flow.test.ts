@@ -51,6 +51,7 @@ describe("real browser outbound PII flow", () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    HTMLElement.prototype.scrollTo = vi.fn();
     requests = [];
     deleteCareerLedgerMock.mockReset();
     deleteCareerLedgerMock.mockResolvedValue(undefined);
@@ -151,6 +152,38 @@ describe("real browser outbound PII flow", () => {
     expect(document.body.textContent).not.toContain("Stale resume");
     expect(JSON.parse(localStorage.getItem("art:history") ?? "[]")).toEqual([]);
     expect(document.body.textContent).toContain("Inputs changed");
+  });
+
+  it("ignores late analysis events from a stream that continues after input invalidation", async () => {
+    let staleController!: ReadableStreamDefaultController<Uint8Array>;
+    let currentController!: ReadableStreamDefaultController<Uint8Array>;
+    vi.mocked(fetch)
+      .mockImplementationOnce(async (_url, init) => {
+        requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(new ReadableStream({ start(controller) { staleController = controller; } }), { status: 200 });
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(new ReadableStream({ start(controller) { currentController = controller; } }), { status: 200 });
+      });
+
+    await act(async () => { button("Forge my resume").click(); });
+    await act(async () => setValue(document.querySelector("#resume") as HTMLTextAreaElement, `${resume} changed`));
+    await act(async () => { button("Forge my resume").click(); });
+    await act(async () => {
+      staleController.enqueue(new TextEncoder().encode(
+        `${JSON.stringify({ type: "thinking", text: "STALE ANALYSIS" })}\n${JSON.stringify({ type: "progress", chars: 999 })}\n`,
+      ));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(document.body.textContent).not.toContain("STALE ANALYSIS");
+    expect(document.body.textContent).not.toContain("999 chars");
+
+    await act(async () => {
+      currentController.error(new DOMException("cancelled", "AbortError"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
   });
 
   it("makes erase-all reachable when a profile exists without history", async () => {

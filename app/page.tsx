@@ -299,11 +299,11 @@ export default function Home() {
             | { type: "progress"; chars: number }
             | { type: "result"; data: TailorResult }
             | { type: "error"; message: string };
+          if (generationId !== activeGenerationRef.current) return;
           if (event.type === "thinking") setThinking((t) => t + event.text);
           else if (event.type === "progress") setProgressChars(event.chars);
           else if (event.type === "error") throw new Error(event.message);
           else if (event.type === "result") {
-            if (generationId !== activeGenerationRef.current) return;
             const restoredResult = restorePii(event.data, restorationMap);
             setResult(restoredResult);
             try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
@@ -314,7 +314,12 @@ export default function Home() {
         }
       }
       if (!finished) throw new Error("The stream ended unexpectedly. Try again.");
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+      if (generationId !== activeGenerationRef.current) return;
+      setTimeout(() => {
+        if (generationId === activeGenerationRef.current) {
+          resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 80);
     } catch (err) {
       if (generationId !== activeGenerationRef.current) return;
       const cancelled = controller.signal.aborted;
