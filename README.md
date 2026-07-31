@@ -46,7 +46,7 @@ npm run dev                  # http://localhost:3000
 
 Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. `ANTHROPIC_MODEL` remains a lower-priority compatibility fallback.
 
-The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials. Career-path O*NET lookup reads server-only `ONET_USERNAME` and `ONET_PASSWORD`; optional `BLS_API_KEY` increases the public BLS API quota. The BLS time-series endpoint is not treated as an occupational-projections feed.
+The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials. Career-path O*NET v2 lookup reads server-only `ONET_API_KEY`; optional `BLS_API_KEY` increases the public BLS API quota. The BLS time-series endpoint is not treated as an occupational-projections feed. Pasted projection and training catalogs are labeled user-supplied/unverified rather than provider-verified.
 
 > The tailor endpoint enables Anthropic's server-side refusal fallback (`fallbacks: "default"`) so a rare safety-classifier decline re-routes automatically instead of failing the request.
 

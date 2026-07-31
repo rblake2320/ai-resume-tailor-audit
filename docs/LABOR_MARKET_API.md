@@ -10,7 +10,7 @@ Request (maximum 4 KiB, `application/json` only):
 { "occupationCode": "15-1252.00" }
 ```
 
-The server reads `ONET_USERNAME` and `ONET_PASSWORD`; neither credential is accepted from or returned to the client. An unconfigured deployment returns 503 instead of synthetic data. Successful responses contain a bounded, normalized occupation profile plus its official O*NET URL, source-update date, retrieval timestamp, and uncertainty statement.
+The server reads `ONET_API_KEY` and sends it only in the official O*NET v2 `X-API-Key` header; the key is neither accepted from nor returned to the client. It calls `https://api-v2.onetcenter.org/online/occupations/{code}/`. An unconfigured deployment returns 503 instead of synthetic data. Successful responses contain only the bounded occupation-overview fields actually fetched: code, title, description, reported titles, `updated.year/contents`, official O*NET URL, retrieval timestamp, and uncertainty statement. Skills/tasks/knowledge/technology arrays are omitted until their individual bounded subresource endpoints are implemented.
 
 ## `POST /api/labor-market/bls-series`
 
@@ -24,15 +24,16 @@ Request (maximum 4 KiB, `application/json` only):
 }
 ```
 
-One to 50 validated series IDs and a maximum 20-year range are accepted. `BLS_API_KEY` is optional and remains server-side. Every result has `kind: "observational_series"`, keeps the BLS series ID, latest observed period, retrieval timestamp, source URL, geography warning, and uncertainty statement. It intentionally has no occupational-projection fields.
+With `BLS_API_KEY`, one to 50 validated series IDs and a maximum 20-year range are accepted; without it, the official limits are 25 series and 10 years. `BLS_API_KEY` remains server-side. Provider messages, missing/extra/duplicate series, empty data, and invalid rows fail closed. Every result has `kind: "observational_series"`, keeps the exact requested BLS series ID, latest observed period, retrieval timestamp, source URL, geography warning, and uncertainty statement. It intentionally has no occupational-projection fields.
 
 ## Projection import
 
-The current BLS Public Data API time-series adapter is not an Employment Projections adapter. The browser therefore accepts a separately sourced projection snapshot only through a strict schema. It requires:
+The current BLS Public Data API time-series adapter is not an Employment Projections adapter. The browser therefore accepts a separately sourced projection snapshot only through a strict schema and labels it `user_supplied_unverified`. It requires:
 
 - occupation code and title;
 - geography and current employment level;
 - projected growth, annual openings, and replacement openings as distinct fields;
+- median wage as a structured amount, ISO-style currency code, period, and unit when supplied;
 - projection start and end years;
 - official `bls.gov` source URL;
 - source as-of date and retrieval timestamp; and

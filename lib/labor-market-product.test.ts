@@ -113,6 +113,18 @@ describe("labor-market product API", () => {
     const configured = createConfiguredLaborMarketProviders({});
     await expect(configured.lookupOnetOccupation("15-1252.00")).rejects.toThrow(/not configured/i);
   });
+
+  it("schema-validates provider output and returns a stable public error without leaking upstream detail", async () => {
+    const source = providers();
+    vi.mocked(source.lookupOnetOccupation).mockResolvedValueOnce({ ...onetProfile, sourceYear: "secret upstream detail" } as never);
+    const response = await createLaborMarketHandlers(source).onet(new Request("http://localhost/api/labor-market/onet", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ occupationCode: "15-1252.00" }),
+    }));
+    expect(response.status).toBe(503);
+    const serialized = await response.text();
+    expect(serialized).toContain("provider is unavailable or returned invalid data");
+    expect(serialized).not.toContain("secret upstream detail");
+  });
 });
 
 describe("career-path records", () => {

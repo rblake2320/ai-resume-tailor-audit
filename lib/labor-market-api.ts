@@ -1,7 +1,9 @@
 import { z } from "zod";
 import {
+  BlsObservationSeriesSchema,
   fetchBlsSeries,
   fetchOnetOccupation,
+  OnetOccupationProfileSchema,
   type BlsObservationSeries,
   type OnetOccupationProfile,
 } from "./labor-market";
@@ -59,28 +61,40 @@ function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { "cache-control": "no-store" } });
 }
 
-function routeError(error: unknown): Response {
+function requestError(error: unknown): Response {
   if (error instanceof RequestBoundaryError) return json({ error: error.message }, error.status);
   if (error instanceof z.ZodError) return json({ error: "Request did not match the labor-market contract.", issues: error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) }, 400);
-  return json({ error: error instanceof Error ? error.message : "Labor-market provider failed." }, 503);
+  return json({ error: "Request could not be processed." }, 400);
+}
+
+function providerError(): Response {
+  return json({ error: "Labor-market provider is unavailable or returned invalid data." }, 503);
 }
 
 export function createLaborMarketHandlers(providers: LaborMarketProviders) {
   return {
     async onet(request: Request): Promise<Response> {
+      let body: z.infer<typeof OnetRequestSchema>;
       try {
-        const body = OnetRequestSchema.parse(await readBoundedJson(request));
-        return json({ profile: await providers.lookupOnetOccupation(body.occupationCode) });
-      } catch (error) { return routeError(error); }
+        body = OnetRequestSchema.parse(await readBoundedJson(request));
+      } catch (error) { return requestError(error); }
+      try {
+        const profile = OnetOccupationProfileSchema.parse(await providers.lookupOnetOccupation(body.occupationCode));
+        return json({ profile });
+      } catch { return providerError(); }
     },
     async bls(request: Request): Promise<Response> {
+      let body: z.infer<typeof BlsRequestSchema>;
       try {
-        const body = BlsRequestSchema.parse(await readBoundedJson(request));
+        body = BlsRequestSchema.parse(await readBoundedJson(request));
+      } catch (error) { return requestError(error); }
+      try {
+        const series = BlsObservationSeriesSchema.array().max(50).parse(await providers.fetchBlsObservations(body.seriesIds, body.startYear, body.endYear));
         return json({
-          series: await providers.fetchBlsObservations(body.seriesIds, body.startYear, body.endYear),
+          series,
           boundary: "BLS time-series observations are not occupational projections. Import a separately sourced projection snapshot for trend classification.",
         });
-      } catch (error) { return routeError(error); }
+      } catch { return providerError(); }
     },
   };
 }
@@ -88,10 +102,9 @@ export function createLaborMarketHandlers(providers: LaborMarketProviders) {
 export function createConfiguredLaborMarketProviders(environment: Record<string, string | undefined> = process.env): LaborMarketProviders {
   return {
     async lookupOnetOccupation(code) {
-      const username = environment.ONET_USERNAME?.trim();
-      const password = environment.ONET_PASSWORD?.trim();
-      if (!username || !password) throw new Error("O*NET provider is not configured.");
-      return fetchOnetOccupation(code, { username, password });
+      const apiKey = environment.ONET_API_KEY?.trim();
+      if (!apiKey) throw new Error("O*NET provider is not configured.");
+      return fetchOnetOccupation(code, apiKey);
     },
     async fetchBlsObservations(seriesIds, startYear, endYear) {
       return fetchBlsSeries(seriesIds, {

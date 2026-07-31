@@ -8,13 +8,20 @@ const HttpsUrlSchema = z.string().url().refine(
   (value) => URL.canParse(value) && new URL(value).protocol === "https:",
   "Source URL must use HTTPS.",
 );
+const UserSuppliedVerificationSchema = z.literal("user_supplied_unverified");
+const BoundedLabelSchema = z.string().trim().min(1).max(500);
 
 export const LaborMarketSnapshotSchema = z.strictObject({
-  occupationCode: z.string().min(1),
-  occupationTitle: z.string().min(1),
-  geography: z.string().min(1),
+  occupationCode: z.string().trim().min(1).max(32),
+  occupationTitle: BoundedLabelSchema,
+  geography: BoundedLabelSchema,
   employmentLevel: z.number().nonnegative().nullable(),
-  medianWage: z.number().nonnegative().nullable(),
+  medianWage: z.strictObject({
+    amount: z.number().finite().nonnegative(),
+    currency: z.string().regex(/^[A-Z]{3}$/u),
+    period: z.enum(["hour", "day", "week", "month", "year", "other"]),
+    unit: z.string().trim().min(1).max(100),
+  }).nullable(),
   projectedGrowthPercent: z.number().finite().nullable(),
   annualOpenings: z.number().nonnegative().nullable(),
   replacementOpenings: z.number().nonnegative().nullable(),
@@ -23,8 +30,9 @@ export const LaborMarketSnapshotSchema = z.strictObject({
   asOfDate: z.string().date(),
   source: z.literal("BLS"),
   sourceUrl: HttpsUrlSchema,
-  uncertainty: z.string().min(1),
+  uncertainty: z.string().trim().min(1).max(2_000),
   retrievedAt: z.string().datetime(),
+  verification: UserSuppliedVerificationSchema,
 }).superRefine((value, context) => {
   if (value.projectionStartYear !== null && value.projectionEndYear !== null && value.projectionEndYear <= value.projectionStartYear) {
     context.addIssue({ code: "custom", message: "Projection end year must be after its start year.", path: ["projectionEndYear"] });
@@ -41,17 +49,19 @@ export type LaborMarketSnapshot = z.infer<typeof LaborMarketSnapshotSchema>;
 export const OnetOccupationProfileSchema = z.strictObject({
   kind: z.literal("occupation_profile"),
   occupationCode: z.string().regex(/^\d{2}-\d{4}\.\d{2}$/u),
-  occupationTitle: z.string().min(1).max(500),
+  occupationTitle: BoundedLabelSchema,
   description: z.string().max(10_000),
   source: z.literal("ONET"),
   sourceUrl: HttpsUrlSchema,
-  asOfDate: z.string().date(),
+  sourceYear: z.number().int().min(1900).max(2200),
+  sourceContents: z.array(z.strictObject({
+    title: BoundedLabelSchema,
+    source: z.string().trim().max(500).optional(),
+    year: z.number().int().min(1900).max(2200).optional(),
+  })).max(100),
   retrievedAt: z.string().datetime(),
-  uncertainty: z.string().min(1),
-  skills: z.array(z.string().min(1).max(500)).max(500),
-  knowledge: z.array(z.string().min(1).max(500)).max(500),
-  tasks: z.array(z.string().min(1).max(2_000)).max(500),
-  technologies: z.array(z.string().min(1).max(500)).max(500),
+  uncertainty: z.string().trim().min(1).max(2_000),
+  reportedTitles: z.array(BoundedLabelSchema).max(100),
 });
 export type OnetOccupationProfile = z.infer<typeof OnetOccupationProfileSchema>;
 
@@ -68,8 +78,8 @@ export const BlsObservationSeriesSchema = z.strictObject({
     year: z.number().int().min(1900).max(2200),
     period: z.string().regex(/^[A-Z]\d{2}$/u),
     value: z.number().finite(),
-    footnotes: z.array(z.unknown()),
-  })).max(20_000),
+    footnotes: z.array(z.unknown()).max(100),
+  })).min(1).max(5_000),
 });
 export type BlsObservationSeries = z.infer<typeof BlsObservationSeriesSchema>;
 
@@ -135,14 +145,35 @@ function latestPeriod(observations: readonly { year: number; period: string }[])
   return observations.map((row) => `${row.year}-${row.period}`).sort().at(-1) ?? null;
 }
 
+const BlsProviderRowSchema = z.object({
+  year: z.string().regex(/^\d{4}$/u),
+  period: z.string().regex(/^[A-Z]\d{2}$/u),
+  value: z.string().refine((value) => Number.isFinite(Number(value)), "BLS value is not finite."),
+  footnotes: z.array(z.unknown()).max(100).optional().default([]),
+});
+const BlsProviderResponseSchema = z.object({
+  status: z.string(),
+  message: z.array(z.string()).max(100),
+  Results: z.object({
+    series: z.array(z.object({
+      seriesID: z.string(),
+      data: z.array(BlsProviderRowSchema).max(5_000),
+    })).max(50),
+  }),
+});
+
 export async function fetchBlsSeries(
   seriesIds: string[],
   options: { startYear: number; endYear: number; registrationKey?: string; fetcher?: Fetcher; retrievedAt?: Date },
 ): Promise<BlsObservationSeries[]> {
-  if (!seriesIds.length || seriesIds.length > 50) throw new Error("BLS request requires 1-50 series IDs.");
-  if (!seriesIds.every((id) => /^[A-Za-z0-9._-]{1,100}$/u.test(id))) throw new Error("BLS series ID is invalid.");
-  if (!Number.isInteger(options.startYear) || !Number.isInteger(options.endYear) || options.startYear > options.endYear || options.endYear - options.startYear > 20) {
-    throw new Error("BLS request requires an integer year range no wider than 20 years.");
+  const registrationKey = options.registrationKey?.trim() || undefined;
+  const maxSeries = registrationKey ? 50 : 25;
+  const maxYears = registrationKey ? 20 : 10;
+  if (!seriesIds.length || seriesIds.length > maxSeries) throw new Error(`BLS request requires 1-${maxSeries} series IDs for ${registrationKey ? "registered" : "unregistered"} access.`);
+  if (!seriesIds.every((id) => /^[A-Z0-9_#-]{1,100}$/u.test(id))) throw new Error("BLS series ID is invalid.");
+  if (new Set(seriesIds).size !== seriesIds.length) throw new Error("BLS request contains duplicate series IDs.");
+  if (!Number.isInteger(options.startYear) || !Number.isInteger(options.endYear) || options.startYear > options.endYear || options.endYear - options.startYear + 1 > maxYears) {
+    throw new Error(`BLS request requires an integer year range no wider than ${maxYears} years for ${registrationKey ? "registered" : "unregistered"} access.`);
   }
   const response = await (options.fetcher ?? fetch)(BLS_ENDPOINT, {
     method: "POST",
@@ -151,25 +182,31 @@ export async function fetchBlsSeries(
       seriesid: seriesIds,
       startyear: String(options.startYear),
       endyear: String(options.endYear),
-      registrationkey: options.registrationKey || undefined,
+      registrationkey: registrationKey,
     }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`BLS API request failed (${response.status}).`);
-  const payload = await boundedJson(response) as { status?: string; Results?: { series?: { seriesID?: string; data?: { year?: string; period?: string; value?: string; footnotes?: unknown[] }[] }[] } };
+  const payload = BlsProviderResponseSchema.parse(await boundedJson(response));
   if (payload.status !== "REQUEST_SUCCEEDED") throw new Error("BLS API did not accept the request.");
-  return (payload.Results?.series ?? []).map((series) => {
-    const observations = (series.data ?? []).map((row) => ({
+  if (payload.message.length) throw new Error(`BLS API returned provider messages: ${payload.message.join(" ")}`);
+  const returnedIds = payload.Results.series.map((series) => series.seriesID);
+  if (returnedIds.length !== seriesIds.length || new Set(returnedIds).size !== returnedIds.length || seriesIds.some((id) => !returnedIds.includes(id))) {
+    throw new Error("BLS API did not return exactly the requested series IDs.");
+  }
+  return payload.Results.series.map((series) => {
+    if (!series.data.length) throw new Error(`BLS series ${series.seriesID} returned no observations.`);
+    const observations = series.data.map((row) => ({
       year: Number(row.year),
-      period: String(row.period),
+      period: row.period,
       value: Number(row.value),
-      footnotes: Array.isArray(row.footnotes) ? row.footnotes : [],
+      footnotes: row.footnotes,
     }));
     return BlsObservationSeriesSchema.parse({
       kind: "observational_series",
       source: "BLS",
       sourceUrl: BLS_ENDPOINT,
-      seriesId: String(series.seriesID),
+      seriesId: series.seriesID,
       geography: "As defined by the BLS series metadata; verify before use.",
       asOfPeriod: latestPeriod(observations),
       retrievedAt: (options.retrievedAt ?? new Date()).toISOString(),
@@ -179,58 +216,62 @@ export async function fetchBlsSeries(
   });
 }
 
-function collectStrings(value: unknown, keys: readonly string[]): string[] {
-  if (!Array.isArray(value)) return [];
-  const result = value.flatMap((item) => {
-    if (typeof item === "string") return [item];
-    if (!item || typeof item !== "object") return [];
-    const record = item as Record<string, unknown>;
-    for (const key of keys) if (typeof record[key] === "string") return [record[key] as string];
-    return [];
-  }).map((item) => item.trim()).filter(Boolean);
-  return [...new Set(result)].slice(0, 500);
-}
+const OnetProviderOverviewSchema = z.object({
+  code: z.string().regex(/^\d{2}-\d{4}\.\d{2}$/u),
+  title: BoundedLabelSchema,
+  description: z.string().max(10_000),
+  sample_of_reported_titles: z.array(BoundedLabelSchema).max(100).optional().default([]),
+  updated: z.object({
+    year: z.number().int().min(1900).max(2200),
+    contents: z.array(z.object({
+      title: BoundedLabelSchema,
+      source: z.string().trim().max(500).optional(),
+      year: z.number().int().min(1900).max(2200).optional(),
+    })).max(500),
+  }),
+});
 
 export async function fetchOnetOccupation(
   code: string,
-  credentials: { username: string; password: string },
+  apiKey: string,
   fetcher: Fetcher = fetch,
   retrievedAt = new Date(),
 ): Promise<OnetOccupationProfile> {
   if (!/^\d{2}-\d{4}\.\d{2}$/u.test(code)) throw new Error("O*NET occupation code is invalid.");
-  if (!credentials.username || !credentials.password) throw new Error("O*NET Web Services credentials are required.");
-  const response = await fetcher(`${ONET_ENDPOINT}/${encodeURIComponent(code)}/summary`, {
+  if (!apiKey.trim() || apiKey.length > 512) throw new Error("O*NET Web Services API key is required.");
+  const response = await fetcher(`${ONET_ENDPOINT}/${encodeURIComponent(code)}/`, {
     headers: {
-      authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64")}`,
+      "X-API-Key": apiKey,
       accept: "application/json",
     },
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`O*NET request failed (${response.status}).`);
-  const value = await boundedJson(response) as Record<string, unknown>;
-  if (typeof value.updated !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value.updated)) throw new Error("O*NET response omitted a valid source update date.");
-  const title = typeof value.title === "string" ? value.title : typeof value.occupation_title === "string" ? value.occupation_title : "";
+  const value = OnetProviderOverviewSchema.parse(await boundedJson(response));
+  if (value.code !== code) throw new Error("O*NET response occupation code did not match the request.");
   return OnetOccupationProfileSchema.parse({
     kind: "occupation_profile",
     source: "ONET",
     sourceUrl: `https://www.onetonline.org/link/summary/${code}`,
     occupationCode: code,
-    occupationTitle: title,
-    description: typeof value.description === "string" ? value.description : "",
+    occupationTitle: value.title,
+    description: value.description,
     retrievedAt: retrievedAt.toISOString(),
-    asOfDate: value.updated,
+    sourceYear: value.updated.year,
+    sourceContents: value.updated.contents,
     uncertainty: "O*NET describes occupational characteristics; it does not guarantee an individual's fit, eligibility, hiring, wage, or outcome.",
-    skills: collectStrings(value.skills, ["name", "title", "element_name"]),
-    knowledge: collectStrings(value.knowledge, ["name", "title", "element_name"]),
-    tasks: collectStrings(value.tasks, ["task", "description", "name"]),
-    technologies: collectStrings(value.technology_skills ?? value.technologies, ["example", "name", "title", "commodity_title"]),
+    reportedTitles: value.sample_of_reported_titles,
   });
 }
 
 export const TrainingResourceSchema = z.strictObject({
-  id: z.string().min(1), title: z.string().min(1), provider: z.string().min(1), sourceUrl: HttpsUrlSchema,
-  skills: z.array(z.string().min(1)), cost: z.strictObject({ amount: z.number().nonnegative().nullable(), currency: z.string().length(3), note: z.string() }),
-  durationHours: z.number().nonnegative().nullable(), prerequisites: z.array(z.string()), accessibility: z.array(z.string()), accreditation: z.string(), evidenceQuality: z.enum(["official", "accredited", "provider_claim", "community"]), asOfDate: z.string().date(),
+  id: z.string().trim().min(1).max(200), title: BoundedLabelSchema, provider: BoundedLabelSchema, sourceUrl: HttpsUrlSchema,
+  skills: z.array(z.string().trim().min(1).max(200)).max(100),
+  cost: z.strictObject({ amount: z.number().finite().nonnegative().nullable(), currency: z.string().regex(/^[A-Z]{3}$/u), note: z.string().max(1_000) }),
+  durationHours: z.number().finite().nonnegative().nullable(),
+  prerequisites: z.array(z.string().max(500)).max(100), accessibility: z.array(z.string().max(500)).max(100), accreditation: z.string().max(500),
+  evidenceQuality: z.enum(["official", "accredited", "provider_claim", "community"]), asOfDate: z.string().date(),
+  verification: UserSuppliedVerificationSchema,
 });
 export type TrainingResource = z.infer<typeof TrainingResourceSchema>;
 
@@ -248,22 +289,29 @@ export function recommendTraining(gaps: readonly string[], resources: readonly T
       score: matchedGaps.length * 10 + evidenceWeight,
       rationale: matchedGaps.length ? `Addresses explicit evidence gaps: ${matchedGaps.join(", ")}.` : "Does not address an explicit evidence gap.",
     };
-  }).filter((item): item is NonNullable<typeof item> => item !== null && item.matchedGaps.length > 0).sort((a, b) => b.score - a.score || (a.resource.cost.amount ?? Infinity) - (b.resource.cost.amount ?? Infinity));
+  }).filter((item): item is NonNullable<typeof item> => item !== null && item.matchedGaps.length > 0).sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    if (a.resource.cost.currency === b.resource.cost.currency) {
+      const byAmount = (a.resource.cost.amount ?? Infinity) - (b.resource.cost.amount ?? Infinity);
+      if (byAmount !== 0) return byAmount;
+    }
+    return a.resource.title < b.resource.title ? -1 : a.resource.title > b.resource.title ? 1 : 0;
+  });
 }
 
 export const CareerPathRecordSchema = z.strictObject({
-  id: z.string().min(1),
+  id: z.string().min(1).max(200),
   createdAt: z.string().datetime(),
   profile: OnetOccupationProfileSchema,
   projection: LaborMarketSnapshotSchema,
-  trend: z.strictObject({ trend: z.enum(["growing", "stable", "transforming", "declining"]), reasons: z.array(z.string()) }),
-  evidenceGaps: z.array(z.string().min(1)).max(100),
+  trend: z.strictObject({ trend: z.enum(["growing", "stable", "transforming", "declining"]), reasons: z.array(z.string().max(1_000)).max(20) }),
+  evidenceGaps: z.array(z.string().trim().min(1).max(500)).max(100),
   trainingRecommendations: z.array(z.strictObject({
     resource: TrainingResourceSchema,
-    matchedGaps: z.array(z.string()),
+    matchedGaps: z.array(z.string().max(500)).max(100),
     score: z.number().finite(),
-    rationale: z.string(),
-  })).max(500),
+    rationale: z.string().max(2_000),
+  })).max(100),
 });
 export type CareerPathRecord = z.infer<typeof CareerPathRecordSchema>;
 
