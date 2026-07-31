@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
-    ,"mcp": "node --experimental-strip-types scripts/mcp-server.ts"
+    "test:watch": "vitest",
+    "mcp": "node --experimental-strip-types scripts/mcp-server.ts"
   },
   "license": "MIT",
   "type": "module",
@@ -35,6 +35,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.5",
     "postcss": "^8.5.25",
     "tailwindcss": "^4.3.3",
     "typescript": "<6.1",
