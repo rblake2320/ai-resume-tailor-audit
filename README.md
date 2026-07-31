@@ -45,7 +45,7 @@ cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
-Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. `ANTHROPIC_MODEL` remains a lower-priority compatibility fallback.
+Get an API key at [platform.claude.com](https://platform.claude.com/). `ANTHROPIC_API_KEY` enables tailoring, and `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. A production server also requires a private `RESUME_FOUNDRY_RATE_LIMIT_DIR`. Agent, MCP, Google, and employer-submission features have additional fail-closed requirements; follow the [deployment runbook](docs/DEPLOYMENT.md) instead of treating `.env.example` as a copy-and-run production configuration.
 
 The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGENT`; Greenhouse and Lever public-board imports require no stored credentials. Career-path O*NET v2 lookup reads server-only `ONET_API_KEY`; optional `BLS_API_KEY` increases the public BLS API quota. The BLS time-series endpoint is not treated as an occupational-projections feed. Pasted projection and training catalogs are labeled user-supplied/unverified rather than provider-verified.
 
@@ -66,6 +66,7 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
 
 The labor-market route contracts and deployment boundaries are documented in [`docs/LABOR_MARKET_API.md`](docs/LABOR_MARKET_API.md).
+Production environment profiles, Windows ACL provisioning, startup order, and failure diagnosis are documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Architecture
 
