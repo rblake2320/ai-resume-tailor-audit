@@ -58,9 +58,111 @@ const FIELD_CATEGORIES: ReadonlyArray<{ category: string; match: RegExp }> = [
   { category: "cover letter", match: /^(?:cover_letter|cover_letter_text|coverletter|letter)$/u },
   { category: "written responses", match: /^(?:question_.*|screening.*|answers?)$/u },
   { category: "message body", match: /^(?:raw_?message|message|body)$/u },
+  { category: "government identifier", match: /^(?:ssn|social_security_number|tax_id|national_id)$/u },
+  { category: "demographic information", match: /^(?:gender|sex|race|ethnicity|age|age_range|date_of_birth|dob)$/u },
+  { category: "disability information", match: /^(?:disability|disability_status|disability_signature.*)$/u },
+  { category: "veteran status", match: /^(?:veteran|veteran_status|military_status)$/u },
+  { category: "work authorization", match: /^(?:work_authorization|visa|sponsorship|authorized_to_work)$/u },
+  { category: "compensation expectations", match: /^(?:salary|salary_expectation|compensation|desired_compensation)$/u },
 ];
 
 const normaliseFieldName = (key: string) => key.trim().toLowerCase().replace(/[\s-]+/gu, "_");
+
+const MAX_FIELD_DEPTH = 6;
+const MAX_FIELD_NODES = 1_000;
+const MAX_FIELD_KEYS = 100;
+const MAX_FIELD_KEY_CHARS = 200;
+const MAX_FIELD_STRING_CHARS = 100_000;
+const MAX_FIELD_TEXT_BYTES = 256_000;
+
+class SubmissionFieldsError extends Error {}
+
+type FieldNode = {
+  value: unknown;
+  key: string;
+  depth: number;
+  inheritedCategories: readonly string[];
+};
+
+const categoriesForKey = (key: string) => {
+  const name = normaliseFieldName(key);
+  return FIELD_CATEGORIES.filter(({ match }) => match.test(name)).map(({ category }) => category);
+};
+
+/**
+ * Walk the exact JSON-compatible structure that connectors will transmit.
+ *
+ * The old classifier skipped every non-string value, so nesting a résumé or
+ * answer in an object/array bypassed the consent record while JSON.stringify
+ * still sent it. This walker classifies every substantive leaf and rejects
+ * structures too deep or large to inspect safely and completely.
+ */
+function classifyOutgoingFields(fields: Record<string, unknown>) {
+  const topLevel = Object.entries(fields);
+  if (topLevel.length > MAX_FIELD_KEYS) throw new SubmissionFieldsError(`Submission fields may contain at most ${MAX_FIELD_KEYS} top-level keys.`);
+
+  const categories = new Set<string>();
+  const freeText: string[] = [];
+  const seen = new WeakSet<object>();
+  const stack: FieldNode[] = topLevel.map(([key, value]) => ({ value, key, depth: 1, inheritedCategories: [] }));
+  let nodes = 0;
+  let textBytes = 0;
+
+  while (stack.length) {
+    const node = stack.pop()!;
+    nodes += 1;
+    if (nodes > MAX_FIELD_NODES) throw new SubmissionFieldsError(`Submission fields may contain at most ${MAX_FIELD_NODES} values.`);
+    if (node.depth > MAX_FIELD_DEPTH) throw new SubmissionFieldsError(`Submission fields may be nested at most ${MAX_FIELD_DEPTH} levels.`);
+    if (node.key.length < 1 || node.key.length > MAX_FIELD_KEY_CHARS) throw new SubmissionFieldsError(`Submission field names must be 1-${MAX_FIELD_KEY_CHARS} characters.`);
+
+    const directCategories = categoriesForKey(node.key);
+    const semanticCategories = [...new Set([...node.inheritedCategories, ...directCategories])];
+    const leafCategories = semanticCategories.length ? semanticCategories : ["written responses"];
+    const { value } = node;
+
+    if (value === null) continue;
+    if (typeof value === "string") {
+      if (value.length > MAX_FIELD_STRING_CHARS) throw new SubmissionFieldsError(`Each submission field string may contain at most ${MAX_FIELD_STRING_CHARS} characters.`);
+      if (value.trim() === "") continue;
+      textBytes += Buffer.byteLength(value, "utf8");
+      if (textBytes > MAX_FIELD_TEXT_BYTES) throw new SubmissionFieldsError(`Submission field text may contain at most ${MAX_FIELD_TEXT_BYTES} UTF-8 bytes.`);
+      for (const category of leafCategories) categories.add(category);
+      freeText.push(value);
+      continue;
+    }
+    if (typeof value === "number") {
+      if (!Number.isFinite(value)) throw new SubmissionFieldsError("Submission field numbers must be finite.");
+      for (const category of leafCategories) categories.add(category);
+      continue;
+    }
+    if (typeof value === "boolean") {
+      for (const category of leafCategories) categories.add(category);
+      continue;
+    }
+    if (typeof value !== "object") throw new SubmissionFieldsError("Submission fields must contain only JSON-compatible values.");
+    if (seen.has(value)) throw new SubmissionFieldsError("Submission fields must not contain circular references.");
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      if (value.length > MAX_FIELD_KEYS) throw new SubmissionFieldsError(`Submission field arrays may contain at most ${MAX_FIELD_KEYS} items.`);
+      for (let index = value.length - 1; index >= 0; index -= 1) {
+        stack.push({ value: value[index], key: node.key, depth: node.depth + 1, inheritedCategories: semanticCategories });
+      }
+      continue;
+    }
+
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) throw new SubmissionFieldsError("Submission fields must contain only plain JSON objects.");
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length > MAX_FIELD_KEYS) throw new SubmissionFieldsError(`Submission field objects may contain at most ${MAX_FIELD_KEYS} keys.`);
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const [key, nested] = entries[index]!;
+      stack.push({ value: nested, key, depth: node.depth + 1, inheritedCategories: semanticCategories });
+    }
+  }
+
+  return { categories, freeText };
+}
 
 /**
  * The personal-data categories actually leaving the app for a submission.
@@ -70,20 +172,7 @@ const normaliseFieldName = (key: string) => key.trim().toLowerCase().replace(/[\
  * considered at all.
  */
 export function outgoingDataCategories(fields: Record<string, unknown>, target?: SubmissionTarget): string[] {
-  const categories = new Set<string>();
-  const freeText: string[] = [];
-
-  for (const [key, value] of Object.entries(fields)) {
-    if (typeof value !== "string" || value.trim() === "") continue;
-    freeText.push(value);
-    const name = normaliseFieldName(key);
-    const matched = FIELD_CATEGORIES.filter(({ match }) => match.test(name));
-    for (const { category } of matched) categories.add(category);
-    // Employers define arbitrary field names, so a fixed list can never be
-    // exhaustive. An unrecognised field still carries applicant-authored text,
-    // and under-declaring a disclosure is worse than over-declaring one.
-    if (matched.length === 0) categories.add("written responses");
-  }
+  const { categories, freeText } = classifyOutgoingFields(fields);
 
   if (target?.provider === "gmail") {
     categories.add("message body");
@@ -117,7 +206,13 @@ export const SubmissionPreviewSchema = z.strictObject({
   }
   // Declared personal-data categories must be the ones actually being sent, so
   // the disclosure the applicant consents to is the disclosure that happens.
-  const actual = outgoingDataCategories(value.fields, value.target);
+  let actual: string[];
+  try {
+    actual = outgoingDataCategories(value.fields, value.target);
+  } catch (error) {
+    context.addIssue({ code: "custom", path: ["fields"], message: error instanceof SubmissionFieldsError ? error.message : "Submission fields are invalid." });
+    return;
+  }
   const declared = [...new Set(value.personalDataCategories)].sort();
   if (declared.join("|") !== actual.join("|")) {
     context.addIssue({ code: "custom", message: `Declared personal-data categories must match the outgoing fields (${actual.join(", ") || "none"}).` });
@@ -255,11 +350,14 @@ export async function submitGreenhouse(input: { apiKey: string; receipt: unknown
 export async function submitLever(input: { apiKey: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {
   const preview = verifySubmissionApproval(input.receipt, input.approvalSecret);
   if (preview.target.provider !== "lever") throw new Error("Approval provider mismatch.");
-  const { site, postingId, requiredFields } = preview.target;
+  const { postingId, requiredFields } = preview.target;
   validateFields(preview.fields, [...new Set(["name", "email", ...requiredFields])]);
   // The key stays in a header: a query-string credential lands in provider
   // access logs, proxy logs, and any telemetry that records request URLs.
-  const url = `https://api.lever.co/v0/postings/${encodeURIComponent(site)}/${encodeURIComponent(postingId)}`;
+  // Lever's authenticated Opportunities API uses the v1 apply endpoint. The
+  // public v0 postings URL (which includes the site token) is an import API,
+  // not the employer-authorized submission contract.
+  const url = `https://api.lever.co/v1/postings/${encodeURIComponent(postingId)}/apply`;
   const response = await retryRequest(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}` },

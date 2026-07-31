@@ -13,7 +13,7 @@ Greenhouse retrieves the live job-specific question schema and validates every r
 Public documentation:
 
 - Greenhouse Job Board API: https://developers.greenhouse.io/job-board.html
-- Lever Postings API: https://github.com/lever/postings-api
+- Lever authenticated API, "Apply to a posting" (`POST /postings/:posting/apply` under `https://api.lever.co/v1`): https://hire.lever.co/developer/documentation (verified 2026-07-31)
 - Gmail drafts: https://developers.google.com/workspace/gmail/api/guides/drafts
 
 This reference implementation proves the gates and provider request contracts with mocked transports. No real employer credential is bundled, and no test submits an application to a real employer.

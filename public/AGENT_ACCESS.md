@@ -20,6 +20,13 @@ Set `RESUME_FOUNDRY_AGENT_STORE` to an absolute durable, access-controlled path 
 
 Note on file permissions: the durable store holds raw packet content and is written with mode `0o600`. POSIX modes are not enforced on Windows, so on a Windows host the store is readable by other local users. Place it on a volume with appropriate ACLs.
 
+The store uses a sibling `.lock` file for cross-process serialization. Locks
+are never reclaimed merely because they are old: a slow live writer is not
+distinguishable from a dead one by age. If a killed process leaves an orphan,
+stop **every** process configured for that store, remove the `.lock` file, and
+then restart one process. Removing a lock while any writer may still be alive
+can corrupt the store. This fail-closed recovery step is intentional.
+
 ## Interface differences
 
 A stdio server has no bearer token to verify — its real trust boundary is the local user who launched the process. Earlier revisions of this document claimed bearer authentication for MCP; that was untrue. Rather than fake a check whose secret the launcher already holds, the stdio surface requires an explicit `RESUME_FOUNDRY_MCP_ENABLED=true` opt-in and withholds the operations that need a human in the loop.

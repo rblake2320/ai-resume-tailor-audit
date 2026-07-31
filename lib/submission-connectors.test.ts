@@ -152,8 +152,54 @@ describe("authorized submission connectors", () => {
     expect(outgoingDataCategories({ tell_us_about_yourself: "I build systems." })).toEqual(["written responses"]);
   });
 
-  it("ignores empty and non-string field values", () => {
-    expect(outgoingDataCategories({ name: "   ", resume_text: "", count: 3 })).toEqual([]);
+  it("classifies nested objects and arrays before an approval can be issued", () => {
+    // Regression: `fields` accepted unknown values, the connectors serialized
+    // them, but the old classifier skipped every non-string top-level value.
+    const fields = {
+      resume_text: { sections: [{ text: "Built reliable systems." }] },
+      screening: [{ email: "ada@example.com", response: "I can travel." }],
+    };
+    const categories = outgoingDataCategories(fields);
+    expect(categories).toEqual(["email", "resume", "written responses"]);
+
+    const nested = { ...preview("greenhouse"), fields, personalDataCategories: categories } as SubmissionPreview;
+    expect(() => issueSubmissionApproval(nested, secret)).not.toThrow();
+    expect(() => issueSubmissionApproval({ ...nested, personalDataCategories: ["resume"] }, secret))
+      .toThrow(/personal-data categories/);
+  });
+
+  it("names sensitive nested application categories rather than hiding them as generic text", () => {
+    expect(outgoingDataCategories({
+      eeoResponses: { gender: "Female", race: "Prefer not to say", veteran: "No", disability: "No" },
+      work_authorization: true,
+      salary_expectation: 100_000,
+    })).toEqual([
+      "compensation expectations",
+      "demographic information",
+      "disability information",
+      "veteran status",
+      "work authorization",
+    ]);
+  });
+
+  it("bounds and validates every recursively transmitted field value", () => {
+    let tooDeep: unknown = "private answer";
+    for (let index = 0; index < 7; index += 1) tooDeep = { nested: tooDeep };
+    for (const fields of [
+      { response: tooDeep },
+      { response: Number.NaN },
+      { response: new Date() },
+      { response: Array.from({ length: 101 }, () => "answer") },
+      Object.fromEntries(Array.from({ length: 101 }, (_, index) => [`field_${index}`, "answer"])),
+    ]) {
+      const candidate = { ...preview("greenhouse"), fields, personalDataCategories: ["written responses"] };
+      expect(() => issueSubmissionApproval(candidate as SubmissionPreview, secret)).toThrow(/Submission field|Submission fields/);
+    }
+  });
+
+  it("ignores empty values but classifies substantive number and boolean answers", () => {
+    expect(outgoingDataCategories({ name: "   ", resume_text: "", empty: null })).toEqual([]);
+    expect(outgoingDataCategories({ years_experience: 3, willing_to_travel: true })).toEqual(["written responses"]);
   });
 
   it("discovers and enforces Greenhouse job-specific required fields before submit", async () => {
@@ -176,15 +222,20 @@ describe("authorized submission connectors", () => {
     expect((fetcher.mock.calls[1][1] as RequestInit).headers).toHaveProperty("authorization");
   });
 
-  it("keeps the Lever credential out of the request URL", async () => {
-    // Regression: the key was interpolated as ?key=..., so it landed in
-    // provider access logs, proxy logs, and any telemetry recording URLs.
+  it("uses Lever's current authenticated v1 apply contract without leaking its credential", async () => {
+    // Regression: the implementation posted to the legacy public v0 postings
+    // path with a site token. Current official Lever documentation specifies
+    // POST /postings/:posting/apply under https://api.lever.co/v1.
     const receipt = issueSubmissionApproval(preview("lever"), secret);
     const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     await submitLever({ apiKey: "lever-secret", receipt, approvalSecret: secret }, fetcher);
-    expect(fetcher.mock.calls[0][0]).toBe("https://api.lever.co/v0/postings/approved-site/222");
-    expect(String(fetcher.mock.calls[0][0])).not.toContain("lever-secret");
-    expect((fetcher.mock.calls[0][1] as RequestInit).headers).toHaveProperty("authorization");
+    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.lever.co/v1/postings/222/apply");
+    expect(url).not.toContain("approved-site");
+    expect(url).not.toContain("lever-secret");
+    expect(init.method).toBe("POST");
+    expect(init.headers).toMatchObject({ "content-type": "application/json", authorization: expect.stringMatching(/^Basic /u) });
+    expect(JSON.parse(String(init.body))).toEqual(preview("lever").fields);
   });
 
   it("requires employer-provided Lever required-field configuration", () => {

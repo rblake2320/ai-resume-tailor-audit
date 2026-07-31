@@ -1,6 +1,5 @@
-// Native Node type stripping requires the explicit extension; the application
-// compiler intentionally does not enable TypeScript-extension imports.
-// @ts-expect-error -- executed directly by node --experimental-strip-types.
+// Native Node type stripping requires the explicit extension. The compiler
+// permits it because this probe and the MCP entrypoint run without a bundler.
 import { createDurableFixedWindowLimiter } from "../durable-rate-limit.ts";
 
 const [directory, scope, limit, windowMs, timestamp] = process.argv.slice(2);
