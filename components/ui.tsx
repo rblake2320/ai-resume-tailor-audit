@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 
 export function Section({
   step,
@@ -98,17 +98,18 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
   );
 }
 
-export function ToolButton({
-  onClick,
-  children,
-  disabled,
-}: {
+export const ToolButton = forwardRef<HTMLButtonElement, {
   onClick: () => void;
   children: React.ReactNode;
   disabled?: boolean;
-}) {
+}>(function ToolButton({
+  onClick,
+  children,
+  disabled,
+}, ref) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -117,7 +118,7 @@ export function ToolButton({
       {children}
     </button>
   );
-}
+});
 
 export function Spinner() {
   return (

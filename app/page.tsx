@@ -52,9 +52,10 @@ export default function Home() {
   );
 
   // Profile (saved locally, once)
+  const [candidateName, setCandidateName] = useState(() => loadProfile()?.candidateName ?? "");
   const [resume, setResume] = useState(() => loadProfile()?.resume ?? "");
   const [extraInfo, setExtraInfo] = useState(() => loadProfile()?.extraInfo ?? "");
-  const [savedSnapshot, setSavedSnapshot] = useState<{ resume: string; extraInfo: string } | null>(
+  const [savedSnapshot, setSavedSnapshot] = useState<{ candidateName: string; resume: string; extraInfo: string } | null>(
     null,
   );
 
@@ -87,22 +88,60 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const forgeButtonRef = useRef<HTMLButtonElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const reviewDialogRef = useRef<HTMLDivElement>(null);
+  const protectedChoiceRef = useRef<HTMLButtonElement>(null);
   const restoreForgeFocusRef = useRef(false);
   const generationAbortRef = useRef<AbortController | null>(null);
+  const activeGenerationRef = useRef(0);
   const cancelReasonRef = useRef<"cancelled" | "timeout" | null>(null);
   const reportPersistenceFailure = useCallback((failure: unknown) => {
     setNotice(failure instanceof Error ? failure.message : "Browser storage failed. Your latest changes may not survive a reload.");
   }, []);
 
   useEffect(() => {
-    if (pendingPii.length === 0 && restoreForgeFocusRef.current) {
+    if (pendingPii.length === 0 && phase !== "working" && restoreForgeFocusRef.current) {
       restoreForgeFocusRef.current = false;
       forgeButtonRef.current?.focus();
     }
+  }, [pendingPii, phase]);
+
+  const closePiiReview = useCallback(() => {
+    restoreForgeFocusRef.current = true;
+    setPendingPii([]);
+  }, []);
+
+  useEffect(() => {
+    if (pendingPii.length === 0) return;
+    const dialog = reviewDialogRef.current;
+    const container = dialog?.parentElement;
+    const page = pageRef.current;
+    if (!dialog || !container || !page) return;
+    const siblings = [...new Set([
+      ...Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child !== dialog),
+      ...Array.from(page.children).filter((child): child is HTMLElement => child instanceof HTMLElement && !child.contains(dialog)),
+    ])];
+    const previous = siblings.map((element) => ({ element, inert: element.inert, ariaHidden: element.getAttribute("aria-hidden") }));
+    for (const element of siblings) {
+      element.inert = true;
+      element.setAttribute("aria-hidden", "true");
+    }
+    protectedChoiceRef.current?.focus();
+    return () => {
+      for (const { element, inert, ariaHidden } of previous) {
+        element.inert = inert;
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      }
+    };
   }, [pendingPii]);
 
   const invalidateResult = useCallback(() => {
-    if (!result) return;
+    const hadActiveGeneration = generationAbortRef.current !== null;
+    activeGenerationRef.current += 1;
+    generationAbortRef.current?.abort();
+    generationAbortRef.current = null;
+    if (!result && !hadActiveGeneration) return;
     setResult(null);
     setPhase("idle");
     setNotice("Inputs changed — the previous generated result remains in Past runs, but is no longer active.");
@@ -120,26 +159,26 @@ export default function Home() {
     if (!resume.trim() && !jobText.trim()) return;
     const timer = setTimeout(() => {
       try { setSavePoints(addSavePoint(
-          { resume, extraInfo },
+          { candidateName, resume, extraInfo },
           { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
         )); }
       catch (failure) { reportPersistenceFailure(failure); }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   // Debounced autosave of the profile (all setState happens inside the timer callback)
   useEffect(() => {
     const t = setTimeout(() => {
-      try { saveProfile({ resume, extraInfo }); setSavedSnapshot({ resume, extraInfo }); }
+      try { saveProfile({ candidateName, resume, extraInfo }); setSavedSnapshot({ candidateName, resume, extraInfo }); }
       catch (failure) { reportPersistenceFailure(failure); }
     }, 600);
     return () => clearTimeout(t);
-  }, [resume, extraInfo, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, reportPersistenceFailure]);
 
   const profileSaved =
     savedSnapshot === null ||
-    (savedSnapshot.resume === resume && savedSnapshot.extraInfo === extraInfo);
+    (savedSnapshot.candidateName === candidateName && savedSnapshot.resume === resume && savedSnapshot.extraInfo === extraInfo);
 
   // Auto-scroll the live analysis feed
   useEffect(() => {
@@ -207,7 +246,7 @@ export default function Home() {
     const fullResume = extraInfo.trim()
       ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${extraInfo}`
       : resume;
-    const protectedResume = protectPii(fullResume);
+    const protectedResume = protectPii(fullResume, { candidateNames: candidateName ? [candidateName] : [] });
     if (privacyMode === "review" && !privacyOverride && protectedResume.matches.length > 0) {
       setPendingPii(protectedResume.matches);
       return;
@@ -217,11 +256,17 @@ export default function Home() {
     const restorationMap = sendProtected ? protectedResume.matches : [];
     setPendingPii([]);
     const controller = new AbortController();
+    const generationId = ++activeGenerationRef.current;
     generationAbortRef.current = controller;
     cancelReasonRef.current = null;
     const timeout = window.setTimeout(() => {
+      if (generationId !== activeGenerationRef.current) return;
       cancelReasonRef.current = "timeout";
+      activeGenerationRef.current += 1;
+      generationAbortRef.current = null;
       controller.abort();
+      setError("Generation timed out after three minutes. Your inputs are safe; retry when ready.");
+      setPhase("error");
     }, GENERATION_TIMEOUT_MS);
     setPhase("working");
     setThinking("");
@@ -259,6 +304,7 @@ export default function Home() {
             | { type: "progress"; chars: number }
             | { type: "result"; data: TailorResult }
             | { type: "error"; message: string };
+          if (generationId !== activeGenerationRef.current) return;
           if (event.type === "thinking") setThinking((t) => t + event.text);
           else if (event.type === "progress") setProgressChars(event.chars);
           else if (event.type === "error") throw new Error(event.message);
@@ -273,8 +319,14 @@ export default function Home() {
         }
       }
       if (!finished) throw new Error("The stream ended unexpectedly. Try again.");
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+      if (generationId !== activeGenerationRef.current) return;
+      setTimeout(() => {
+        if (generationId === activeGenerationRef.current) {
+          resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 80);
     } catch (err) {
+      if (generationId !== activeGenerationRef.current) return;
       const cancelled = controller.signal.aborted;
       setError(
         cancelled
@@ -286,17 +338,23 @@ export default function Home() {
       setPhase("error");
     } finally {
       window.clearTimeout(timeout);
-      generationAbortRef.current = null;
+      if (generationId === activeGenerationRef.current) generationAbortRef.current = null;
     }
-  }, [resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
 
   const cancelGeneration = useCallback(() => {
+    const controller = generationAbortRef.current;
+    if (!controller) return;
     cancelReasonRef.current = "cancelled";
-    generationAbortRef.current?.abort();
+    activeGenerationRef.current += 1;
+    generationAbortRef.current = null;
+    controller.abort();
+    setError("Generation cancelled. Your inputs are safe and unchanged.");
+    setPhase("error");
   }, []);
 
   const clearJob = useCallback(() => {
-    generationAbortRef.current?.abort();
+    invalidateResult();
     setJobUrl("");
     setJobText("");
     setJobTitle("");
@@ -305,7 +363,7 @@ export default function Home() {
     setResult(null);
     setPhase("idle");
     setNotice("Job fields cleared.");
-  }, []);
+  }, [invalidateResult]);
 
   const ready = resume.length >= 200 && jobText.length >= 100 && phase !== "working";
   const slug =
@@ -316,6 +374,8 @@ export default function Home() {
       .slice(0, 50) || "tailored";
 
   const restoreSavePoint = useCallback((point: SavePoint) => {
+    invalidateResult();
+    setCandidateName(point.profile.candidateName ?? "");
     setResume(point.profile.resume);
     setExtraInfo(point.profile.extraInfo);
     setJobText(point.session.jobText);
@@ -327,20 +387,20 @@ export default function Home() {
     setResult(point.session.result);
     setPhase(point.session.result ? "done" : "idle");
     setNotice(`Restored save point from ${new Date(point.createdAt).toLocaleString()}.`);
-  }, []);
+  }, [invalidateResult]);
 
   const createManualSavePoint = useCallback(() => {
     try {
       setSavePoints(addSavePoint(
-        { resume, extraInfo },
+        { candidateName, resume, extraInfo },
         { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
         "Manual save point",
       ));
     } catch (failure) { reportPersistenceFailure(failure); }
-  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 md:px-8">
+    <div ref={pageRef} className="mx-auto max-w-6xl px-4 pb-24 pt-10 md:px-8">
       {/* Masthead */}
       <header className="rise mb-10 border-b border-ink-700 pb-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -380,6 +440,27 @@ export default function Home() {
             title="Your profile"
             hint={profileSaved ? "saved locally ✓" : "saving…"}
           >
+            <div className="mb-4 max-w-md">
+              <label htmlFor="candidate-name" className="mb-1 block text-xs text-ink-300">
+                Your name for privacy protection
+              </label>
+              <input
+                id="candidate-name"
+                type="text"
+                autoComplete="name"
+                maxLength={120}
+                value={candidateName}
+                onChange={(event) => {
+                  invalidateResult();
+                  setCandidateName(event.target.value);
+                }}
+                placeholder="Jane Doe"
+                className="w-full rounded-lg border border-ink-700 bg-ink-950/80 px-3 py-2 text-sm text-ink-100 outline-none transition focus:border-brass-400/60"
+              />
+              <p className="mt-1 text-[10px] leading-snug text-ink-400">
+                Optional. Protect mode masks this exact name locally; it never guesses which words are a person’s name.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
               <div>
                 <div className="mb-2 flex items-center justify-between">
@@ -610,8 +691,9 @@ export default function Home() {
             <div>
               <h2 className="text-sm font-semibold text-paper">Personal information shield</h2>
               <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-ink-400">
-                Contact details are replaced locally before generation and restored afterward. You
-                can review detected fields or send your exact text whenever you choose.
+                Contact details and the name you explicitly enter above are replaced locally before
+                generation and restored afterward. Names are never guessed. You can review detected
+                fields or send your exact text whenever you choose.
               </p>
               <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-ink-400">
                 Read-aloud uses your browser/device voice. Dictation starts only when you press its
@@ -621,7 +703,7 @@ export default function Home() {
             <select
               aria-label="Personal information protection mode"
               value={privacyMode}
-              onChange={(event) => setPrivacyMode(event.target.value as PrivacyMode)}
+              onChange={(event) => { invalidateResult(); setPrivacyMode(event.target.value as PrivacyMode); }}
               className="rounded-lg border border-ink-700 bg-ink-950 px-3 py-2 text-xs text-ink-100"
             >
               <option value="protect">Protect automatically</option>
@@ -631,25 +713,47 @@ export default function Home() {
           </div>
           {privacyMode === "exact" && (
             <p role="status" className="mt-3 text-xs text-warn">
-              Exact mode may send email addresses, phone numbers, profile links, addresses, or other
-              identifiers to Anthropic. You can switch back at any time.
+              Exact mode may send your name, email addresses, phone numbers, profile links,
+              addresses, or other identifiers to Anthropic. You can switch back at any time.
             </p>
           )}
         </div>
 
         {pendingPii.length > 0 && (
-          <div role="alertdialog" aria-label="Review personal information" className="rounded-xl border border-warn/50 bg-warn/10 p-4">
-            <h2 className="font-semibold text-paper">Review before anything leaves this browser</h2>
+          <div
+            ref={reviewDialogRef}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="pii-review-title"
+            className="rounded-xl border border-warn/50 bg-warn/10 p-4"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closePiiReview();
+                return;
+              }
+              if (event.key !== "Tab") return;
+              const controls = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+              if (controls.length === 0) return;
+              const first = controls[0];
+              const last = controls.at(-1)!;
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+          >
+            <h2 id="pii-review-title" className="font-semibold text-paper">Review before anything leaves this browser</h2>
             <p className="mt-1 text-xs text-ink-300">
               Found {pendingPii.length} personal field{pendingPii.length === 1 ? "" : "s"}: {Array.from(new Set(pendingPii.map((match) => match.kind))).join(", ")}.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <ToolButton onClick={() => void forge("protected")}>Send protected copy</ToolButton>
-              <ToolButton onClick={() => void forge("exact")}>Send exact text once</ToolButton>
-              <ToolButton onClick={() => {
-                restoreForgeFocusRef.current = true;
-                setPendingPii([]);
-              }}>Cancel</ToolButton>
+              <ToolButton ref={protectedChoiceRef} onClick={() => { restoreForgeFocusRef.current = true; void forge("protected"); }}>Send protected copy</ToolButton>
+              <ToolButton onClick={() => { restoreForgeFocusRef.current = true; void forge("exact"); }}>Send exact text once</ToolButton>
+              <ToolButton onClick={closePiiReview}>Cancel</ToolButton>
             </div>
           </div>
         )}
@@ -791,25 +895,32 @@ export default function Home() {
           )}
         </section>
 
-        {history.length > 0 && (
-          <section className="mt-10 border-t border-ink-700 pt-6">
+        <section className="mt-10 border-t border-ink-700 pt-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold tracking-wide text-paper">
                 Past runs <span className="text-ink-400">(stored only in this browser)</span>
               </h2>
               <ToolButton
                 onClick={async () => {
-                  if (confirm("Delete your saved profile and all history from this browser?")) {
-                    try {
-                      await clearAllData(); setHistory([]); setSavePoints([]); setResume(""); setExtraInfo("");
-                    } catch (failure) { reportPersistenceFailure(failure); }
+                  if (confirm("Delete all your saved Resume Foundry data from this browser?")) {
+                    activeGenerationRef.current += 1;
+                    generationAbortRef.current?.abort();
+                    generationAbortRef.current = null;
+                    try { await clearAllData(); }
+                    catch (failure) { reportPersistenceFailure(failure); }
+                    finally {
+                      setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo("");
+                      setJobText(""); setJobUrl(""); setJobTitle(""); setCompany(""); setEmphasis("balanced");
+                      setPrivacyMode("protect"); setPendingPii([]); setResult(null); setPhase("idle");
+                      setThinking(""); setProgressChars(0); setError("");
+                    }
                   }
                 }}
               >
                 Erase all my data
               </ToolButton>
             </div>
-            <ul className="grid gap-2 md:grid-cols-2">
+            {history.length > 0 && <ul className="grid gap-2 md:grid-cols-2">
               {history.map((h) => (
                 <li
                   key={h.id}
@@ -848,9 +959,8 @@ export default function Home() {
                   </button>
                 </li>
               ))}
-            </ul>
+            </ul>}
           </section>
-        )}
       </main>
       )}
 

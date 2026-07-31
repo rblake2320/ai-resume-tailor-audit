@@ -12,6 +12,8 @@ import { clearCareerPathRecords } from "./labor-market-storage";
  */
 
 export interface Profile {
+  /** User-supplied identity used for exact, local PII masking; never inferred. */
+  candidateName?: string;
   resume: string;
   /** Anything that doesn't fit the resume: side projects, metrics, preferences. */
   extraInfo: string;
@@ -56,12 +58,12 @@ function writeStored(key: string, value: unknown, operation: string): void {
     throw new LocalPersistenceError(operation, { cause: error });
   }
 }
-const ProfileSchema = z.strictObject({ resume: z.string(), extraInfo: z.string(), updatedAt: z.number().finite() });
+const ProfileSchema = z.strictObject({ candidateName: z.string().max(120).optional().default(""), resume: z.string(), extraInfo: z.string(), updatedAt: z.number().finite() });
 const HistoryEntrySchema = z.strictObject({ id: z.string().min(1), createdAt: z.number().finite(), jobTitle: z.string(), company: z.string(), result: TailorResultSchema });
 const SessionSchema = z.strictObject({ jobText: z.string(), jobUrl: z.string(), jobTitle: z.string(), company: z.string(), emphasis: z.enum(["balanced", "technical", "leadership"]), privacyMode: z.enum(["protect", "review", "exact"]), result: TailorResultSchema.nullable() }).partial();
 const SavePointSchema = z.strictObject({
   id: z.string().min(1), createdAt: z.number().finite(), label: z.string(),
-  profile: z.strictObject({ resume: z.string(), extraInfo: z.string() }),
+  profile: z.strictObject({ candidateName: z.string().max(120).optional().default(""), resume: z.string(), extraInfo: z.string() }),
   session: SessionSchema.required(),
 });
 const ApplicationPacketSchema = z.strictObject({
@@ -141,7 +143,7 @@ export interface SavePoint {
   id: string;
   createdAt: number;
   label: string;
-  profile: Pick<Profile, "resume" | "extraInfo">;
+  profile: Pick<Profile, "resume" | "extraInfo"> & Pick<Profile, "candidateName">;
   session: Session;
 }
 
@@ -180,18 +182,19 @@ export function loadSavePoints(): SavePoint[] {
 }
 
 export function addSavePoint(
-  profile: Pick<Profile, "resume" | "extraInfo">,
+  profile: Pick<Profile, "resume" | "extraInfo"> & Pick<Profile, "candidateName">,
   session: Session,
   label = "Automatic checkpoint",
 ): SavePoint[] {
   const current = loadSavePoints();
-  const comparable = JSON.stringify({ profile, session });
+  const normalizedProfile = { candidateName: profile.candidateName ?? "", resume: profile.resume, extraInfo: profile.extraInfo };
+  const comparable = JSON.stringify({ profile: normalizedProfile, session });
   const latest = current[0];
   if (latest && JSON.stringify({ profile: latest.profile, session: latest.session }) === comparable) {
     return current;
   }
   const next = [
-    { id: crypto.randomUUID(), createdAt: Date.now(), label, profile, session },
+    { id: crypto.randomUUID(), createdAt: Date.now(), label, profile: normalizedProfile, session },
     ...current,
   ].slice(0, SAVE_POINTS_LIMIT);
   if (typeof window !== "undefined") writeStored(SAVE_POINTS_KEY, next, "saving a recovery checkpoint");
@@ -243,7 +246,11 @@ export async function clearAllData(): Promise<void> {
     }
   } catch (error) { failures.push(new LocalPersistenceError("erasing local data", { cause: error })); }
   try { clearCareerPathRecords(); } catch (error) { failures.push(error); }
-  try { await deleteCareerLedger(); } catch (error) { failures.push(error); }
+  try { await deleteCareerLedger(); }
+  catch (error) {
+    const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
+    failures.push(new LocalPersistenceError(`erasing the encrypted career ledger${detail}`, { cause: error }));
+  }
   try { window.dispatchEvent?.(new Event("resume-foundry:data-cleared")); } catch (error) { failures.push(error); }
   if (failures.length) throw failures[0];
 }

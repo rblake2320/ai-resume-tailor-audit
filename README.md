@@ -23,6 +23,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 ## Features
 
 - **Master profile** — paste or upload (PDF / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
+- **Personal-information shield** — locally masks supported contact/identifier forms and an explicitly supplied candidate name before generation, with review and exact-text escape hatches. Its documented limits are in [docs/PII_PROTECTION.md](docs/PII_PROTECTION.md).
 - **Job by URL** — paste a public careers-page link and a bounded HTML response is fetched and extracted server-side. LinkedIn and Indeed automation is rejected; paste those postings manually.
 - **Instant keyword scan** — deterministic, client-side coverage check the moment both fields are filled. Transparent baseline before the AI pass.
 - **AI tailoring** — streaming analysis you can watch live, then: before/after match scores with rationale, classified change log, matched / honestly-added / not-added keywords, gap analysis with concrete advice, and ATS formatting checks.

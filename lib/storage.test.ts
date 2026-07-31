@@ -21,11 +21,16 @@ import { createJobSnapshot } from "./job-inbox";
 import { createApplicationPacket, createApplicationRecord } from "./applications";
 import type { TailorResult } from "./schema";
 
+const { deleteCareerLedgerMock } = vi.hoisted(() => ({ deleteCareerLedgerMock: vi.fn(async () => undefined) }));
+vi.mock("./career-vault", () => ({ deleteCareerLedger: deleteCareerLedgerMock }));
+
 class MemoryStorage {
   #values = new Map<string, string>();
   getItem(key: string) { return this.#values.get(key) ?? null; }
   setItem(key: string, value: string) { this.#values.set(key, value); }
   removeItem(key: string) { this.#values.delete(key); }
+  get length() { return this.#values.size; }
+  key(index: number) { return Array.from(this.#values.keys())[index] ?? null; }
 }
 
 const session: Session = {
@@ -38,7 +43,7 @@ const session: Session = {
   result: null,
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); deleteCareerLedgerMock.mockReset(); deleteCareerLedgerMock.mockResolvedValue(undefined); });
 
 describe("local save points", () => {
   beforeEach(() => {
@@ -53,6 +58,22 @@ describe("local save points", () => {
     expect(points).toHaveLength(1);
     expect(loadSavePoints()[0]).toMatchObject({ label: "Manual", profile: { resume: "resume v1" }, session });
     expect(deleteSavePoint(points[0].id)).toEqual([]);
+  });
+
+  it("persists an explicit candidate name and migrates older profiles without guessing one", () => {
+    saveProfile({ candidateName: "Jane Doe", resume: "resume", extraInfo: "" });
+    expect(loadProfile()?.candidateName).toBe("Jane Doe");
+
+    localStorage.setItem("art:profile", JSON.stringify({ resume: "legacy", extraInfo: "", updatedAt: 1 }));
+    expect(loadProfile()).toMatchObject({ candidateName: "", resume: "legacy" });
+  });
+
+  it("migrates older save points without inventing a candidate name", () => {
+    localStorage.setItem("art:save-points", JSON.stringify([{
+      id: "legacy", createdAt: 1, label: "Legacy",
+      profile: { resume: "legacy resume", extraInfo: "" }, session,
+    }]));
+    expect(loadSavePoints()[0].profile).toEqual({ candidateName: "", resume: "legacy resume", extraInfo: "" });
   });
 
   it("deduplicates identical consecutive states", () => {
@@ -72,9 +93,21 @@ describe("local save points", () => {
   });
 
   it("erases checkpoints with the rest of the local user data", async () => {
-    addSavePoint({ resume: "private", extraInfo: "" }, session);
+    saveProfile({ candidateName: "Jane Doe", resume: "private", extraInfo: "" });
+    addSavePoint({ candidateName: "Jane Doe", resume: "private", extraInfo: "" }, session);
     await clearAllData();
     expect(loadSavePoints()).toEqual([]);
+    expect(loadProfile()).toBeNull();
+  });
+
+  it("clears browser records and announces cleanup even when vault deletion fails", async () => {
+    saveProfile({ candidateName: "Jane Doe", resume: "private", extraInfo: "" });
+    const dispatchEvent = vi.fn();
+    Object.assign(window, { dispatchEvent });
+    deleteCareerLedgerMock.mockRejectedValueOnce(new Error("vault unavailable"));
+    await expect(clearAllData()).rejects.toThrow(/encrypted career ledger/);
+    expect(loadProfile()).toBeNull();
+    expect(dispatchEvent).toHaveBeenCalledOnce();
   });
   it("quarantines malformed persisted history instead of bricking every reload", () => {
     localStorage.setItem("art:history", JSON.stringify([{ result: { broken: true } }]));
