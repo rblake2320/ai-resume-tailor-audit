@@ -91,6 +91,24 @@ export async function createApplicationPacket(input: {
   return structuredClone({ ...partial, checksums });
 }
 
+export async function verifyApplicationPacket(packet: ApplicationPacket): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  const profile = { resume: packet.profileSnapshot.resume, extraInfo: packet.profileSnapshot.extraInfo };
+  const expected = {
+    job: await sha256(canonical(packet.jobSnapshot)),
+    profile: await sha256(canonical(profile)),
+    resume: await sha256(packet.tailoredResult.tailored_resume_markdown),
+    coverLetter: await sha256(packet.tailoredResult.cover_letter_markdown),
+  };
+  if (packet.profileSnapshot.checksum !== expected.profile) errors.push("Profile snapshot checksum mismatch.");
+  for (const key of ["job", "profile", "resume", "coverLetter"] as const) {
+    if (packet.checksums[key] !== expected[key]) errors.push(`${key} checksum mismatch.`);
+  }
+  const { checksums: _checksums, ...body } = packet;
+  if (packet.checksums.packet !== await sha256(canonical(body))) errors.push("Packet checksum mismatch.");
+  return { valid: errors.length === 0, errors };
+}
+
 export function createApplicationRecord(packet: ApplicationPacket): ApplicationRecord {
   return { id: crypto.randomUUID(), packet: structuredClone(packet), packetHistory: [], state: "ready", timeline: [{ at: packet.createdAt, type: "packet.created", detail: `Packet v${packet.version} created` }], notes: [], contacts: [], interviewDates: [], followUpAt: null, compensation: "", referral: "", rejectionReason: "", nextAction: "Review and approve submission", documentLinks: [], emailLinks: [], calendarLinks: [], reminders: [] };
 }
@@ -136,6 +154,8 @@ export function buildInterviewPrep(record: ApplicationRecord) {
 export function allowedTransitions(state: ApplicationState): readonly ApplicationState[] { return TRANSITIONS[state]; }
 
 export async function transitionApplication(record: ApplicationRecord, next: ApplicationState, now = new Date()): Promise<ApplicationRecord> {
+  const integrity = await verifyApplicationPacket(record.packet);
+  if (!integrity.valid) throw new Error(`Application packet integrity failed: ${integrity.errors.join(" ")}`);
   if (!TRANSITIONS[record.state].includes(next)) throw new Error(`Invalid application transition: ${record.state} -> ${next}`);
   const updated = structuredClone(record);
   updated.state = next;

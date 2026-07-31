@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicationAnalytics, approveReminder, buildInterviewPrep, createApplicationPacket, createApplicationRecord, dismissReminder, transitionApplication } from "./applications";
+import { applicationAnalytics, approveReminder, buildInterviewPrep, createApplicationPacket, createApplicationRecord, dismissReminder, transitionApplication, verifyApplicationPacket } from "./applications";
 import { createJobSnapshot } from "./job-inbox";
 import type { TailorResult } from "./schema";
 
@@ -15,6 +15,13 @@ describe("immutable application packets", () => {
     const created = await packet(); const old = created.tailoredResult.tailored_resume_markdown;
     result.tailored_resume_markdown = "Changed later";
     expect(created.checksums.packet).toMatch(/^[a-f0-9]{64}$/); expect(created.checksums.resume).toMatch(/^[a-f0-9]{64}$/); expect(created.tailoredResult.tailored_resume_markdown).toBe(old);
+  });
+  it("re-verifies every immutable artifact and rejects a rehydrated tampered packet", async () => {
+    const created = await packet();
+    expect(await verifyApplicationPacket(created)).toEqual({ valid: true, errors: [] });
+    const tampered = structuredClone(created); tampered.tailoredResult.tailored_resume_markdown = "# Unapproved replacement";
+    expect(await verifyApplicationPacket(tampered)).toMatchObject({ valid: false });
+    await expect(transitionApplication(createApplicationRecord(tampered), "submitted")).rejects.toThrow(/integrity failed/);
   });
   it("allows only valid state transitions and records submission time", async () => {
     const record = createApplicationRecord(await packet());
