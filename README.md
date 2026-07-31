@@ -17,6 +17,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 | **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
 | **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
 | **Local-first privacy** | Your profile and history live in your browser's localStorage. The app does not write a server-side copy. One click erases everything. |
+| **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
 
 ## Features
 

@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSavePoint,
   clearAllData,
   deleteSavePoint,
+  loadJobInbox,
   loadSavePoints,
+  saveJobInbox,
   type Session,
 } from "./storage";
+import { createJobSnapshot } from "./job-inbox";
 
 class MemoryStorage {
   #values = new Map<string, string>();
@@ -23,6 +26,8 @@ const session: Session = {
   privacyMode: "protect",
   result: null,
 };
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("local save points", () => {
   beforeEach(() => {
@@ -59,5 +64,23 @@ describe("local save points", () => {
     addSavePoint({ resume: "private", extraInfo: "" }, session);
     clearAllData();
     expect(loadSavePoints()).toEqual([]);
+  });
+});
+
+describe("job inbox persistence", () => {
+  beforeEach(() => {
+    const localStorage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage });
+    vi.stubGlobal("localStorage", localStorage);
+  });
+
+  it("round-trips validated immutable snapshots", async () => {
+    const snapshot = await createJobSnapshot({
+      company: "Acme",
+      title: "Engineer",
+      description: "Build reliable software systems with testing, observability, security, collaboration, documentation, deployment, and customer-focused engineering practices.",
+    });
+    saveJobInbox([snapshot]);
+    expect(loadJobInbox()).toEqual([snapshot]);
   });
 });

@@ -22,6 +22,7 @@ import {
 import { ResultView } from "@/components/ResultView";
 import { Chip, Section, Spinner, ToolButton } from "@/components/ui";
 import { DictationButton } from "@/components/SpeechControls";
+import { JobInbox } from "@/components/JobInbox";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -534,6 +535,23 @@ export default function Home() {
             {notice && <p className="mt-2 text-xs text-warn">{notice}</p>}
           </Section>
         </div>
+
+        <JobInbox
+          current={{
+            company: company.trim() || "Unknown company",
+            title: jobTitle.trim() || "Untitled role",
+            description: jobText,
+            applicationUrl: jobUrl,
+          }}
+          onSelect={(job) => {
+            invalidateResult();
+            setJobText(job.description);
+            setJobUrl(job.applicationUrl);
+            setJobTitle(job.title);
+            setCompany(job.company);
+            setNotice(`Loaded immutable snapshot revision ${job.revision} from the Job Inbox.`);
+          }}
+        />
 
         {/* Instant scan */}
         {scan && (

@@ -148,3 +148,42 @@ export const TailorRequestSchema = z.object({
 });
 
 export type TailorRequest = z.infer<typeof TailorRequestSchema>;
+
+// ---- Job Search OS: normalized posting snapshots -----------------------
+export const JobSourceSchema = z.enum([
+  "manual", "url", "csv", "json", "greenhouse", "lever", "usajobs", "email", "other",
+]);
+export const RemoteStatusSchema = z.enum(["remote", "hybrid", "onsite", "unspecified"]);
+export const CompensationSchema = z.strictObject({
+  currency: z.string().min(3).max(3).default("USD"),
+  minimum: z.number().finite().nonnegative().nullable().default(null),
+  maximum: z.number().finite().nonnegative().nullable().default(null),
+  interval: z.enum(["hour", "day", "week", "month", "year", "other"]).default("year"),
+  description: z.string().max(500).default(""),
+}).refine((value) => value.maximum === null || value.minimum === null || value.maximum >= value.minimum,
+  "Compensation maximum must be greater than or equal to minimum.");
+
+export const JobPostingSnapshotSchema = z.strictObject({
+  id: z.string().min(1),
+  source: JobSourceSchema,
+  sourceId: z.string().max(500).default(""),
+  company: z.string().min(1).max(200),
+  title: z.string().min(1).max(200),
+  location: z.string().max(300).default(""),
+  remoteStatus: RemoteStatusSchema.default("unspecified"),
+  compensation: CompensationSchema.nullable().default(null),
+  description: z.string().min(100),
+  requiredQualifications: z.array(z.string().min(1).max(1000)).default([]),
+  preferredQualifications: z.array(z.string().min(1).max(1000)).default([]),
+  applicationUrl: z.string().url().or(z.literal("")),
+  postedAt: z.string().datetime().nullable().default(null),
+  closesAt: z.string().datetime().nullable().default(null),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  importedAt: z.string().datetime(),
+  revision: z.number().int().positive(),
+  previousSnapshotId: z.string().nullable().default(null),
+});
+
+export type JobSource = z.infer<typeof JobSourceSchema>;
+export type RemoteStatus = z.infer<typeof RemoteStatusSchema>;
+export type JobPostingSnapshot = z.infer<typeof JobPostingSnapshotSchema>;
