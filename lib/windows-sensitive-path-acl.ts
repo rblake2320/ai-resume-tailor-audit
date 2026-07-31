@@ -16,6 +16,7 @@ const SENSITIVE_PATHS = [
 ] as const;
 
 export type WindowsAclMode = "apply" | "verify";
+export type WindowsAclOperation = WindowsAclMode | "preflight";
 export type AclEnvironment = Record<string, string | undefined>;
 
 export interface WindowsAclRunnerResult {
@@ -24,11 +25,15 @@ export interface WindowsAclRunnerResult {
   inheritanceProtected: boolean;
   unexpectedAllowSids: string[];
   currentUserHasFullControl: boolean;
+  missingFullControlSids?: string[];
+  denyRuleCount?: number;
+  inheritedRuleCount?: number;
+  checkedItemCount?: number;
 }
 
 export type WindowsAclRunner = (input: {
   targetPath: string;
-  mode: WindowsAclMode;
+  mode: WindowsAclOperation;
   kind: "directory" | "file";
 }) => Promise<WindowsAclRunnerResult>;
 
@@ -80,7 +85,7 @@ function uniqueDirectories(env: AclEnvironment) {
 
 export async function runWindowsAclScript(input: {
   targetPath: string;
-  mode: WindowsAclMode;
+  mode: WindowsAclOperation;
   kind: "directory" | "file";
 }): Promise<WindowsAclRunnerResult> {
   const script = path.join(process.cwd(), "scripts", "windows-sensitive-path-acl.ps1");
@@ -114,12 +119,12 @@ export async function runWindowsAclScript(input: {
 export async function enforceConfiguredWindowsSensitivePathAcls(options: {
   env?: AclEnvironment;
   platform?: NodeJS.Platform;
-  production?: boolean;
   runner?: WindowsAclRunner;
 } = {}): Promise<SensitivePathAclResult> {
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
-  const production = options.production ?? env.NODE_ENV === "production";
+  const environment = env.NODE_ENV?.trim().toLowerCase();
+  const explicitlyNonProduction = environment === "development" || environment === "test";
   const targets = configuredTargets(env);
 
   if (targets.length === 0) return { status: "not-configured", checked: [] };
@@ -127,7 +132,7 @@ export async function enforceConfiguredWindowsSensitivePathAcls(options: {
 
   const mode = parseMode(env[WINDOWS_ACL_MODE_ENV]);
   if (!mode) {
-    if (production) {
+    if (!explicitlyNonProduction) {
       throw new Error(
         `${WINDOWS_ACL_MODE_ENV}=apply or verify is required in production when sensitive Windows paths are configured.`,
       );
@@ -138,6 +143,10 @@ export async function enforceConfiguredWindowsSensitivePathAcls(options: {
   const runner = options.runner ?? runWindowsAclScript;
   const checked: string[] = [];
   for (const directory of uniqueDirectories(env)) {
+    const preflight = await runner({ targetPath: directory.path, mode: "preflight", kind: "directory" });
+    if (!preflight.secure) {
+      throw new Error(`${directory.envNames.join("/")} failed the Windows reparse-point preflight.`);
+    }
     if (mode === "apply") await mkdir(directory.path, { recursive: true });
     else {
       const info = await stat(directory.path).catch(() => undefined);

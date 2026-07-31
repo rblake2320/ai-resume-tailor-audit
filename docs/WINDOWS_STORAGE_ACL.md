@@ -8,7 +8,7 @@ On Windows, `npm start` checks every configured sensitive path in its `prestart`
 RESUME_FOUNDRY_WINDOWS_ACL_MODE=apply
 ```
 
-for a service account that is allowed to create and secure its dedicated directories, or use `verify` when directories are provisioned separately. If a sensitive store is configured in Windows production and the mode is missing, `off`, invalid, or verification fails, `npm start` exits before launching Next.js. The instrumentation backstop rejects runtime initialization. Development skips the check unless a mode is explicitly selected.
+for a service account that is allowed to create and secure its dedicated directories, or use `verify` when directories are provisioned separately. When any sensitive path is configured, the mode is mandatory unless `NODE_ENV` is explicitly `development` or `test`; an unset or misspelled environment is treated as production-sensitive and fails closed. If the mode is missing, `off`, invalid, or verification fails, `npm start` exits before launching Next.js. The instrumentation backstop rejects runtime initialization.
 
 The boundary recognizes these paths:
 
@@ -29,6 +29,8 @@ The PowerShell helper uses .NET's supported `System.Security.AccessControl` APIs
 3. replaces access rules with full control for the service identity, Local System, and the local Administrators group;
 4. reads the resulting ACL back; and
 5. fails unless inheritance is disabled, the service identity owns the directory and has full control, and no other principal has an allow rule.
+
+Before `apply` creates a missing directory, a separate component-by-component preflight rejects reparse points in every existing ancestor, so creation cannot be redirected through a junction. Existing directory trees are then walked without following reparse points. Every existing child is verified and `apply` replaces its ACL; a junction, symbolic link, mount point, or other reparse point in the configured path or tree fails the check. Deny rules fail verification, inherit-only rules are not counted as effective access, and the service identity, Local System, and Administrators must each retain effective full control.
 
 `verify` performs only steps 4 and 5.
 
