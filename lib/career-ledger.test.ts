@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  appendCareerEvent, createCareerLedger, createDisclosurePacket, currentCareerEvents,
-  exportEncryptedCareerLedger, importEncryptedCareerLedger, verifyCareerLedger,
+  appendCareerEvent, createCareerLedger, createDisclosurePacket, currentCareerEvents, deleteCareerEvent,
+  exportEncryptedCareerLedger, importEncryptedCareerLedger, migrateCareerLedger, reviewInferredSkill, verifyCareerLedger,
   type CareerEventInput,
 } from "./career-ledger";
 
@@ -69,5 +69,33 @@ describe("career evidence ledger", () => {
     const backup = await exportEncryptedCareerLedger(await appendCareerEvent(createCareerLedger("owner-1"), event()), "a strong recovery phrase");
     const tampered = { ...backup, ciphertext: `${backup.ciphertext.slice(0, -2)}AA` };
     await expect(importEncryptedCareerLedger(tampered, "a strong recovery phrase")).rejects.toThrow(/integrity verification/);
+  });
+  it("migrates a schema-v1 fixture losslessly into private v2 defaults", async () => {
+    const current = await appendCareerEvent(createCareerLedger("owner-1"), event());
+    const { privacy: _privacy, deletions: _deletions, ...legacyBody } = current;
+    const legacy = { ...legacyBody, schemaVersion: 1 as const };
+    const migrated = migrateCareerLedger(legacy);
+    expect(migrated.schemaVersion).toBe(2); expect(migrated.events).toEqual(current.events);
+    expect(migrated.privacy).toMatchObject({ ageBand: "unspecified", publicProfileEnabled: false, advertisingConsent: false });
+  });
+  it("enforces minor privacy defaults and explicit age-of-majority review", () => {
+    const ledger = createCareerLedger("young-owner", new Date("2026-01-01T00:00:00Z"), "minor");
+    expect(ledger.privacy).toMatchObject({ ageBand: "minor", publicProfileEnabled: false, guardianAssistance: "none" });
+    expect(ledger.privacy.ageOfMajorityReviewDueAt).toBe("2027-01-01T00:00:00.000Z");
+  });
+  it("erases item content, retains a non-content receipt, and rebuilds integrity", async () => {
+    let ledger = await appendCareerEvent(createCareerLedger("owner-1"), event()); const removed = ledger.events[0];
+    ledger = await appendCareerEvent(ledger, event({ title: "Keep me" })); ledger = await deleteCareerEvent(ledger, removed.id, "Owner request", new Date("2026-03-01T00:00:00Z"));
+    expect(JSON.stringify(ledger)).not.toContain("Robotics team"); expect(ledger.events.map((item) => item.title)).toEqual(["Keep me"]);
+    expect(ledger.deletions[0]).toMatchObject({ eventId: removed.id, priorHash: removed.hash, reason: "Owner request" });
+    expect((await verifyCareerLedger(ledger)).valid).toBe(true);
+  });
+  it("lets the owner confirm, edit, or reject AI skill mappings without upgrading them to facts", async () => {
+    let ledger = await appendCareerEvent(createCareerLedger("owner"), event({ skills: [{ name: "systems thinking", state: "unconfirmed_inference", source: "ai_suggestion" }] }));
+    ledger = await reviewInferredSkill(ledger, ledger.events[0].id, "systems thinking", { action: "edit", editedName: "systems analysis" });
+    expect(currentCareerEvents(ledger)[0].skills).toEqual([{ name: "systems analysis", state: "user_confirmed_inference", source: "ai_suggestion" }]);
+    expect(currentCareerEvents(ledger)[0].skills[0].state).not.toBe("fact");
+    let rejection = await appendCareerEvent(createCareerLedger("owner"), event({ skills: [{ name: "leadership", state: "unconfirmed_inference", source: "ai_suggestion" }] }));
+    rejection = await reviewInferredSkill(rejection, rejection.events[0].id, "leadership", { action: "reject" }); expect(currentCareerEvents(rejection)[0].skills).toEqual([]);
   });
 });

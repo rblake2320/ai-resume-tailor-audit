@@ -1,4 +1,4 @@
-import { CareerLedgerSchema, type CareerLedger } from "./career-ledger";
+import { EncryptedCareerBackupSchema, exportEncryptedCareerLedger, importEncryptedCareerLedger, migrateCareerLedger, type CareerLedger } from "./career-ledger";
 
 const DB_NAME = "resume-foundry-career-vault";
 const DB_VERSION = 1;
@@ -22,19 +22,27 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-export async function loadCareerLedger(): Promise<CareerLedger | null> {
+async function storedValue(): Promise<unknown> {
   const db = await openVault();
-  try {
-    const value = await requestResult(db.transaction(STORE, "readonly").objectStore(STORE).get(ACTIVE));
-    return value ? CareerLedgerSchema.parse(value) : null;
-  } finally { db.close(); }
+  try { return await requestResult(db.transaction(STORE, "readonly").objectStore(STORE).get(ACTIVE)); }
+  finally { db.close(); }
 }
 
-export async function saveCareerLedger(ledger: CareerLedger): Promise<void> {
-  const parsed = CareerLedgerSchema.parse(ledger); const db = await openVault();
+export async function hasCareerLedger(): Promise<boolean> { return Boolean(await storedValue()); }
+
+export async function loadCareerLedger(passphrase: string): Promise<CareerLedger | null> {
+  const value = await storedValue(); if (!value) return null;
+  const encrypted = EncryptedCareerBackupSchema.safeParse(value);
+  if (encrypted.success) return importEncryptedCareerLedger(encrypted.data, passphrase);
+  // One-time migration for the original plaintext-v1 browser vault. It is immediately re-encrypted.
+  const migrated = migrateCareerLedger(value); await saveCareerLedger(migrated, passphrase); return migrated;
+}
+
+export async function saveCareerLedger(ledger: CareerLedger, passphrase: string): Promise<void> {
+  const encrypted = await exportEncryptedCareerLedger(ledger, passphrase); const db = await openVault();
   try {
     const transaction = db.transaction(STORE, "readwrite");
-    transaction.objectStore(STORE).put(parsed, ACTIVE);
+    transaction.objectStore(STORE).put(encrypted, ACTIVE);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error ?? new Error("Career vault write failed."));

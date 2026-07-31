@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CAREER_LEDGER_SCHEMA_VERSION = 1 as const;
+export const CAREER_LEDGER_SCHEMA_VERSION = 2 as const;
 
 export const CareerEventCategorySchema = z.enum([
   "project", "coursework", "paid_work", "volunteering", "caregiving",
@@ -51,6 +51,22 @@ export const CareerEventSchema = z.strictObject({
   hash: z.string().regex(/^[a-f0-9]{64}$/),
 });
 
+export const CareerPrivacySchema = z.strictObject({
+  ageBand: z.enum(["minor", "adult", "unspecified"]),
+  guardianAssistance: z.enum(["none", "invited"]),
+  ownershipConfirmedAt: z.string().datetime(),
+  ageOfMajorityReviewDueAt: z.string().datetime().nullable(),
+  publicProfileEnabled: z.boolean(),
+  advertisingConsent: z.literal(false),
+  modelTrainingConsent: z.boolean(),
+}).superRefine((value, context) => {
+  if (value.ageBand === "minor" && value.publicProfileEnabled) context.addIssue({ code: "custom", message: "A minor's career ledger cannot enable a public profile." });
+});
+export const CareerDeletionSchema = z.strictObject({ eventId: z.string().uuid(), deletedAt: z.string().datetime(), priorHash: z.string().regex(/^[a-f0-9]{64}$/), reason: z.string().min(1).max(500) });
+
+const CareerLedgerV1Schema = z.strictObject({
+  schemaVersion: z.literal(1), ledgerId: z.string().uuid(), ownerId: z.string().min(1), createdAt: z.string().datetime(), updatedAt: z.string().datetime(), events: z.array(CareerEventSchema),
+});
 export const CareerLedgerSchema = z.strictObject({
   schemaVersion: z.literal(CAREER_LEDGER_SCHEMA_VERSION),
   ledgerId: z.string().uuid(),
@@ -58,6 +74,8 @@ export const CareerLedgerSchema = z.strictObject({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   events: z.array(CareerEventSchema),
+  privacy: CareerPrivacySchema,
+  deletions: z.array(CareerDeletionSchema),
 });
 
 export type CareerEvent = z.infer<typeof CareerEventSchema>;
@@ -80,12 +98,22 @@ async function sha256(value: unknown): Promise<string> {
 
 function random(size: number): Uint8Array { const value = new Uint8Array(size); crypto.getRandomValues(value); return value; }
 
-export function createCareerLedger(ownerId: string, now = new Date()): CareerLedger {
+export function createCareerLedger(ownerId: string, now = new Date(), ageBand: "minor" | "adult" | "unspecified" = "unspecified"): CareerLedger {
   const timestamp = now.toISOString();
   return CareerLedgerSchema.parse({
     schemaVersion: CAREER_LEDGER_SCHEMA_VERSION,
-    ledgerId: crypto.randomUUID(), ownerId, createdAt: timestamp, updatedAt: timestamp, events: [],
+    ledgerId: crypto.randomUUID(), ownerId, createdAt: timestamp, updatedAt: timestamp, events: [], deletions: [],
+    privacy: { ageBand, guardianAssistance: "none", ownershipConfirmedAt: timestamp,
+      ageOfMajorityReviewDueAt: ageBand === "minor" ? new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1)).toISOString() : null,
+      publicProfileEnabled: false, advertisingConsent: false, modelTrainingConsent: false },
   });
+}
+
+export function migrateCareerLedger(value: unknown): CareerLedger {
+  const current = CareerLedgerSchema.safeParse(value); if (current.success) return current.data;
+  const legacy = CareerLedgerV1Schema.parse(value);
+  return CareerLedgerSchema.parse({ ...legacy, schemaVersion: 2, deletions: [], privacy: { ageBand: "unspecified", guardianAssistance: "none",
+    ownershipConfirmedAt: legacy.updatedAt, ageOfMajorityReviewDueAt: null, publicProfileEnabled: false, advertisingConsent: false, modelTrainingConsent: false } });
 }
 
 /** Append-only: corrections are new events linked to the event they supersede. */
@@ -126,6 +154,31 @@ export async function verifyCareerLedger(ledger: CareerLedger): Promise<{ valid:
 export function currentCareerEvents(ledger: CareerLedger): CareerEvent[] {
   const superseded = new Set(ledger.events.flatMap((event) => event.supersedesEventId ? [event.supersedesEventId] : []));
   return ledger.events.filter((event) => !superseded.has(event.id));
+}
+
+/** Explicit erasure is exceptional: retain only a non-content deletion receipt, then rebuild the integrity chain. */
+export async function deleteCareerEvent(ledger: CareerLedger, eventId: string, reason: string, now = new Date()): Promise<CareerLedger> {
+  const parsed = CareerLedgerSchema.parse(ledger); const removed = parsed.events.find((event) => event.id === eventId);
+  if (!removed) throw new Error("Career event not found."); if (!reason.trim()) throw new Error("Deletion reason is required.");
+  const retained = parsed.events.filter((event) => event.id !== eventId && event.supersedesEventId !== eventId);
+  const rebuilt: CareerEvent[] = []; let previousHash: string | null = null;
+  for (const [index, event] of retained.entries()) {
+    const { hash: _hash, ...body } = event; const withoutHash = { ...body, sequence: index + 1, previousHash };
+    const next = CareerEventSchema.parse({ ...withoutHash, hash: await sha256(withoutHash) }); rebuilt.push(next); previousHash = next.hash;
+  }
+  return CareerLedgerSchema.parse({ ...parsed, updatedAt: now.toISOString(), events: rebuilt,
+    deletions: [...parsed.deletions, { eventId, deletedAt: now.toISOString(), priorHash: removed.hash, reason: reason.trim() }] });
+}
+
+export async function reviewInferredSkill(ledger: CareerLedger, eventId: string, skillName: string,
+  decision: { action: "confirm" | "reject" | "edit"; editedName?: string }, now = new Date()): Promise<CareerLedger> {
+  const source = currentCareerEvents(ledger).find((event) => event.id === eventId); if (!source) throw new Error("Career event not found.");
+  const target = source.skills.find((skill) => skill.name === skillName && skill.state === "unconfirmed_inference"); if (!target) throw new Error("Unconfirmed skill mapping not found.");
+  const skills = source.skills.filter((skill) => skill !== target);
+  if (decision.action !== "reject") skills.push({ name: decision.action === "edit" ? (decision.editedName?.trim() || "") : target.name, state: "user_confirmed_inference", source: target.source });
+  if (skills.some((skill) => !skill.name)) throw new Error("Edited skill name is required.");
+  const { id: _id, sequence: _sequence, capturedAt: _capturedAt, previousHash: _previousHash, hash: _hash, ...input } = source;
+  return appendCareerEvent(ledger, { ...input, skills, supersedesEventId: source.id, correctionReason: `User ${decision.action}ed inferred skill mapping: ${skillName}` }, now);
 }
 
 export async function createDisclosurePacket(ledger: CareerLedger, eventIds: readonly string[]) {
@@ -179,8 +232,8 @@ export async function importEncryptedCareerLedger(backup: unknown, passphrase: s
       new Uint8Array(unb64(parsed.ciphertext)).buffer,
     );
     const payload = JSON.parse(new TextDecoder().decode(plaintext)) as { ledger: unknown; checksum: string };
-    const ledger = CareerLedgerSchema.parse(payload.ledger);
-    if (await sha256(ledger) !== payload.checksum) throw new Error("Backup checksum mismatch.");
+    if (await sha256(payload.ledger) !== payload.checksum) throw new Error("Backup checksum mismatch.");
+    const ledger = migrateCareerLedger(payload.ledger);
     const integrity = await verifyCareerLedger(ledger); if (!integrity.valid) throw new Error(integrity.errors.join(" "));
     return ledger;
   } catch (error) {
