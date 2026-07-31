@@ -6,6 +6,7 @@ import { mdToAtsText, mdToHtml } from "@/lib/markdown";
 import { downloadDocx } from "@/lib/docx-export";
 import { Chip, CopyButton, ScoreDial, ToolButton, downloadText } from "./ui";
 import { ReadAloudControls } from "./SpeechControls";
+import { EvidenceWorkspace } from "./EvidenceWorkspace";
 
 const KIND_LABEL: Record<TailorResult["changes"][number]["kind"], string> = {
   reworded: "Reworded",
@@ -54,6 +55,8 @@ export function ResultView({
           {result.score_rationale}
         </p>
       </div>
+
+      <EvidenceWorkspace items={result.requirement_evidence ?? []} />
 
       {/* Keywords */}
       <div className="grid gap-4 md:grid-cols-3">

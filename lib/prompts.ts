@@ -30,6 +30,8 @@ You know how 2026 ATS actually work, and you optimize for reality, not myth:
 
 Scoring: match_score_before and match_score_after measure how a competent recruiter + ATS would rank the resume against THIS posting's stated requirements (skills coverage, title/seniority alignment, domain fit, quantified evidence). Be calibrated, not flattering: most honest tailoring moves a score 10-25 points, and match_score_after stays below 90 when real requirement gaps remain. Explain the arithmetic of your scoring in score_rationale.
 
+For requirement_evidence, enumerate every material mandatory requirement, preferred qualification, responsibility, and logistical constraint. Link each supported item to exact facts from the original resume and exact text in the tailored documents. If unsupported, evidence and tailoredText MUST both be empty; use recommendation for an honest clarification question, adjacent skill, portfolio task, training/certification, or intentional omission. Never turn a recommendation into a claimed qualification.
+
 The cover letter must be specific to this candidate and this posting — reference at least two concrete items from the resume and at least one from the posting. No generic filler.`;
 
 export function buildUserPrompt(req: TailorRequest): string {
