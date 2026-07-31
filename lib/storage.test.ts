@@ -5,11 +5,21 @@ import {
   deleteSavePoint,
   loadJobInbox,
   loadHistory,
+  loadApplications,
+  loadCareerBackupMarker,
+  loadProfile,
   loadSavePoints,
+  loadSession,
+  LocalPersistenceError,
+  saveApplications,
+  saveCareerBackupMarker,
   saveJobInbox,
+  saveProfile,
   type Session,
 } from "./storage";
 import { createJobSnapshot } from "./job-inbox";
+import { createApplicationPacket, createApplicationRecord } from "./applications";
+import type { TailorResult } from "./schema";
 
 class MemoryStorage {
   #values = new Map<string, string>();
@@ -72,6 +82,19 @@ describe("local save points", () => {
     expect(localStorage.getItem("art:history")).toBeNull();
     expect(localStorage.getItem("art:history:quarantine")).toContain("broken");
   });
+
+  it.each([
+    ["art:profile", () => loadProfile(), null],
+    ["art:session", () => loadSession(), null],
+    ["art:save-points", () => loadSavePoints(), []],
+    ["art:job-inbox:v1", () => loadJobInbox(), []],
+    ["art:applications:v1", () => loadApplications(), []],
+  ] as const)("quarantines malformed persisted data in %s", (key, load, fallback) => {
+    localStorage.setItem(key, JSON.stringify([{ unexpected: "private data" }]));
+    expect(load()).toEqual(fallback);
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(localStorage.getItem(`${key}:quarantine`)).toContain("private data");
+  });
 });
 
 describe("job inbox persistence", () => {
@@ -89,5 +112,49 @@ describe("job inbox persistence", () => {
     });
     saveJobInbox([snapshot]);
     expect(loadJobInbox()).toEqual([snapshot]);
+  });
+
+  it("round-trips a schema-valid immutable application record", async () => {
+    const job = await createJobSnapshot({
+      company: "Acme", title: "Engineer",
+      description: "Build reliable software systems with testing, observability, security, collaboration, documentation, deployment, and customer-focused engineering practices.",
+    });
+    const result: TailorResult = {
+      match_score_before: 50, match_score_after: 70, score_rationale: "Evidence improved alignment.", changes: [],
+      keywords: { matched: [], added: [], not_added: [] }, gap_analysis: [], requirement_evidence: [], ats_checks: [],
+      tailored_resume_markdown: "# Resume", cover_letter_markdown: "Cover",
+    };
+    const record = createApplicationRecord(await createApplicationPacket({ jobSnapshot: job, profile: { resume: "Original", extraInfo: "Evidence" }, result }));
+    saveApplications([record]);
+    expect(loadApplications()).toEqual([record]);
+  });
+});
+
+describe("unavailable browser storage", () => {
+  it("fails reads closed when localStorage access throws SecurityError", () => {
+    const deniedWindow = {} as Window;
+    Object.defineProperty(deniedWindow, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } });
+    vi.stubGlobal("window", deniedWindow);
+    expect(() => loadProfile()).not.toThrow();
+    expect(loadProfile()).toBeNull();
+    expect(loadSession()).toBeNull();
+    expect(loadApplications()).toEqual([]);
+  });
+
+  it("signals a write failure instead of claiming data was saved", () => {
+    const failing = {
+      getItem: () => null,
+      setItem: () => { throw new DOMException("full", "QuotaExceededError"); },
+      removeItem: vi.fn(),
+    };
+    vi.stubGlobal("window", { localStorage: failing });
+    expect(() => saveProfile({ resume: "private resume", extraInfo: "" })).toThrow(LocalPersistenceError);
+    expect(() => addSavePoint({ resume: "private resume", extraInfo: "" }, session)).toThrow(/may not survive a reload/);
+    expect(() => saveCareerBackupMarker("2026-07-31T12:00:00.000Z")).toThrow(LocalPersistenceError);
+  });
+
+  it("fails the career backup marker read closed when getItem throws", () => {
+    vi.stubGlobal("window", { localStorage: { getItem: () => { throw new DOMException("denied", "SecurityError"); } } });
+    expect(loadCareerBackupMarker()).toBeNull();
   });
 });

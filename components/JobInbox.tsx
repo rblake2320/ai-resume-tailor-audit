@@ -29,7 +29,8 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
         else duplicates += 1;
       } catch { rejected += 1; }
     }
-    saveJobInbox(next); setJobs(next);
+    try { saveJobInbox(next); setJobs(next); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Job Inbox could not be saved."); return; }
     setMessage(`${added} imported · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} skipped${rejected ? ` · ${rejected} invalid` : ""}`);
   }
 
@@ -53,7 +54,7 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
     {jobs.length === 0 ? <p className="mt-3 rounded-lg border border-dashed border-ink-700 p-4 text-xs text-ink-400">No saved jobs yet. Load or paste a posting, then save it here.</p> :
       <ul className="mt-3 grid gap-2 md:grid-cols-2">{jobs.map((job) => <li key={job.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-ink-700 px-3 py-2">
         <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onSelect(job)}><span className="block truncate text-sm text-paper">{job.title} <span className="text-brass-300">@ {job.company}</span></span><span className="block truncate font-mono text-[10px] text-ink-400">{job.source} · revision {job.revision} · {job.location || "location unspecified"}</span></button>
-        <button type="button" className="text-xs text-ink-400 hover:text-bad" aria-label={`Delete ${job.title} snapshot`} onClick={() => setJobs(deleteJobSnapshot(job.id))}>✕</button>
+        <button type="button" className="text-xs text-ink-400 hover:text-bad" aria-label={`Delete ${job.title} snapshot`} onClick={() => { try { setJobs(deleteJobSnapshot(job.id)); } catch (error) { setMessage(error instanceof Error ? error.message : "Job snapshot could not be deleted."); } }}>✕</button>
       </li>)}</ul>}
   </section>;
 }

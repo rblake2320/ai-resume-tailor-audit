@@ -20,18 +20,23 @@ export function ApplicationTracker({ result, profile, job }: { result: TailorRes
     const existing = loadJobInbox();
     const jobSnapshot = await createJobSnapshot({ ...job, company: job.company || "Unknown company", title: job.title || "Untitled role", source: job.applicationUrl ? "url" : "manual" }, existing);
     const packet = await createApplicationPacket({ jobSnapshot, profile, result });
-    const next = [createApplicationRecord(packet), ...records]; saveApplications(next); setRecords(next); setMessage("Immutable packet prepared and checksummed.");
+    const next = [createApplicationRecord(packet), ...records];
+    try { saveApplications(next); setRecords(next); setMessage("Immutable packet prepared and checksummed."); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Application packet could not be saved."); }
   }
 
   async function move(record: ApplicationRecord, state: ApplicationState) {
     const transitioned = await transitionApplication(record, state);
     const next = records.map((entry) => entry.id === record.id ? transitioned : entry);
-    saveApplications(next); setRecords(next);
+    try { saveApplications(next); setRecords(next); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Application state could not be saved."); }
   }
 
   function updateReminder(record: ApplicationRecord, reminderId: string, action: "approve" | "dismiss") {
     const updated = action === "approve" ? approveReminder(record, reminderId) : dismissReminder(record, reminderId);
-    const next = records.map((entry) => entry.id === record.id ? updated : entry); saveApplications(next); setRecords(next);
+    const next = records.map((entry) => entry.id === record.id ? updated : entry);
+    try { saveApplications(next); setRecords(next); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Reminder state could not be saved."); }
   }
 
   return <section className="rounded-xl border border-ink-700 bg-ink-900/70 p-4" aria-labelledby="application-tracker-heading">

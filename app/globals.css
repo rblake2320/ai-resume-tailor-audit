@@ -154,8 +154,15 @@ body::before {
   color: #14161b;
 }
 
+.print-document {
+  display: none;
+}
+
 /* Print: only the document sheet, clean black-on-white */
 @media print {
+  .print-document {
+    display: block !important;
+  }
   body {
     background: #fff !important;
   }
@@ -170,6 +177,7 @@ body::before {
     visibility: visible;
   }
   [data-print-area] {
+    display: block !important;
     position: absolute;
     inset: 0;
     padding: 0;
