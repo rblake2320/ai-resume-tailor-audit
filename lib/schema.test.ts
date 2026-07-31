@@ -167,6 +167,19 @@ describe("deterministic evidence boundary", () => {
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
   });
   it.each([
+    ["employer rows", "Acme Corp Senior Engineer 2019-2024\nInitech Corp Staff Engineer 2015-2019", "2019-2024 Initech Corp"],
+    ["plain heading", "PROFESSIONAL EXPERIENCE AND ACHIEVEMENTS\nBuilt CI pipelines", "ACHIEVEMENTS Built CI"],
+    ["disclaimer row", "Built CI pipelines cutting deploy time 40%\nEvaluated Kubernetes but never deployed it", "deploy time 40% Evaluated Kubernetes"],
+  ])("does not join separate unmarked PDF records: %s", (_label, resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+  });
+  it.each([
+    ["Led platform delivery at Acme Inc.\nacross twelve regions", "Acme Inc. across twelve regions"],
+    ["Authorized to work in the U.S.\nwithout sponsorship", "U.S. without sponsorship"],
+  ])("accepts an abbreviation-ending PDF wrap: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).not.toThrow();
+  });
+  it.each([
     "Node.js at Acme",
     "3.5 years of Python",
     "AWS Solutions Architect (2024)",
@@ -219,6 +232,16 @@ describe("deterministic evidence boundary", () => {
   ])("does not let an exception hide a real denial: %s", (resume) => {
     const evidence = resume.includes("Rust") ? "zero experience with Rust" : resume.includes("experience") ? "Kubernetes experience" : resume.includes("certified") ? "certified in AWS" : resume.includes("shipped") ? "shipped Kubernetes to production" : "proficient in Kubernetes";
     expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+  });
+  it("keeps yet as a conjunction when it does not intensify a negator", () => {
+    expect(() => assertTailorResultEvidence(resultForEvidence("built CI pipelines"), "No Kubernetes yet built CI pipelines")).not.toThrow();
+  });
+  it.each([
+    ["Minimal Kubernetes experience", "Kubernetes experience"],
+    ["Limited Kubernetes experience", "Kubernetes experience"],
+  ])("does not let a degree qualifier prove an unqualified claim: %s", (resume, evidence) => {
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence), resume)).toThrow(/failed evidence validation/);
+    expect(() => assertTailorResultEvidence(resultForEvidence(evidence, "partially_supported"), resume)).not.toThrow();
   });
   it.each([
     ["Acme Limited built CI pipelines", "built CI pipelines"],

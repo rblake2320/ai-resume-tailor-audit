@@ -162,6 +162,8 @@ const qualifiedRatherThanProven = (evidence: string): boolean => {
 };
 
 const CONTINUATION_END = /\b(?:a|an|and|as|at|by|for|from|in|of|on|or|the|to|with|across|cutting)$/iu;
+const RECORD_END = /(?:[.!?;:]|\b(?:19|20)\d{2}(?:\s*[-–]\s*(?:(?:19|20)\d{2}|present))?)$/iu;
+const ABBREVIATION_END = /\b(?:inc|ltd|llc|corp|u\.s|ph\.d)\.$/iu;
 
 /**
  * Reconstruct likely logical lines from PDF visual-line output without
@@ -201,11 +203,10 @@ const sourceEvidenceSegments = (source: string): string[] => {
       current = line;
       continue;
     }
-    const currentWords = current.trim().split(/\s+/u).length;
+    const hardRecordEnd = /\p{L}/u.test(current) && current === current.toLocaleUpperCase("en-US")
+      || (RECORD_END.test(current) && !ABBREVIATION_END.test(current));
     const isContinuation = bullet
-      || currentWords >= 4
-      || CONTINUATION_END.test(current)
-      || /^[\p{Ll}\p{N},.;:)]/u.test(line);
+      || (!hardRecordEnd && (CONTINUATION_END.test(current) || /^[\p{Ll}\p{N},.;:)]/u.test(line)));
     if (isContinuation) current += ` ${line}`;
     else {
       flush();

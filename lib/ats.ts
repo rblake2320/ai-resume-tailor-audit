@@ -41,7 +41,7 @@ const normalize = (s: string) => s.toLowerCase().normalize("NFKD");
 // matched span. Broad sentence/document polarity caused unrelated honest
 // evidence to be rejected (for example "No Kubernetes; built CI pipelines").
 const DIRECT_NEGATION =
-  /\b(?:no|not|never|without|lacks?|lacking|zero|none|unfamiliar(?:\s+with)?|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t)\s+(?:yet\s+)?(?:(?!(?:and|but|however|though|while|although)\b)[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
+  /\b(?:no|not|never|without|lacks?|lacking|zero|none|unfamiliar(?:\s+with)?|excluding|don['’]?t|doesn['’]?t|didn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|can['’]?t|cannot|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t)\s+(?:yet\s+)?(?:(?!(?:and|but|however|though|while|yet|although)\b)[\p{L}\p{N}'’+/#.-]+\s+){0,2}$/iu;
 // These are affirmative constructions only when they end immediately before
 // the cited span. Broader exceptions admitted real denials such as "not only
 // lacking Kubernetes".
@@ -61,9 +61,12 @@ export function affirmativelyPresent(resume: string, keyword: string, rejectQual
   let idx = haystack.indexOf(kw);
   while (idx !== -1) {
     const before = haystack.slice(Math.max(0, idx - 160), idx);
+    const qualifiedByDegree = rejectQualified
+      && /\b(?:minimal|limited)\s*$/iu.test(before)
+      && /\b(?:experience|proficiency|knowledge|familiarity|exposure)\b/iu.test(kw);
     const negated = NONE_OF.test(before)
       || (!FALSE_NEGATION.test(before) && DIRECT_NEGATION.test(before))
-      || (rejectQualified && DIRECT_QUALIFIER.test(before));
+      || (rejectQualified && (DIRECT_QUALIFIER.test(before) || qualifiedByDegree));
     if (!negated) return true;
     idx = haystack.indexOf(kw, idx + kw.length);
   }
