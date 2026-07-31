@@ -83,6 +83,15 @@ describe("sensitive-work employer attestation", () => {
     expect(verifyOne(valid, { nonceStore }).valid).toBe(true);
   });
 
+  it("rejects duplicate disclosed claim keys before consuming the nonce", () => {
+    const nonceStore = new InMemoryNonceStore();
+    const duplicatedCredential = credential();
+    duplicatedCredential.disclosures.push(duplicatedCredential.disclosures[0]);
+    const duplicated = presentation(duplicatedCredential);
+    expect(() => verifyOne(duplicated, { nonceStore })).toThrow(/more than once/);
+    expect(verifyOne(presentation(), { nonceStore }).valid).toBe(true);
+  });
+
   it("atomically rejects replay after a valid presentation", () => {
     const shown = presentation(); const nonceStore = new InMemoryNonceStore();
     const base = { presentation: shown, registry, status, expectedAudience: "prospective-employer", expectedNonce: "verifier-nonce", now: new Date("2026-06-01T00:00:00Z"), nonceStore, frozenAssertion };
