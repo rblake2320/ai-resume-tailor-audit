@@ -1,4 +1,5 @@
 import type { TailorResult } from "./schema";
+import type { PrivacyMode } from "./pii";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -66,8 +67,89 @@ export function deleteHistory(id: string): HistoryEntry[] {
   return next;
 }
 
+// ---- Active session (job form + last generated result) -------------------
+// So a reload restores the in-progress job and the currently-viewed result,
+// not just the saved-run history.
+export interface Session {
+  jobText: string;
+  jobUrl: string;
+  jobTitle: string;
+  company: string;
+  emphasis: "balanced" | "technical" | "leadership";
+  privacyMode: PrivacyMode;
+  result: TailorResult | null;
+}
+
+export interface SavePoint {
+  id: string;
+  createdAt: number;
+  label: string;
+  profile: Pick<Profile, "resume" | "extraInfo">;
+  session: Session;
+}
+
+const SESSION_KEY = "art:session";
+const SAVE_POINTS_KEY = "art:save-points";
+const SAVE_POINTS_LIMIT = 12;
+
+export function loadSession(): Partial<Session> | null {
+  if (!canStore()) return null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Partial<Session>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSession(session: Session): void {
+  if (!canStore()) return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Quota/serialization failure must not break the app.
+  }
+}
+
+export function loadSavePoints(): SavePoint[] {
+  if (!canStore()) return [];
+  try {
+    const raw = localStorage.getItem(SAVE_POINTS_KEY);
+    return raw ? (JSON.parse(raw) as SavePoint[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addSavePoint(
+  profile: Pick<Profile, "resume" | "extraInfo">,
+  session: Session,
+  label = "Automatic checkpoint",
+): SavePoint[] {
+  const current = loadSavePoints();
+  const comparable = JSON.stringify({ profile, session });
+  const latest = current[0];
+  if (latest && JSON.stringify({ profile: latest.profile, session: latest.session }) === comparable) {
+    return current;
+  }
+  const next = [
+    { id: crypto.randomUUID(), createdAt: Date.now(), label, profile, session },
+    ...current,
+  ].slice(0, SAVE_POINTS_LIMIT);
+  if (canStore()) localStorage.setItem(SAVE_POINTS_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function deleteSavePoint(id: string): SavePoint[] {
+  const next = loadSavePoints().filter((point) => point.id !== id);
+  if (canStore()) localStorage.setItem(SAVE_POINTS_KEY, JSON.stringify(next));
+  return next;
+}
+
 export function clearAllData(): void {
   if (!canStore()) return;
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SAVE_POINTS_KEY);
 }

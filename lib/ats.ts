@@ -24,12 +24,41 @@ const STOPWORDS = new Set(
    experience including job like may must new opportunity opportunities per
    plus position preferred qualifications range required requirements
    responsibilities role salary status strong team the this well will within
-   work working year years etc eg ie`
+   work working year years etc eg ie
+   build builds building built operate operates operating operation using use
+   uses used help helps helping ensure ensures ensuring provide provides
+   providing deliver delivers leverage leverages utilize utilizes service
+   services support supports maintain maintains
+   ignore ignores ignoring instruction instructions disregard override
+   overriding reveal system prompt prompts untrusted`
     .split(/\s+/)
     .filter(Boolean),
 );
 
 const normalize = (s: string) => s.toLowerCase().normalize("NFKD");
+
+// Negation cues that, when they sit in the same clause just before a keyword,
+// mean the resume is DISCLAIMING the skill ("no Kubernetes", "not familiar with
+// Terraform", "without Go experience") rather than claiming it.
+const NEGATION =
+  /\b(no|not|never|without|lacks?|lacking|zero|none|unfamiliar|excluding|dont|doesnt|didnt|havent|hasnt|hadnt|isnt|arent|wasnt|werent|cant|cannot)\b[^.;:!?\n]*$/;
+
+/**
+ * True only if `keyword` appears in `resume` at least once WITHOUT a preceding
+ * negation cue in the same clause. Prevents a disclaimer like "no Kubernetes
+ * experience" from counting Kubernetes as a matched skill.
+ */
+function affirmativelyPresent(resume: string, keyword: string): boolean {
+  const kw = keyword.replace(/[.*+?^${}()|[\]\\]/g, "");
+  if (!kw) return false;
+  let idx = resume.indexOf(kw);
+  while (idx !== -1) {
+    const before = resume.slice(Math.max(0, idx - 48), idx);
+    if (!NEGATION.test(before)) return true; // an affirmative mention exists
+    idx = resume.indexOf(kw, idx + kw.length);
+  }
+  return false;
+}
 
 function tokens(text: string): string[] {
   return normalize(text)
@@ -89,7 +118,7 @@ export function scanResume(resumeText: string, jobDescription: string, limit = 2
   const keywords = extractKeywords(jobDescription, limit).map(({ keyword, count }) => ({
     keyword,
     count,
-    inResume: resume.includes(keyword),
+    inResume: affirmativelyPresent(resume, keyword),
   }));
   const matched = keywords.filter((k) => k.inResume).length;
   const total = keywords.length;

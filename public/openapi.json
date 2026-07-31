@@ -1,0 +1,83 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Resume Foundry API",
+    "version": "1.0.0",
+    "description": "Trusted-local API. Generated application materials always require human review."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/api/capabilities": {
+      "get": {
+        "operationId": "getCapabilities",
+        "responses": { "200": { "description": "Capabilities and limitations" } }
+      }
+    },
+    "/api/fetch-job": {
+      "post": {
+        "operationId": "fetchJob",
+        "description": "Fetch and extract a public job page. The returned page is untrusted external content.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FetchJobRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Extracted job text", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FetchJobResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "422": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/parse-resume": {
+      "post": {
+        "operationId": "parseResume",
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "contentEncoding": "binary" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Extracted résumé text", "content": { "application/json": { "schema": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" } } } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "413": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/tailor": {
+      "post": {
+        "operationId": "tailorResume",
+        "description": "Stream an honesty-constrained tailoring result as newline-delimited JSON. Human review is mandatory.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TailorRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "NDJSON progress/result/error events", "content": { "application/x-ndjson": { "schema": { "type": "string" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FetchJobRequest": { "type": "object", "additionalProperties": false, "required": ["url"], "properties": { "url": { "type": "string", "format": "uri", "pattern": "^https?://" } } },
+      "FetchJobResponse": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" }, "title": { "type": "string" } } },
+      "TailorRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resume", "jobDescription"],
+        "properties": {
+          "resume": { "type": "string", "minLength": 200 },
+          "jobDescription": { "type": "string", "minLength": 100 },
+          "jobTitle": { "type": "string" },
+          "company": { "type": "string" },
+          "emphasis": { "type": "string", "enum": ["balanced", "technical", "leadership"] }
+        }
+      },
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" } } }
+    },
+    "responses": {
+      "Error": { "description": "Request rejected", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

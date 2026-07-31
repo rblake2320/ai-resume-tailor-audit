@@ -16,7 +16,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
 | **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
 | **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
-| **Local-first privacy** | Your profile and history live in your browser's localStorage. The server stores nothing. One click erases everything. |
+| **Local-first privacy** | Your profile and history live in your browser's localStorage. The app does not write a server-side copy. One click erases everything. |
 
 ## Features
 
@@ -38,7 +38,7 @@ cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
-Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5`.
+Get an API key at [platform.claude.com](https://platform.claude.com/). The only required variable is `ANTHROPIC_API_KEY`; `RESUME_FOUNDRY_ANTHROPIC_MODEL` optionally overrides the default `claude-opus-5` without inheriting unrelated Claude CLI model aliases. `ANTHROPIC_MODEL` remains a lower-priority compatibility fallback.
 
 > The tailor endpoint enables Anthropic's server-side refusal fallback (`fallbacks: "default"`) so a rare safety-classifier decline re-routes automatically instead of failing the request.
 
@@ -79,7 +79,7 @@ lib/
 
 Design decisions worth knowing:
 
-- **No database, no auth.** Deliberate: privacy is a feature and setup is `npm install` + one key. Everything user-specific is client-side.
+- **No database, no auth.** Deliberate: privacy is a feature and setup is `npm install` + one key. Profile and history persistence is client-side; generation requests still pass through the app server to Anthropic.
 - **Structured outputs** (`output_config.format` with a strict JSON schema derived from Zod) guarantee a parseable result; the same Zod schema re-validates server-side.
 - **Streaming NDJSON** from the tailor route: live thinking summaries (`thinking: adaptive, display: summarized`), progress ticks, then the final validated result.
 - **Fonts are npm-installed** (Fraunces, Instrument Sans, JetBrains Mono via Fontsource) — builds are hermetic, no network font fetch.

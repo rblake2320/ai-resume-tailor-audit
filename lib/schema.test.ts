@@ -65,8 +65,8 @@ describe("tailorResultJsonSchema", () => {
 describe("TailorRequestSchema", () => {
   it("applies defaults", () => {
     const parsed = TailorRequestSchema.parse({
-      resume: "x".repeat(200),
-      jobDescription: "y".repeat(100),
+      resume: "Jordan Blake, Senior Software Engineer with eight years building scalable web platforms in Python, TypeScript, and Go. Led a team of six engineers migrating a monolith to microservices on AWS, cutting latency and improving reliability for payment services. Built CI pipelines and mentored junior developers. B.S. Computer Science.",
+      jobDescription: "We are hiring a Staff Backend Engineer to lead our payments platform, design distributed systems, own reliability and observability, mentor engineers, and drive architecture for high throughput services using Python, Go, AWS, Kafka, and Postgres.",
     });
     expect(parsed.emphasis).toBe("balanced");
     expect(parsed.jobTitle).toBe("");
@@ -79,4 +79,22 @@ describe("TailorRequestSchema", () => {
       expect(res.error.issues.some((i) => i.message.includes("Resume"))).toBe(true);
     }
   });
+});
+
+import { describe as d3, it as i3, expect as e3 } from "vitest";
+d3("TailorRequestSchema — content-quality gate", () => {
+  const jd = "We are hiring a Staff Backend Engineer to design distributed systems, own reliability, mentor engineers, and drive architecture for high throughput payment services using Python, Go, AWS, Kafka, and Postgres across our platform.";
+  for (const [label, resume] of [
+    ["repeated char", "x".repeat(300)],
+    ["repeated token", "spam ".repeat(120)],
+    ["emoji only", "🎉".repeat(200)],
+    ["whitespace", "   \n\t ".repeat(80)],
+    ["zero-width", "​".repeat(400)],
+    ["html repeat", "<script>x</script>".repeat(40)],
+  ] as const) {
+    i3(`rejects junk resume: ${label}`, () => {
+      const r = TailorRequestSchema.safeParse({ resume, jobDescription: jd });
+      e3(r.success).toBe(false);
+    });
+  }
 });
