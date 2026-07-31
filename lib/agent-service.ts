@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -18,7 +18,7 @@ const AgentRequestSchema = z.strictObject({
 export type AgentRequest = z.input<typeof AgentRequestSchema>;
 
 type StoredJob = { id: string; title: string; company: string; description: string; url: string; dismissed: boolean; importedAt: string };
-type StoredApplication = { id: string; jobId: string; state: "prepared" | "approved" | "handoff_opened" | "submitted"; packet: Record<string, unknown>; approvedAt: string | null; submittedAt: string | null; responses: unknown[]; followUps: string[] };
+type StoredApplication = { id: string; jobId: string; state: "prepared" | "approved" | "handoff_opened" | "submitted"; packet: Record<string, unknown>; approvedAt: string | null; submittedAt: string | null; /** First outward disclosure; consumes one unit of daily quota. */ disclosedAt?: string | null; responses: unknown[]; followUps: string[] };
 export type AuditEntry = { id: string; at: string; actor: string; operation: AgentOperation; allowed: boolean; reason: string; inputHash: string; resultId: string | null };
 type Store = { version: 1; jobs: StoredJob[]; applications: StoredApplication[]; audit: AuditEntry[] };
 const emptyStore = (): Store => ({ version: 1, jobs: [], applications: [], audit: [] });
@@ -26,6 +26,9 @@ const emptyStore = (): Store => ({ version: 1, jobs: [], applications: [], audit
 const storePath = () => {
   const configured = process.env.RESUME_FOUNDRY_AGENT_STORE?.trim();
   if (!configured) throw new Error("RESUME_FOUNDRY_AGENT_STORE must be configured for durable agent operations.");
+  // A relative path silently resolved against the process CWD — exactly the
+  // ephemeral deployment directory the documented guarantee promises to refuse.
+  if (!path.isAbsolute(configured)) throw new Error("RESUME_FOUNDRY_AGENT_STORE must be an absolute path on durable storage.");
   return configured;
 };
 async function loadStore(): Promise<Store> { try { return JSON.parse(await readFile(storePath(), "utf8")) as Store; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyStore(); throw error; } }
@@ -33,18 +36,56 @@ async function saveStore(store: Store) { const target = storePath(); await mkdir
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const text = (value: unknown, name: string, minimum = 1) => { if (typeof value !== "string" || value.trim().length < minimum) throw new Error(`${name} is required.`); return value.trim(); };
 
+/**
+ * Operations that accept or return raw packet content — résumé text, cover
+ * letter, contact details. `applications.review` returns the entire stored
+ * packet and `applications.prepare` writes it, so both handle PII. Both were
+ * previously ungated, so any bearer holder could read back every stored résumé
+ * and its personal identifiers with no approval of any kind.
+ */
+const PII_OPERATIONS: readonly AgentOperation[] = [
+  "applications.prepare", "applications.review", "applications.open_handoff", "applications.mark_submitted",
+];
+
+function secretsMatch(supplied: unknown, expected: string) {
+  if (typeof supplied !== "string") return false;
+  const a = Buffer.from(supplied, "utf8"); const b = Buffer.from(expected, "utf8");
+  // Compare a fixed-size digest so differing lengths do not short-circuit.
+  return timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
+}
+
 function decision(operation: AgentOperation, request: z.output<typeof AgentRequestSchema>) {
   if (operation === "applications.approve") {
     const secret = process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET;
-    if (!secret || request.humanApprovalSecret !== secret) return { allowed: false, reason: "Explicit human approval secret is required." };
+    if (!secret || !secretsMatch(request.humanApprovalSecret, secret)) return { allowed: false, reason: "Explicit human approval secret is required." };
   }
-  if (["applications.open_handoff", "applications.mark_submitted"].includes(operation) && request.piiApproved !== true) return { allowed: false, reason: "Protected PII disclosure requires explicit approval." };
+  if (PII_OPERATIONS.includes(operation) && request.piiApproved !== true) return { allowed: false, reason: "Protected PII disclosure requires explicit approval." };
   return { allowed: true, reason: "Policy satisfied." };
+}
+
+/**
+ * Daily quota is consumed on the first outward disclosure of an application,
+ * whether that is opening a handoff or marking a submission. The limit
+ * previously guarded only `mark_submitted`, which is self-reported bookkeeping,
+ * so an agent that simply never called it could open unlimited handoffs.
+ */
+function assertDailyDisclosureAllowed(store: Store, application: StoredApplication, now: string) {
+  if (application.disclosedAt) return; // Already counted; later stages are free.
+  const limit = Number(process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT ?? 10);
+  const used = store.applications.filter((item) => item.disclosedAt && today(item.disclosedAt) === today(now)).length;
+  if (!Number.isInteger(limit) || limit < 1 || used >= limit) throw new Error("Daily application limit reached.");
+  application.disclosedAt = now;
 }
 
 function today(value: string) { return value.slice(0, 10); }
 async function executeAgentOperationInner(raw: AgentRequest) {
-  const request = AgentRequestSchema.parse(raw); const store = await loadStore(); const now = new Date().toISOString();
+  const request = AgentRequestSchema.parse(raw); const now = new Date().toISOString();
+  // `loadStore()` used to run outside this guard, so an EACCES/EISDIR or a
+  // corrupt store escaped to the route and returned the durable store's
+  // absolute filesystem path to the caller in `error.message`.
+  let store: Store;
+  try { store = await loadStore(); }
+  catch { return { ok: false, operation: request.operation, error: "The agent durable store is unavailable." }; }
   const permission = decision(request.operation, request); let result: unknown = null; let resultId: string | null = null;
   try {
     if (!permission.allowed) throw new Error(permission.reason);
@@ -56,11 +97,11 @@ async function executeAgentOperationInner(raw: AgentRequest) {
       case "jobs.compare": { const ids = Array.isArray(input.ids) ? input.ids : []; result = store.jobs.filter((job) => ids.includes(job.id)); break; }
       case "jobs.dismiss": { const job = store.jobs.find((item) => item.id === input.id); if (!job) throw new Error("Job not found."); job.dismissed = true; result = job; resultId = job.id; break; }
       case "matches.score": { const job = store.jobs.find((item) => item.id === input.jobId); if (!job) throw new Error("Job not found."); const evidence = Array.isArray(input.evidence) ? input.evidence.map(String) : []; const words = new Set(evidence.join(" ").toLowerCase().split(/\W+/u)); const terms = job.description.toLowerCase().split(/\W+/u).filter((term) => term.length > 3); const matched = [...new Set(terms.filter((term) => words.has(term)))]; result = { jobId: job.id, score: terms.length ? Math.round(matched.length / new Set(terms).size * 100) : 0, matched, policy: "lexical evidence only; no qualification inference" }; break; }
-      case "applications.prepare": { const job = store.jobs.find((item) => item.id === input.jobId); if (!job) throw new Error("Job not found."); const application: StoredApplication = { id: randomUUID(), jobId: job.id, state: "prepared", packet: structuredClone((input.packet ?? {}) as Record<string, unknown>), approvedAt: null, submittedAt: null, responses: [], followUps: [] }; store.applications.push(application); result = application; resultId = application.id; break; }
+      case "applications.prepare": { const job = store.jobs.find((item) => item.id === input.jobId); if (!job) throw new Error("Job not found."); const application: StoredApplication = { id: randomUUID(), jobId: job.id, state: "prepared", packet: structuredClone((input.packet ?? {}) as Record<string, unknown>), approvedAt: null, submittedAt: null, disclosedAt: null, responses: [], followUps: [] }; store.applications.push(application); result = application; resultId = application.id; break; }
       case "applications.review": { result = store.applications.find((item) => item.id === input.applicationId) ?? null; break; }
       case "applications.approve": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application || application.state !== "prepared") throw new Error("Only a prepared application can be approved."); application.state = "approved"; application.approvedAt = now; result = application; resultId = application.id; break; }
-      case "applications.open_handoff": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application || application.state !== "approved") throw new Error("Approved application required."); application.state = "handoff_opened"; result = application; resultId = application.id; break; }
-      case "applications.mark_submitted": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application || !["approved", "handoff_opened"].includes(application.state)) throw new Error("Approved application required."); const limit = Number(process.env.RESUME_FOUNDRY_DAILY_APPLICATION_LIMIT ?? 10); const count = store.applications.filter((item) => item.submittedAt && today(item.submittedAt) === today(now)).length; if (!Number.isInteger(limit) || limit < 1 || count >= limit) throw new Error("Daily application limit reached."); application.state = "submitted"; application.submittedAt = now; result = application; resultId = application.id; break; }
+      case "applications.open_handoff": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application || application.state !== "approved") throw new Error("Approved application required."); assertDailyDisclosureAllowed(store, application, now); application.state = "handoff_opened"; result = application; resultId = application.id; break; }
+      case "applications.mark_submitted": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application || !["approved", "handoff_opened"].includes(application.state)) throw new Error("Approved application required."); assertDailyDisclosureAllowed(store, application, now); application.state = "submitted"; application.submittedAt = now; result = application; resultId = application.id; break; }
       case "applications.record_response": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application) throw new Error("Application not found."); application.responses.push({ at: now, value: input.response ?? null }); result = application; resultId = application.id; break; }
       case "applications.schedule_followup": { const application = store.applications.find((item) => item.id === input.applicationId); if (!application) throw new Error("Application not found."); const dueAt = text(input.dueAt, "dueAt"); if (!Number.isFinite(new Date(dueAt).getTime())) throw new Error("dueAt must be an ISO date."); application.followUps.push(new Date(dueAt).toISOString()); result = application; resultId = application.id; break; }
       case "analytics.summary": result = { jobs: store.jobs.length, activeJobs: store.jobs.filter((job) => !job.dismissed).length, applications: store.applications.length, submitted: store.applications.filter((item) => item.submittedAt).length }; break;

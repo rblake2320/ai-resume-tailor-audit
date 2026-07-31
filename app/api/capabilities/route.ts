@@ -23,13 +23,15 @@ export function GET() {
       { id: "tailorResume", method: "POST", path: "/api/tailor", openWorld: true, streaming: "ndjson" },
       { id: "agentOperations", method: "POST", path: "/api/agent/{operation}", authentication: "bearer", humanApproval: true },
       { id: "agentAudit", method: "GET", path: "/api/agent/audit", authentication: "bearer" },
-      { id: "mcpTools", transport: "stdio", command: "npm run mcp", humanApproval: true },
+      { id: "mcpTools", transport: "stdio", command: "npm run mcp", authentication: "none-local-process-boundary", requiresOptIn: "RESUME_FOUNDRY_MCP_ENABLED", operations: "subset-excludes-approval-and-pii" },
     ],
     limitations: [
       "No public authentication or multi-user isolation.",
       "No A2A task endpoint or public multi-tenant identity boundary.",
       "Browser-local profiles, save points, run history, and encrypted career evidence are not server-readable.",
       "Human review is required before using generated application materials.",
+      "The stdio MCP surface has no transport authentication; its trust boundary is the local user who launched it.",
+      "Approval-gated and PII-bearing operations are HTTP-only so a model cannot supply its own approval.",
     ],
   });
 }
