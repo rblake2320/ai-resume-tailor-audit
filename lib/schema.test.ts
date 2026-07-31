@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertTailorResultEvidence,
+  summarizeHonestyViolations,
   TailorRequestSchema,
   TailorResultSchema,
   tailorResultJsonSchema,
@@ -69,6 +70,34 @@ describe("deterministic evidence boundary", () => {
       tailored_resume_markdown: "# Jane Doe\nBuilt CI pipelines and improved CI/CD delivery.",
     });
     expect(() => assertTailorResultEvidence(result, "Engineer. Built CI pipelines for releases.")).not.toThrow();
+  });
+  it("compares visible text across Markdown, XML entities, and typographic punctuation", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: ["CI/CD"] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["AT&amp;T platform work, 2021 - Present"], tailoredText: ["AT&T platform work, 2021 - Present with CI/CD"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\n**AT&T platform work, 2021 – Present** with **CI/CD**.",
+    });
+    expect(() => assertTailorResultEvidence(result, "AT&T platform work, 2021 – Present")).not.toThrow();
+  });
+  it("still rejects paraphrased or stitched evidence after presentation normalization", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines and mentored four engineers"], tailoredText: ["Built CI pipelines"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nBuilt CI pipelines.",
+    });
+    expect(() => assertTailorResultEvidence(result, "Built CI pipelines. Mentored four engineers.")).toThrow(/failed evidence validation/);
+  });
+  it("summarizes failures without copying requirement ids, keywords, or document text", () => {
+    const summary = summarizeHonestyViolations([
+      "Requirement secret-id cites evidence absent from the original résumé.",
+      "Requirement other-id references tailored text absent from the generated documents.",
+      'Added keyword "private term" is absent from the generated documents.',
+    ]);
+    expect(summary).toEqual({ sourceCitationMismatch: 1, outputReferenceMismatch: 1, addedKeywordMismatch: 1 });
+    expect(JSON.stringify(summary)).not.toMatch(/secret-id|other-id|private term/);
   });
   it("withholds fabricated evidence, missing output references, and phantom added keywords", () => {
     const result = TailorResultSchema.parse({

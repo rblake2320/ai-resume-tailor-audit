@@ -304,7 +304,7 @@ export default function Home() {
             | { type: "thinking"; text: string }
             | { type: "progress"; chars: number }
             | { type: "result"; data: TailorResult }
-            | { type: "error"; message: string };
+            | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED" };
           if (generationId !== activeGenerationRef.current) return;
           if (event.type === "thinking") setThinking((t) => t + event.text);
           else if (event.type === "progress") setProgressChars(event.chars);

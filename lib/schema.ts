@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mdToAtsText } from "./markdown.ts";
 
 export const EvidenceStateSchema = z.enum([
   "proven", "partially_supported", "unsupported", "needs_clarification", "intentionally_omitted",
@@ -110,13 +111,41 @@ export const TailorResultSchema = z.strictObject({
 export type TailorResult = z.infer<typeof TailorResultSchema>;
 
 export class HonestyValidationError extends Error {
-  constructor(public readonly violations: readonly string[]) {
+  public readonly violations: readonly string[];
+
+  constructor(violations: readonly string[]) {
     super(`Generated content failed evidence validation: ${violations.join(" ")}`);
     this.name = "HonestyValidationError";
+    this.violations = violations;
   }
 }
 
-const comparable = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/\s+/gu, " ").trim();
+export type HonestyViolationSummary = {
+  sourceCitationMismatch: number;
+  outputReferenceMismatch: number;
+  addedKeywordMismatch: number;
+};
+
+/** Content-free operational diagnostics: counts rule classes without logging résumé or job text. */
+export function summarizeHonestyViolations(violations: readonly string[]): HonestyViolationSummary {
+  return {
+    sourceCitationMismatch: violations.filter((item) => item.includes("cites evidence absent")).length,
+    outputReferenceMismatch: violations.filter((item) => item.includes("references tailored text absent")).length,
+    addedKeywordMismatch: violations.filter((item) => item.startsWith("Added keyword ")).length,
+  };
+}
+
+const comparable = (value: string) => mdToAtsText(value)
+  .replaceAll("&amp;", "&")
+  .replaceAll("&lt;", "<")
+  .replaceAll("&gt;", ">")
+  .normalize("NFKC")
+  .toLocaleLowerCase("en-US")
+  .replace(/[\u2010-\u2015\u2212]/gu, "-")
+  .replace(/[\u2018\u2019]/gu, "'")
+  .replace(/[\u201c\u201d]/gu, '"')
+  .replace(/\s+/gu, " ")
+  .trim();
 
 /** Deterministic post-generation boundary for structured evidence references. */
 export function assertTailorResultEvidence(result: TailorResult, originalResume: string): void {
