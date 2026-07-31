@@ -56,23 +56,23 @@ function parseMode(value: string | undefined): WindowsAclMode | undefined {
   throw new Error(`${WINDOWS_ACL_MODE_ENV} must be apply, verify, or off.`);
 }
 
-function assertSafeAbsolutePath(configured: string, envName: string) {
-  if (!path.win32.isAbsolute(configured)) {
+function assertSafeAbsolutePath(configured: string, envName: string, pathApi: typeof path.win32) {
+  if (!pathApi.isAbsolute(configured)) {
     throw new Error(`${envName} must be an absolute Windows path before its ACL can be checked.`);
   }
-  const resolved = path.win32.resolve(configured);
-  if (resolved === path.win32.parse(resolved).root) {
+  const resolved = pathApi.resolve(configured);
+  if (resolved === pathApi.parse(resolved).root) {
     throw new Error(`${envName} must not target a filesystem root.`);
   }
   return resolved;
 }
 
-function uniqueDirectories(env: AclEnvironment) {
+function uniqueDirectories(env: AclEnvironment, pathApi: typeof path.win32) {
   const byCanonicalPath = new Map<string, { path: string; envNames: string[] }>();
   for (const target of configuredTargets(env)) {
-    const resolved = assertSafeAbsolutePath(target.configured, target.env);
-    const directory = target.kind === "file" ? path.win32.dirname(resolved) : resolved;
-    if (directory === path.win32.parse(directory).root) {
+    const resolved = assertSafeAbsolutePath(target.configured, target.env, pathApi);
+    const directory = target.kind === "file" ? pathApi.dirname(resolved) : resolved;
+    if (directory === pathApi.parse(directory).root) {
       throw new Error(`${target.env} has a filesystem-root parent; use a dedicated private directory.`);
     }
     const key = directory.toLowerCase();
@@ -120,6 +120,7 @@ export async function enforceConfiguredWindowsSensitivePathAcls(options: {
   env?: AclEnvironment;
   platform?: NodeJS.Platform;
   runner?: WindowsAclRunner;
+  pathApi?: typeof path.win32;
 } = {}): Promise<SensitivePathAclResult> {
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
@@ -141,8 +142,9 @@ export async function enforceConfiguredWindowsSensitivePathAcls(options: {
   }
 
   const runner = options.runner ?? runWindowsAclScript;
+  const pathApi = options.pathApi ?? path.win32;
   const checked: string[] = [];
-  for (const directory of uniqueDirectories(env)) {
+  for (const directory of uniqueDirectories(env, pathApi)) {
     const preflight = await runner({ targetPath: directory.path, mode: "preflight", kind: "directory" });
     if (!preflight.secure) {
       throw new Error(`${directory.envNames.join("/")} failed the Windows reparse-point preflight.`);
@@ -163,7 +165,7 @@ export async function enforceConfiguredWindowsSensitivePathAcls(options: {
     checked.push(...directory.envNames);
   }
   for (const target of targets.filter((entry) => entry.kind === "file")) {
-    const resolved = assertSafeAbsolutePath(target.configured, target.env);
+    const resolved = assertSafeAbsolutePath(target.configured, target.env, pathApi);
     const info = await stat(resolved).catch(() => undefined);
     if (!info) continue;
     if (!info.isFile()) throw new Error(`${target.env} must identify a regular file.`);

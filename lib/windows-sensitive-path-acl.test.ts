@@ -116,7 +116,7 @@ describe("Windows sensitive-path ACL startup boundary", () => {
       RESUME_FOUNDRY_NONCE_STORE: path.join(root, "nonces"),
     };
     await expect(
-      enforceConfiguredWindowsSensitivePathAcls({ env, platform: "win32", runner }),
+      enforceConfiguredWindowsSensitivePathAcls({ env, platform: "win32", runner, pathApi: path }),
     ).resolves.toEqual({
       status: "secured",
       checked: [
@@ -155,6 +155,7 @@ describe("Windows sensitive-path ACL startup boundary", () => {
       },
       platform: "win32",
       runner,
+      pathApi: path,
     });
     expect(runner).toHaveBeenNthCalledWith(1, {
       targetPath: root,
@@ -183,6 +184,7 @@ describe("Windows sensitive-path ACL startup boundary", () => {
         },
         platform: "win32",
         runner,
+        pathApi: path,
       }),
     ).rejects.toThrow(/unexpectedAllowCount=1/);
   });
