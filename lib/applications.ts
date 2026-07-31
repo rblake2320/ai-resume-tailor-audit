@@ -61,6 +61,10 @@ export interface ApplicationRecord {
   reminders: ApplicationReminder[];
 }
 
+function submissionTime(record: ApplicationRecord): string | null {
+  return record.timeline.find((event) => event.type === "application.submitted")?.at ?? null;
+}
+
 // Packet checksums previously ordered keys with `localeCompare`, which is locale-
 // and ICU-dependent: "a" sorts before "A" under en-US but after it by code unit.
 // `screeningAnswers` keys are employer-supplied question names, so two hosts
@@ -147,7 +151,7 @@ export function buildInterviewPrep(record: ApplicationRecord) {
   return {
     packetId: packet.id, packetVersion: packet.version, packetChecksum: packet.checksums.packet,
     role: packet.jobSnapshot.title, company: packet.jobSnapshot.company,
-    boundAt: packet.submittedAt ?? packet.createdAt,
+    boundAt: submissionTime(record) ?? packet.createdAt,
     evidenceStories: packet.tailoredResult.requirement_evidence.filter((item) => item.state === "proven" || item.state === "partially_supported").map((item) => ({ requirement: item.requirement, evidence: item.evidence })),
     honestGaps: packet.tailoredResult.gap_analysis.map((item) => ({ ...item })),
     questionsToPrepare: packet.tailoredResult.requirement_evidence.map((item) => `How would you demonstrate: ${item.requirement}?`),
@@ -166,20 +170,16 @@ export async function transitionApplication(record: ApplicationRecord, next: App
   updated.timeline.push({ at: now.toISOString(), type: "application.transition", detail: `${record.state} -> ${next}` });
   const reminder = suggestedReminder(next, now); if (reminder) updated.reminders.push(reminder);
   if (next === "submitted") {
-    updated.packetHistory.push(structuredClone(updated.packet));
-    const { checksums: _oldChecksums, ...packetBody } = updated.packet;
-    const versionedBody = { ...packetBody, id: crypto.randomUUID(), version: updated.packet.version + 1, submittedAt: now.toISOString() };
-    updated.packet = {
-      ...versionedBody,
-      checksums: { ...updated.packet.checksums, packet: await sha256(canonical(versionedBody)) },
-    };
-    updated.timeline.push({ at: now.toISOString(), type: "packet.versioned", detail: `Packet v${updated.packet.version} sealed for submission` });
+    // Submission is an event about the already approved, immutable packet. Do
+    // not mint a new packet identity here: doing so invalidates an approval
+    // receipt that is bound to the original id, version, and checksum.
+    updated.timeline.push({ at: now.toISOString(), type: "application.submitted", detail: `Packet v${updated.packet.version} submitted` });
   }
   return updated;
 }
 
 export function applicationAnalytics(records: readonly ApplicationRecord[]) {
-  const submitted = records.filter((record) => record.packet.submittedAt);
+  const submitted = records.filter((record) => submissionTime(record));
   const responses = records.filter((record) => ["recruiter_response", "interviewing", "offer"].includes(record.state));
   const interviews = records.filter((record) => ["interviewing", "offer"].includes(record.state));
   const source = new Map<string, { applications: number; responses: number }>();
@@ -196,8 +196,8 @@ export function applicationAnalytics(records: readonly ApplicationRecord[]) {
   }
   const now = Date.now();
   const perWeek = new Map<string, number>();
-  for (const record of submitted) { const date = new Date(record.packet.submittedAt!); const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - date.getUTCDay())); const key = start.toISOString().slice(0, 10); perWeek.set(key, (perWeek.get(key) ?? 0) + 1); }
-  const responseHours = responses.flatMap((record) => { const response = record.timeline.find((event) => event.detail.includes("-> recruiter_response")); return response && record.packet.submittedAt ? [(new Date(response.at).getTime() - new Date(record.packet.submittedAt).getTime()) / 3_600_000] : []; });
+  for (const record of submitted) { const date = new Date(submissionTime(record)!); const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - date.getUTCDay())); const key = start.toISOString().slice(0, 10); perWeek.set(key, (perWeek.get(key) ?? 0) + 1); }
+  const responseHours = responses.flatMap((record) => { const response = record.timeline.find((event) => event.detail.includes("-> recruiter_response")); const submittedAt = submissionTime(record); return response && submittedAt ? [(new Date(response.at).getTime() - new Date(submittedAt).getTime()) / 3_600_000] : []; });
   return {
     applicationsPerWeek: Object.fromEntries(perWeek), responseRate: submitted.length ? responses.length / submitted.length : 0,
     interviewConversionRate: submitted.length ? interviews.length / submitted.length : 0,
