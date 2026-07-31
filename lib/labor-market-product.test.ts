@@ -49,6 +49,7 @@ const projection: LaborMarketSnapshot = {
 
 function providers(): LaborMarketProviders {
   return {
+    blsAccess: "unregistered",
     lookupOnetOccupation: vi.fn().mockResolvedValue(onetProfile),
     fetchBlsObservations: vi.fn().mockResolvedValue([{
       kind: "observational_series",
@@ -68,11 +69,16 @@ describe("labor-market product API", () => {
   it("keeps both public routes aligned across capabilities and OpenAPI", async () => {
     const capabilityBody = await capabilities().json() as { operations: Array<{ path?: string }> };
     const advertised = capabilityBody.operations.map((operation) => operation.path);
-    const spec = JSON.parse(await readFile(path.resolve("public/openapi.json"), "utf8")) as { paths: Record<string, { post?: unknown }> };
+    const spec = JSON.parse(await readFile(path.resolve("public/openapi.json"), "utf8")) as {
+      paths: Record<string, { post?: { requestBody?: { content?: Record<string, { schema?: { properties?: { seriesIds?: unknown } } }> } } }>;
+    };
     for (const route of ["/api/labor-market/onet", "/api/labor-market/bls-series"]) {
       expect(advertised).toContain(route);
       expect(spec.paths[route]?.post).toBeDefined();
     }
+    expect(spec.paths["/api/labor-market/bls-series"].post?.requestBody?.content?.["application/json"]?.schema?.properties?.seriesIds).toMatchObject({
+      maxItems: 25, uniqueItems: true, items: { pattern: "^[A-Z0-9_#-]{1,100}$" },
+    });
   });
 
   it("makes O*NET reachable through a bounded, mockable server handler without returning credentials", async () => {
@@ -86,7 +92,7 @@ describe("labor-market product API", () => {
     expect(response.status).toBe(200);
     const serialized = await response.text();
     expect(JSON.parse(serialized)).toEqual({ profile: onetProfile });
-    expect(source.lookupOnetOccupation).toHaveBeenCalledWith("15-1252.00");
+    expect(source.lookupOnetOccupation).toHaveBeenCalledWith("15-1252.00", expect.any(AbortSignal));
     expect(serialized).not.toContain("password");
   });
 
@@ -135,6 +141,33 @@ describe("labor-market product API", () => {
     expect(response.status).toBe(200);
     expect(body.series[0]).toMatchObject({ kind: "observational_series", seriesId: "CES0000000001" });
     expect(JSON.stringify(body)).not.toContain("projectedGrowthPercent");
+  });
+
+  it("rejects requests outside the configured BLS tier before provider work", async () => {
+    const source = providers();
+    const handler = createLaborMarketHandlers(source).bls;
+    const request = (value: unknown) => new Request("http://localhost/api/labor-market/bls-series", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(value),
+    });
+    for (const value of [
+      { seriesIds: ["lowercase"], startYear: 2026, endYear: 2026 },
+      { seriesIds: ["SERIES1", "SERIES1"], startYear: 2026, endYear: 2026 },
+      { seriesIds: Array.from({ length: 26 }, (_, index) => `SERIES${index}`), startYear: 2026, endYear: 2026 },
+      { seriesIds: ["SERIES1"], startYear: 2016, endYear: 2026 },
+    ]) expect((await handler(request(value))).status).toBe(400);
+    expect(source.fetchBlsObservations).not.toHaveBeenCalled();
+  });
+
+  it("passes the incoming request abort signal to provider work", async () => {
+    const source = providers();
+    const controller = new AbortController();
+    const request = new Request("http://localhost/api/labor-market/onet", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ occupationCode: "15-1252.00" }), signal: controller.signal,
+    });
+    const response = await createLaborMarketHandlers(source).onet(request);
+    expect(response.status).toBe(200);
+    expect(source.lookupOnetOccupation).toHaveBeenCalledWith("15-1252.00", request.signal);
   });
 
   it("fails closed when O*NET credentials are absent instead of pretending the provider is ready", async () => {

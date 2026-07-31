@@ -10,7 +10,7 @@ Request (maximum 4 KiB, `application/json` only):
 { "occupationCode": "15-1252.00" }
 ```
 
-The server reads `ONET_API_KEY` and sends it only in the official O*NET v2 `X-API-Key` header; the key is neither accepted from nor returned to the client. It calls `https://api-v2.onetcenter.org/online/occupations/{code}/`. An unconfigured deployment returns 503 instead of synthetic data. Successful responses contain only the bounded occupation-overview fields actually fetched: code, title, description, reported titles, `updated.year/contents`, official O*NET URL, retrieval timestamp, and uncertainty statement. Skills/tasks/knowledge/technology arrays are omitted until their individual bounded subresource endpoints are implemented.
+The server reads `ONET_API_KEY` and sends it only in the official O*NET v2 `X-API-Key` header; the key is neither accepted from nor returned to the client. It calls `https://api-v2.onetcenter.org/online/occupations/{code}/`. An unconfigured deployment returns 503 instead of synthetic data. Successful responses contain only the bounded occupation-overview fields actually fetched: code, title, description, reported titles, `updated.year/contents`, official O*NET URL, retrieval timestamp, and uncertainty statement. Because the official overview contract makes `updated` optional, an omitted value is represented as `sourceYear: null`, empty source contents, and an explicit undated-provenance warning; no update year is inferred. Skills/tasks/knowledge/technology arrays are omitted until their individual bounded subresource endpoints are implemented.
 
 ## `POST /api/labor-market/bls-series`
 
@@ -25,6 +25,8 @@ Request (maximum 4 KiB, `application/json` only):
 ```
 
 With `BLS_API_KEY`, one to 50 validated series IDs and a maximum 20-year range are accepted; without it, the official limits are 25 series and 10 years. `BLS_API_KEY` remains server-side. Provider messages, missing/extra/duplicate series, empty data, and invalid rows fail closed. Every result has `kind: "observational_series"`, keeps the exact requested BLS series ID, latest observed period, retrieval timestamp, source URL, geography warning, and uncertainty statement. It intentionally has no occupational-projection fields.
+
+The OpenAPI document advertises the conservative unregistered tier so every documented request is valid with or without a registration key. Requests outside the active tier are rejected as client contract errors before provider work.
 
 ## Projection import
 
@@ -44,8 +46,9 @@ Missing inputs, stale data (older than three years), future dates, non-BLS URLs,
 ## Operational limits
 
 - Provider responses are capped at 512 KiB after transfer decoding.
-- Provider calls time out after 10 seconds.
+- Provider calls time out after 10 seconds and are also aborted when the caller disconnects.
 - Missing or non-JSON provider responses fail closed.
+- Rejected provider HTTP and content-type responses are canceled without buffering their bodies.
 - Responses use `Cache-Control: no-store`.
 - No live provider call occurs in the automated suite; provider adapters are injected and mocked.
 - O*NET contract compatibility still requires an authorized credential-backed staging check before public release.

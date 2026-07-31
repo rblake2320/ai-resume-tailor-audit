@@ -54,12 +54,12 @@ export const OnetOccupationProfileSchema = z.strictObject({
   description: z.string().max(10_000),
   source: z.literal("ONET"),
   sourceUrl: HttpsUrlSchema,
-  sourceYear: z.number().int().min(1900).max(2200),
+  sourceYear: z.number().int().min(1900).max(2200).nullable(),
   sourceContents: z.array(z.strictObject({
     title: BoundedLabelSchema,
     source: z.string().trim().max(500).optional(),
     year: z.number().int().min(1900).max(2200).optional(),
-  })).max(100),
+  })).max(500),
   retrievedAt: z.string().datetime(),
   uncertainty: z.string().trim().min(1).max(2_000),
   reportedTitles: z.array(BoundedLabelSchema).max(100),
@@ -114,7 +114,10 @@ type Fetcher = typeof fetch;
 
 async function boundedJson(response: Response, limitBytes = PROVIDER_RESPONSE_LIMIT_BYTES): Promise<unknown> {
   const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
-  if (contentType !== "application/json") throw new Error("Labor-market provider returned an unsupported content type.");
+  if (contentType !== "application/json") {
+    await response.body?.cancel("unsupported provider content type").catch(() => undefined);
+    throw new Error("Labor-market provider returned an unsupported content type.");
+  }
   let text: string;
   try { text = await readResponseText(response, limitBytes); }
   catch (error) {
@@ -125,6 +128,16 @@ async function boundedJson(response: Response, limitBytes = PROVIDER_RESPONSE_LI
   }
   try { return JSON.parse(text); }
   catch { throw new Error("Labor-market provider returned malformed JSON."); }
+}
+
+async function rejectHttpResponse(response: Response, provider: string): Promise<never> {
+  await response.body?.cancel("provider returned an HTTP error").catch(() => undefined);
+  throw new Error(`${provider} request failed (${response.status}).`);
+}
+
+function providerSignal(caller?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(10_000);
+  return caller ? AbortSignal.any([caller, timeout]) : timeout;
 }
 
 function latestPeriod(observations: readonly { year: number; period: string }[]): string | null {
@@ -150,7 +163,7 @@ const BlsProviderResponseSchema = z.object({
 
 export async function fetchBlsSeries(
   seriesIds: string[],
-  options: { startYear: number; endYear: number; registrationKey?: string; fetcher?: Fetcher; retrievedAt?: Date },
+  options: { startYear: number; endYear: number; registrationKey?: string; fetcher?: Fetcher; retrievedAt?: Date; signal?: AbortSignal },
 ): Promise<BlsObservationSeries[]> {
   const registrationKey = options.registrationKey?.trim() || undefined;
   const maxSeries = registrationKey ? 50 : 25;
@@ -170,9 +183,9 @@ export async function fetchBlsSeries(
       endyear: String(options.endYear),
       registrationkey: registrationKey,
     }),
-    signal: AbortSignal.timeout(10_000),
+    signal: providerSignal(options.signal),
   });
-  if (!response.ok) throw new Error(`BLS API request failed (${response.status}).`);
+  if (!response.ok) return rejectHttpResponse(response, "BLS API");
   const payload = BlsProviderResponseSchema.parse(await boundedJson(response));
   if (payload.status !== "REQUEST_SUCCEEDED") throw new Error("BLS API did not accept the request.");
   if (payload.message.length) throw new Error(`BLS API returned provider messages: ${payload.message.join(" ")}`);
@@ -214,7 +227,7 @@ const OnetProviderOverviewSchema = z.object({
       source: z.string().trim().max(500).optional(),
       year: z.number().int().min(1900).max(2200).optional(),
     })).max(500),
-  }),
+  }).optional(),
 });
 
 export async function fetchOnetOccupation(
@@ -222,6 +235,7 @@ export async function fetchOnetOccupation(
   apiKey: string,
   fetcher: Fetcher = fetch,
   retrievedAt = new Date(),
+  signal?: AbortSignal,
 ): Promise<OnetOccupationProfile> {
   if (!/^\d{2}-\d{4}\.\d{2}$/u.test(code)) throw new Error("O*NET occupation code is invalid.");
   if (!apiKey.trim() || apiKey.length > 512) throw new Error("O*NET Web Services API key is required.");
@@ -230,9 +244,9 @@ export async function fetchOnetOccupation(
       "X-API-Key": apiKey,
       accept: "application/json",
     },
-    signal: AbortSignal.timeout(10_000),
+    signal: providerSignal(signal),
   });
-  if (!response.ok) throw new Error(`O*NET request failed (${response.status}).`);
+  if (!response.ok) return rejectHttpResponse(response, "O*NET");
   const value = OnetProviderOverviewSchema.parse(await boundedJson(response));
   if (value.code !== code) throw new Error("O*NET response occupation code did not match the request.");
   return OnetOccupationProfileSchema.parse({
@@ -243,9 +257,11 @@ export async function fetchOnetOccupation(
     occupationTitle: value.title,
     description: value.description,
     retrievedAt: retrievedAt.toISOString(),
-    sourceYear: value.updated.year,
-    sourceContents: value.updated.contents,
-    uncertainty: "O*NET describes occupational characteristics; it does not guarantee an individual's fit, eligibility, hiring, wage, or outcome.",
+    sourceYear: value.updated?.year ?? null,
+    sourceContents: value.updated?.contents ?? [],
+    uncertainty: value.updated
+      ? "O*NET describes occupational characteristics; it does not guarantee an individual's fit, eligibility, hiring, wage, or outcome."
+      : "O*NET did not report source-update provenance for this occupation. Treat its characteristics as undated; they do not guarantee fit, eligibility, hiring, wage, or outcome.",
     reportedTitles: value.sample_of_reported_titles,
   });
 }

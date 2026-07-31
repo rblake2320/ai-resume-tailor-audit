@@ -12,16 +12,25 @@ import {
 const REQUEST_LIMIT_BYTES = 4 * 1024;
 const OnetRequestSchema = z.strictObject({ occupationCode: z.string().regex(/^\d{2}-\d{4}\.\d{2}$/u) });
 const BlsRequestSchema = z.strictObject({
-  seriesIds: z.array(z.string().regex(/^[A-Za-z0-9._-]{1,100}$/u)).min(1).max(50),
+  seriesIds: z.array(z.string().regex(/^[A-Z0-9_#-]{1,100}$/u)).min(1).max(50),
   startYear: z.number().int().min(1900).max(2200),
   endYear: z.number().int().min(1900).max(2200),
-}).refine((value) => value.startYear <= value.endYear && value.endYear - value.startYear <= 20, {
-  message: "BLS year range must be ordered and no wider than 20 years.",
 });
 
 export interface LaborMarketProviders {
-  lookupOnetOccupation(code: string): Promise<OnetOccupationProfile>;
-  fetchBlsObservations(seriesIds: string[], startYear: number, endYear: number): Promise<BlsObservationSeries[]>;
+  blsAccess: "registered" | "unregistered";
+  lookupOnetOccupation(code: string, signal?: AbortSignal): Promise<OnetOccupationProfile>;
+  fetchBlsObservations(seriesIds: string[], startYear: number, endYear: number, signal?: AbortSignal): Promise<BlsObservationSeries[]>;
+}
+
+function parseBlsRequest(input: unknown, access: LaborMarketProviders["blsAccess"]) {
+  const value = BlsRequestSchema.parse(input);
+  const maxSeries = access === "registered" ? 50 : 25;
+  const maxYears = access === "registered" ? 20 : 10;
+  if (value.seriesIds.length > maxSeries) throw new z.ZodError([{ code: "custom", path: ["seriesIds"], message: `BLS ${access} access accepts at most ${maxSeries} series.` }]);
+  if (new Set(value.seriesIds).size !== value.seriesIds.length) throw new z.ZodError([{ code: "custom", path: ["seriesIds"], message: "BLS series IDs must be unique." }]);
+  if (value.startYear > value.endYear || value.endYear - value.startYear + 1 > maxYears) throw new z.ZodError([{ code: "custom", path: ["endYear"], message: `BLS ${access} access requires an ordered range of at most ${maxYears} years.` }]);
+  return value;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -46,17 +55,17 @@ export function createLaborMarketHandlers(providers: LaborMarketProviders) {
         body = OnetRequestSchema.parse(await readJsonBody(request, REQUEST_LIMIT_BYTES));
       } catch (error) { return requestError(error); }
       try {
-        const profile = OnetOccupationProfileSchema.parse(await providers.lookupOnetOccupation(body.occupationCode));
+        const profile = OnetOccupationProfileSchema.parse(await providers.lookupOnetOccupation(body.occupationCode, request.signal));
         return json({ profile });
       } catch { return providerError(); }
     },
     async bls(request: Request): Promise<Response> {
       let body: z.infer<typeof BlsRequestSchema>;
       try {
-        body = BlsRequestSchema.parse(await readJsonBody(request, REQUEST_LIMIT_BYTES));
+        body = parseBlsRequest(await readJsonBody(request, REQUEST_LIMIT_BYTES), providers.blsAccess);
       } catch (error) { return requestError(error); }
       try {
-        const series = BlsObservationSeriesSchema.array().max(50).parse(await providers.fetchBlsObservations(body.seriesIds, body.startYear, body.endYear));
+        const series = BlsObservationSeriesSchema.array().max(50).parse(await providers.fetchBlsObservations(body.seriesIds, body.startYear, body.endYear, request.signal));
         return json({
           series,
           boundary: "BLS time-series observations are not occupational projections. Import a separately sourced projection snapshot for trend classification.",
@@ -67,17 +76,20 @@ export function createLaborMarketHandlers(providers: LaborMarketProviders) {
 }
 
 export function createConfiguredLaborMarketProviders(environment: Record<string, string | undefined> = process.env): LaborMarketProviders {
+  const registrationKey = environment.BLS_API_KEY?.trim() || undefined;
   return {
-    async lookupOnetOccupation(code) {
+    blsAccess: registrationKey ? "registered" : "unregistered",
+    async lookupOnetOccupation(code, signal) {
       const apiKey = environment.ONET_API_KEY?.trim();
       if (!apiKey) throw new Error("O*NET provider is not configured.");
-      return fetchOnetOccupation(code, apiKey);
+      return fetchOnetOccupation(code, apiKey, fetch, new Date(), signal);
     },
-    async fetchBlsObservations(seriesIds, startYear, endYear) {
+    async fetchBlsObservations(seriesIds, startYear, endYear, signal) {
       return fetchBlsSeries(seriesIds, {
         startYear,
         endYear,
-        registrationKey: environment.BLS_API_KEY?.trim() || undefined,
+        registrationKey,
+        signal,
       });
     },
   };

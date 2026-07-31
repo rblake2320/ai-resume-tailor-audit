@@ -976,15 +976,16 @@
                   "startYear",
                   "endYear"
                 ],
+                "description": "The public contract advertises the conservative unregistered BLS tier: unique IDs and an ordered inclusive range of at most 10 years. Deployments with BLS_API_KEY also accept the official registered tier of 50 series and 20 years.",
                 "properties": {
                   "seriesIds": {
                     "type": "array",
                     "minItems": 1,
-                    "maxItems": 50,
+                    "maxItems": 25,
+                    "uniqueItems": true,
                     "items": {
                       "type": "string",
-                      "minLength": 1,
-                      "maxLength": 100
+                      "pattern": "^[A-Z0-9_#-]{1,100}$"
                     }
                   },
                   "startYear": {

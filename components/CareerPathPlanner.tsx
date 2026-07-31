@@ -89,7 +89,7 @@ export function CareerPathPlanner() {
     {profile && <div className="mt-3 rounded border border-ink-700 bg-ink-950 p-3 text-xs text-ink-300">
       <strong className="text-paper">{profile.occupationTitle}</strong> <span className="font-mono text-[10px]">{profile.occupationCode}</span>
       <p className="mt-1">{profile.description}</p>
-      <p className="mt-2 text-[10px] text-ink-400">Source: <a className="underline" href={profile.sourceUrl} target="_blank" rel="noreferrer">O*NET</a> · source year {profile.sourceYear} · retrieved {new Date(profile.retrievedAt).toLocaleString()}</p>
+      <p className="mt-2 text-[10px] text-ink-400">Source: <a className="underline" href={profile.sourceUrl} target="_blank" rel="noreferrer">O*NET</a> · source year {profile.sourceYear ?? "not reported"} · retrieved {new Date(profile.retrievedAt).toLocaleString()}</p>
       <p className="mt-1 text-[10px] text-ink-400">{profile.uncertainty}</p>
     </div>}
 

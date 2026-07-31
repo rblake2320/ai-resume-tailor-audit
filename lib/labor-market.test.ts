@@ -35,10 +35,12 @@ describe("labor-market path intelligence", () => {
     expect(JSON.stringify(fetcher.mock.calls[0][1])).not.toContain("Basic");
   });
 
-  it("rejects O*NET identity/date mismatches and bounded-response violations", async () => {
+  it("rejects O*NET identity mismatches, accepts omitted update provenance, and bounds responses", async () => {
     const official = fixture("onet-occupation-overview.json");
     await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(jsonResponse({ ...official, code: "29-1141.00" })))).rejects.toThrow(/code/i);
-    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(jsonResponse({ ...official, updated: undefined })))).rejects.toThrow(/updated/i);
+    await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(jsonResponse({ ...official, updated: undefined })))).resolves.toMatchObject({
+      sourceYear: null, sourceContents: [], uncertainty: expect.stringMatching(/did not report source-update provenance/i),
+    });
     await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(jsonResponse({ ...official, padding: "x".repeat(600_000) })))).rejects.toThrow(/size limit/);
   });
 
@@ -60,6 +62,32 @@ describe("labor-market path intelligence", () => {
       throw new DOMException("provider timed out", "AbortError");
     });
     await expect(fetchOnetOccupation("15-1252.00", "key", aborted as typeof fetch)).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("propagates caller aborts and cancels bodies rejected before parsing", async () => {
+    const caller = new AbortController();
+    const upstreamSignals: AbortSignal[] = [];
+    const pending = vi.fn((_url: string, init?: RequestInit) => {
+      const upstreamSignal = init?.signal as AbortSignal;
+      upstreamSignals.push(upstreamSignal);
+      return new Promise<Response>((_resolve, reject) => upstreamSignal.addEventListener("abort", () => reject(upstreamSignal.reason), { once: true }));
+    });
+    const lookup = fetchOnetOccupation("15-1252.00", "key", pending as typeof fetch, new Date(), caller.signal);
+    caller.abort(new DOMException("client disconnected", "AbortError"));
+    await expect(lookup).rejects.toMatchObject({ name: "AbortError" });
+    expect(upstreamSignals[0].aborted).toBe(true);
+
+    for (const response of [
+      { status: 200, contentType: "text/html" },
+      { status: 502, contentType: "application/json" },
+    ]) {
+      const cancel = vi.fn();
+      const body = new ReadableStream({ pull() { /* remains open until canceled */ }, cancel });
+      await expect(fetchOnetOccupation("15-1252.00", "key", vi.fn().mockResolvedValue(new Response(body, {
+        status: response.status, headers: { "content-type": response.contentType },
+      })))).rejects.toThrow();
+      expect(cancel).toHaveBeenCalledOnce();
+    }
   });
 
   it("preserves exact BLS observations and rejects messages, missing series, and invalid/empty rows", async () => {
