@@ -12,7 +12,7 @@ export const RequirementEvidenceSchema = z.strictObject({
   category: z.enum(["mandatory", "preferred", "responsibility", "logistics"]),
   state: EvidenceStateSchema,
   evidence: z.array(z.string().max(2_000)).max(10).describe("Exact facts from the original resume supporting this requirement; empty when unsupported"),
-  tailoredText: z.array(z.string().max(2_000)).max(20).describe("Exact resulting resume or cover-letter text tied to this requirement; empty when unsupported"),
+  tailoredText: z.array(z.string().max(2_000)).max(20).describe("Best-effort exact output spans tied to this requirement; invalid model references are removed and may leave this empty"),
   recommendation: z.string().describe("Honest next step, clarification, adjacent skill, portfolio task, training, or omission rationale"),
 }).superRefine((item, context) => {
   if (item.state === "unsupported" && (item.evidence.length > 0 || item.tailoredText.length > 0)) {
@@ -313,7 +313,7 @@ export function reconcileTailorResultOutputReferences(result: TailorResult): Tai
       added,
       not_added: [
         ...result.keywords.not_added,
-        ...removed.map((keyword) => ({ keyword, reason: "Not present in the generated documents." })),
+        ...removed.map((keyword) => ({ keyword, reason: "System correction: the model listed this keyword as added, but it was not present in the generated documents." })),
       ],
     },
     requirement_evidence: result.requirement_evidence.map((requirement) => ({
@@ -338,8 +338,9 @@ export function tailorResultJsonSchema(): Record<string, unknown> {
     delete n.maximum;
     delete n.exclusiveMinimum;
     delete n.exclusiveMaximum;
-    // Anthropic structured outputs reject array cardinality keywords even
-    // though Zod must retain them for post-response workload limits.
+    // Live Anthropic verification accepts $schema/minLength/maxLength but
+    // rejects array cardinality keywords. Zod retains the latter for
+    // post-response workload limits; only the provider schema omits them.
     delete n.minItems;
     delete n.maxItems;
     for (const v of Object.values(n)) strip(v);

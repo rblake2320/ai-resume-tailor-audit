@@ -27,6 +27,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 - **Job by URL** — paste a public careers-page link and a bounded HTML response is fetched and extracted server-side. LinkedIn and Indeed automation is rejected; paste those postings manually.
 - **Instant keyword scan** — deterministic, client-side coverage check the moment both fields are filled. Transparent baseline before the AI pass.
 - **AI tailoring** — streaming analysis you can watch live, then: before/after match scores with rationale, classified change log, matched / honestly-added / not-added keywords, gap analysis with concrete advice, and ATS formatting checks.
+- **Honesty enforcement boundary** — source citations are checked against the supplied résumé and a mismatch withholds the draft. Model-authored `tailoredText` and `keywords.added` references are corrected, not rejection gates: missing output references are removed, missing added-keyword claims move to `not_added` with a system-attributed reason, and `tailoredText` linkage is therefore best-effort. Human review remains required.
 - **Cover letter** — specific to your evidence and the posting, never generic filler.
 - **Exports** — DOCX (ATS-safe single column), Markdown, plain text, print/PDF, one-click copy.
 - **History** — past runs stored locally, reloadable, deletable.

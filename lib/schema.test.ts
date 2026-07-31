@@ -79,7 +79,10 @@ describe("deterministic evidence boundary", () => {
     });
     const reconciled = reconcileTailorResultOutputReferences(result);
     expect(reconciled.keywords.added).toEqual(["CI/CD"]);
-    expect(reconciled.keywords.not_added).toContainEqual({ keyword: "phantom keyword", reason: "Not present in the generated documents." });
+    expect(reconciled.keywords.not_added).toContainEqual({
+      keyword: "phantom keyword",
+      reason: "System correction: the model listed this keyword as added, but it was not present in the generated documents.",
+    });
     expect(reconciled.requirement_evidence[0].tailoredText).toEqual(["Built CI/CD pipelines"]);
     expect(() => assertTailorResultEvidence(reconciled, "Built CI pipelines")).not.toThrow();
   });

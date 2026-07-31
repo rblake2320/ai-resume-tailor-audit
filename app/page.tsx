@@ -315,10 +315,10 @@ export default function Home() {
           else if (event.type === "error") {
             if (event.reasonCode === "EVIDENCE_VALIDATION_FAILED") {
               const blockedReferences = event.validation
-                ? Object.values(event.validation).reduce((total, count) => total + count, 0)
+                ? event.validation.sourceCitationMismatch
                 : 0;
               const detail = blockedReferences > 0
-                ? ` ${blockedReferences} evidence reference${blockedReferences === 1 ? "" : "s"} could not be verified.`
+                ? ` ${blockedReferences} source citation${blockedReferences === 1 ? "" : "s"} could not be verified.`
                 : "";
               throw new Error(`${event.message}${detail}`);
             }
