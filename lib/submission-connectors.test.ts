@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { assertApprovedPacket, createGmailDraft, greenhouseRequiredFields, issueSubmissionApproval, submitGreenhouse, submitLever, verifySubmissionApproval, type SubmissionPreview, type SubmissionTarget } from "./submission-connectors";
+import { assertApprovedPacket, createGmailDraft, greenhouseRequiredFields, issueSubmissionApproval, outgoingDataCategories, submissionDestination, submitGreenhouse, submitLever, verifySubmissionApproval, type ApprovablePacket, type SubmissionPreview, type SubmissionTarget } from "./submission-connectors";
 
 const secret = "this-is-a-human-approval-secret";
 
@@ -11,7 +11,7 @@ const targets: Record<SubmissionPreview["provider"], SubmissionTarget> = {
 
 const preview = (provider: "greenhouse" | "lever" | "gmail"): SubmissionPreview => ({
   applicationId: "app-1", provider, company: "Acme", role: "Engineer",
-  destination: "https://example.com/apply", packetVersion: 2,
+  destination: submissionDestination(targets[provider]), packetVersion: 2,
   resumeChecksum: "a".repeat(64), coverLetterChecksum: "b".repeat(64), packetChecksum: "c".repeat(64),
   personalDataCategories: ["email"],
   fields: { first_name: "Ada", last_name: "Lovelace", name: "Ada Lovelace", email: "ada@example.com", resume_text: "APPROVED RESUME" },
@@ -84,13 +84,47 @@ describe("authorized submission connectors", () => {
     expect(() => issueSubmissionApproval(mismatched, secret)).toThrow();
   });
 
-  it("binds the exact frozen packet, résumé, and cover letter", () => {
+  it("binds the packet identity, version, employer, role, and content digests", () => {
     const approved = preview("greenhouse");
-    const good = { packet: "c".repeat(64), resume: "a".repeat(64), coverLetter: "b".repeat(64) };
-    expect(() => assertApprovedPacket(approved, good)).not.toThrow();
-    expect(() => assertApprovedPacket(approved, { ...good, packet: "d".repeat(64) })).toThrow(/packet/);
-    expect(() => assertApprovedPacket(approved, { ...good, resume: "d".repeat(64) })).toThrow(/resume/);
-    expect(() => assertApprovedPacket(approved, { ...good, coverLetter: "d".repeat(64) })).toThrow(/cover letter/);
+    const packet: ApprovablePacket = {
+      id: "app-1", version: 2,
+      checksums: { packet: "c".repeat(64), resume: "a".repeat(64), coverLetter: "b".repeat(64) },
+      jobSnapshot: { company: "Acme", title: "Engineer" },
+    };
+    expect(() => assertApprovedPacket(approved, packet)).not.toThrow();
+
+    const mutate = (patch: Partial<ApprovablePacket>) => ({ ...structuredClone(packet), ...patch });
+    expect(() => assertApprovedPacket(approved, mutate({ checksums: { ...packet.checksums, packet: "d".repeat(64) } }))).toThrow(/packet/);
+    expect(() => assertApprovedPacket(approved, mutate({ checksums: { ...packet.checksums, resume: "d".repeat(64) } }))).toThrow(/resume/);
+    expect(() => assertApprovedPacket(approved, mutate({ checksums: { ...packet.checksums, coverLetter: "d".repeat(64) } }))).toThrow(/cover letter/);
+    // A digest-identical packet from a different application, version, or
+    // employer must still be refused: the applicant approved a specific
+    // application for a specific employer and role, not just some bytes.
+    expect(() => assertApprovedPacket(approved, mutate({ id: "app-2" }))).toThrow(/application id/);
+    expect(() => assertApprovedPacket(approved, mutate({ version: 3 }))).toThrow(/packet version/);
+    expect(() => assertApprovedPacket(approved, mutate({ jobSnapshot: { company: "Other Corp", title: "Engineer" } }))).toThrow(/company/);
+    expect(() => assertApprovedPacket(approved, mutate({ jobSnapshot: { company: "Acme", title: "Manager" } }))).toThrow(/role/);
+  });
+
+  it("refuses a preview whose displayed destination is not where the target routes", () => {
+    // The applicant reads `destination`; the machine acts on `target`. Left
+    // independent, a preview could display an approved employer while the signed
+    // target routed somewhere else entirely.
+    const lying = { ...preview("greenhouse"), destination: "https://boards.greenhouse.io/trusted-employer/jobs/999" } as SubmissionPreview;
+    expect(() => issueSubmissionApproval(lying, secret)).toThrow(/Displayed destination must match/);
+  });
+
+  it("refuses a preview that under-declares the personal data it will send", () => {
+    const under = { ...preview("greenhouse"), personalDataCategories: [] } as SubmissionPreview;
+    expect(() => issueSubmissionApproval(under, secret)).toThrow(/personal-data categories/);
+    const over = { ...preview("greenhouse"), personalDataCategories: ["email", "government identifier"] } as SubmissionPreview;
+    expect(() => issueSubmissionApproval(over, secret)).toThrow(/personal-data categories/);
+  });
+
+  it("derives personal-data categories from the fields actually being sent", () => {
+    expect(outgoingDataCategories({ email: "ada@example.com" })).toEqual(["email"]);
+    expect(outgoingDataCategories({ a: "ssn 555-00-1234", b: "ada@example.com" }).sort()).toEqual(["email", "government identifier"]);
+    expect(outgoingDataCategories({ name: "Ada Lovelace" })).toEqual([]);
   });
 
   it("discovers and enforces Greenhouse job-specific required fields before submit", async () => {

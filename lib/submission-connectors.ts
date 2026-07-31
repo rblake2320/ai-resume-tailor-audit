@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { canonicalJson } from "./canonical-json";
+import { protectPii } from "./pii";
 
 export const SubmissionProviderSchema = z.enum(["greenhouse", "lever", "gmail"]);
 
@@ -21,6 +22,29 @@ export const SubmissionTargetSchema = z.discriminatedUnion("provider", [
 ]);
 export type SubmissionTarget = z.infer<typeof SubmissionTargetSchema>;
 
+/**
+ * The canonical human-facing destination for a signed target.
+ *
+ * `destination` is what the applicant reads; `target` is what the machine acts
+ * on. Left independent, a preview could display an approved employer while the
+ * signed target routed somewhere else entirely — the human approves one thing
+ * and the request goes to another. Deriving it makes that divergence
+ * unrepresentable.
+ */
+export function submissionDestination(target: SubmissionTarget): string {
+  switch (target.provider) {
+    case "greenhouse": return `https://boards.greenhouse.io/${target.boardToken}/jobs/${target.jobId}`;
+    case "lever": return `https://jobs.lever.co/${target.site}/${target.postingId}`;
+    case "gmail": return "https://mail.google.com/mail/u/0/#drafts";
+  }
+}
+
+/** The personal-data categories actually present in the outgoing fields. */
+export function outgoingDataCategories(fields: Record<string, unknown>): string[] {
+  const text = Object.values(fields).filter((value) => typeof value === "string").join("\n");
+  return [...new Set(protectPii(text).matches.map((match) => match.kind))].sort();
+}
+
 const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export const SubmissionPreviewSchema = z.strictObject({
@@ -35,6 +59,19 @@ export const SubmissionPreviewSchema = z.strictObject({
 }).superRefine((value, context) => {
   if (value.target.provider !== value.provider) {
     context.addIssue({ code: "custom", message: "Approved target provider must match the preview provider." });
+    return;
+  }
+  // The displayed destination must be the one the signed target routes to.
+  const expected = submissionDestination(value.target);
+  if (value.destination !== expected) {
+    context.addIssue({ code: "custom", message: `Displayed destination must match the signed target (${expected}).` });
+  }
+  // Declared personal-data categories must be the ones actually being sent, so
+  // the disclosure the applicant consents to is the disclosure that happens.
+  const actual = outgoingDataCategories(value.fields);
+  const declared = [...new Set(value.personalDataCategories)].sort();
+  if (declared.join("|") !== actual.join("|")) {
+    context.addIssue({ code: "custom", message: `Declared personal-data categories must match the outgoing fields (${actual.join(", ") || "none"}).` });
   }
 });
 export type SubmissionPreview = z.infer<typeof SubmissionPreviewSchema>;
@@ -88,16 +125,34 @@ export function verifySubmissionApproval(receipt: unknown, secret: string, now =
 }
 
 /**
- * Throws unless the packet presented for transmission is the exact packet the
- * applicant approved. Callers must additionally run `verifyApplicationPacket`
- * so a self-consistent but forged packet cannot satisfy this by simply
- * carrying matching checksums of its own tampered content.
+ * The subset of an application packet a submission must agree with. Structural
+ * so this module stays independent of the applications module.
  */
-export function assertApprovedPacket(preview: SubmissionPreview, checksums: { packet: string; resume: string; coverLetter: string }) {
+export interface ApprovablePacket {
+  id: string;
+  version: number;
+  checksums: { packet: string; resume: string; coverLetter: string };
+  jobSnapshot: { company: string; title: string };
+}
+
+/**
+ * Throws unless the packet presented for transmission is the exact packet the
+ * applicant approved — including the identity and the employer name and role
+ * they read on screen, not only the content digests.
+ *
+ * Callers must additionally run `verifyApplicationPacket` so a self-consistent
+ * but forged packet cannot satisfy this by carrying matching checksums of its
+ * own tampered content.
+ */
+export function assertApprovedPacket(preview: SubmissionPreview, packet: ApprovablePacket) {
   const mismatched = [
-    preview.packetChecksum !== checksums.packet && "packet",
-    preview.resumeChecksum !== checksums.resume && "resume",
-    preview.coverLetterChecksum !== checksums.coverLetter && "cover letter",
+    preview.packetChecksum !== packet.checksums.packet && "packet",
+    preview.resumeChecksum !== packet.checksums.resume && "resume",
+    preview.coverLetterChecksum !== packet.checksums.coverLetter && "cover letter",
+    preview.applicationId !== packet.id && "application id",
+    preview.packetVersion !== packet.version && "packet version",
+    preview.company !== packet.jobSnapshot.company && "company",
+    preview.role !== packet.jobSnapshot.title && "role",
   ].filter(Boolean);
   if (mismatched.length) throw new Error(`Submission packet does not match the approved packet (${mismatched.join(", ")}).`);
 }
