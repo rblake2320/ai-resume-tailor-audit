@@ -52,9 +52,10 @@ export default function Home() {
   );
 
   // Profile (saved locally, once)
+  const [candidateName, setCandidateName] = useState(() => loadProfile()?.candidateName ?? "");
   const [resume, setResume] = useState(() => loadProfile()?.resume ?? "");
   const [extraInfo, setExtraInfo] = useState(() => loadProfile()?.extraInfo ?? "");
-  const [savedSnapshot, setSavedSnapshot] = useState<{ resume: string; extraInfo: string } | null>(
+  const [savedSnapshot, setSavedSnapshot] = useState<{ candidateName: string; resume: string; extraInfo: string } | null>(
     null,
   );
 
@@ -120,26 +121,26 @@ export default function Home() {
     if (!resume.trim() && !jobText.trim()) return;
     const timer = setTimeout(() => {
       try { setSavePoints(addSavePoint(
-          { resume, extraInfo },
+          { candidateName, resume, extraInfo },
           { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
         )); }
       catch (failure) { reportPersistenceFailure(failure); }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   // Debounced autosave of the profile (all setState happens inside the timer callback)
   useEffect(() => {
     const t = setTimeout(() => {
-      try { saveProfile({ resume, extraInfo }); setSavedSnapshot({ resume, extraInfo }); }
+      try { saveProfile({ candidateName, resume, extraInfo }); setSavedSnapshot({ candidateName, resume, extraInfo }); }
       catch (failure) { reportPersistenceFailure(failure); }
     }, 600);
     return () => clearTimeout(t);
-  }, [resume, extraInfo, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, reportPersistenceFailure]);
 
   const profileSaved =
     savedSnapshot === null ||
-    (savedSnapshot.resume === resume && savedSnapshot.extraInfo === extraInfo);
+    (savedSnapshot.candidateName === candidateName && savedSnapshot.resume === resume && savedSnapshot.extraInfo === extraInfo);
 
   // Auto-scroll the live analysis feed
   useEffect(() => {
@@ -207,7 +208,7 @@ export default function Home() {
     const fullResume = extraInfo.trim()
       ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${extraInfo}`
       : resume;
-    const protectedResume = protectPii(fullResume);
+    const protectedResume = protectPii(fullResume, { candidateNames: candidateName ? [candidateName] : [] });
     if (privacyMode === "review" && !privacyOverride && protectedResume.matches.length > 0) {
       setPendingPii(protectedResume.matches);
       return;
@@ -288,7 +289,7 @@ export default function Home() {
       window.clearTimeout(timeout);
       generationAbortRef.current = null;
     }
-  }, [resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
 
   const cancelGeneration = useCallback(() => {
     cancelReasonRef.current = "cancelled";
@@ -316,6 +317,7 @@ export default function Home() {
       .slice(0, 50) || "tailored";
 
   const restoreSavePoint = useCallback((point: SavePoint) => {
+    setCandidateName(point.profile.candidateName ?? "");
     setResume(point.profile.resume);
     setExtraInfo(point.profile.extraInfo);
     setJobText(point.session.jobText);
@@ -332,12 +334,12 @@ export default function Home() {
   const createManualSavePoint = useCallback(() => {
     try {
       setSavePoints(addSavePoint(
-        { resume, extraInfo },
+        { candidateName, resume, extraInfo },
         { jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result },
         "Manual save point",
       ));
     } catch (failure) { reportPersistenceFailure(failure); }
-  }, [resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, jobText, jobUrl, jobTitle, company, emphasis, privacyMode, result, reportPersistenceFailure]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 md:px-8">
@@ -380,6 +382,27 @@ export default function Home() {
             title="Your profile"
             hint={profileSaved ? "saved locally ✓" : "saving…"}
           >
+            <div className="mb-4 max-w-md">
+              <label htmlFor="candidate-name" className="mb-1 block text-xs text-ink-300">
+                Your name for privacy protection
+              </label>
+              <input
+                id="candidate-name"
+                type="text"
+                autoComplete="name"
+                maxLength={120}
+                value={candidateName}
+                onChange={(event) => {
+                  invalidateResult();
+                  setCandidateName(event.target.value);
+                }}
+                placeholder="Jane Doe"
+                className="w-full rounded-lg border border-ink-700 bg-ink-950/80 px-3 py-2 text-sm text-ink-100 outline-none transition focus:border-brass-400/60"
+              />
+              <p className="mt-1 text-[10px] leading-snug text-ink-400">
+                Optional. Protect mode masks this exact name locally; it never guesses which words are a person’s name.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
               <div>
                 <div className="mb-2 flex items-center justify-between">
@@ -610,8 +633,9 @@ export default function Home() {
             <div>
               <h2 className="text-sm font-semibold text-paper">Personal information shield</h2>
               <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-ink-400">
-                Contact details are replaced locally before generation and restored afterward. You
-                can review detected fields or send your exact text whenever you choose.
+                Contact details and the name you explicitly enter above are replaced locally before
+                generation and restored afterward. Names are never guessed. You can review detected
+                fields or send your exact text whenever you choose.
               </p>
               <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-ink-400">
                 Read-aloud uses your browser/device voice. Dictation starts only when you press its
@@ -631,8 +655,8 @@ export default function Home() {
           </div>
           {privacyMode === "exact" && (
             <p role="status" className="mt-3 text-xs text-warn">
-              Exact mode may send email addresses, phone numbers, profile links, addresses, or other
-              identifiers to Anthropic. You can switch back at any time.
+              Exact mode may send your name, email addresses, phone numbers, profile links,
+              addresses, or other identifiers to Anthropic. You can switch back at any time.
             </p>
           )}
         </div>
@@ -801,7 +825,7 @@ export default function Home() {
                 onClick={async () => {
                   if (confirm("Delete your saved profile and all history from this browser?")) {
                     try {
-                      await clearAllData(); setHistory([]); setSavePoints([]); setResume(""); setExtraInfo("");
+                      await clearAllData(); setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo("");
                     } catch (failure) { reportPersistenceFailure(failure); }
                   }
                 }}

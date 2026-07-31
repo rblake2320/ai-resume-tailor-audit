@@ -55,6 +55,14 @@ describe("local save points", () => {
     expect(deleteSavePoint(points[0].id)).toEqual([]);
   });
 
+  it("persists an explicit candidate name and migrates older profiles without guessing one", () => {
+    saveProfile({ candidateName: "Jane Doe", resume: "resume", extraInfo: "" });
+    expect(loadProfile()?.candidateName).toBe("Jane Doe");
+
+    localStorage.setItem("art:profile", JSON.stringify({ resume: "legacy", extraInfo: "", updatedAt: 1 }));
+    expect(loadProfile()).toMatchObject({ candidateName: "", resume: "legacy" });
+  });
+
   it("deduplicates identical consecutive states", () => {
     addSavePoint({ resume: "same", extraInfo: "" }, session);
     addSavePoint({ resume: "same", extraInfo: "" }, session);
