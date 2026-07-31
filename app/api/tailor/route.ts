@@ -7,7 +7,12 @@ import { TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+// Use an app-specific override first so unrelated shell/CLI aliases such as
+// ANTHROPIC_MODEL=opusplan cannot silently break this production route.
+const MODEL =
+  process.env.RESUME_FOUNDRY_ANTHROPIC_MODEL ||
+  process.env.ANTHROPIC_MODEL ||
+  "claude-opus-5";
 
 type StreamEvent =
   | { type: "thinking"; text: string }
@@ -54,14 +59,22 @@ export async function POST(req: NextRequest): Promise<Response> {
           },
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: buildUserPrompt(parsed) }],
-        });
+        }, { signal: req.signal });
 
         let chars = 0;
         let lastProgress = 0;
+        let signalledThinking = false;
         for await (const event of msgStream) {
           if (event.type !== "content_block_delta") continue;
-          if (event.delta.type === "thinking_delta" && event.delta.thinking) {
-            send({ type: "thinking", text: event.delta.thinking });
+          if (event.delta.type === "thinking_delta") {
+            // The model's internal reasoning is NOT forwarded to the client:
+            // it can contain scoring deliberation, sanitization/injection-
+            // handling narration, and drafting strategy. Emit a single neutral
+            // progress ping so the UI shows liveness during the analysis phase.
+            if (!signalledThinking) {
+              signalledThinking = true;
+              send({ type: "progress", chars: 0 });
+            }
           } else if (event.delta.type === "text_delta") {
             chars += event.delta.text.length;
             if (chars - lastProgress > 400) {

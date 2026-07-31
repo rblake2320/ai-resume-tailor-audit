@@ -106,9 +106,42 @@ export function tailorResultJsonSchema(): Record<string, unknown> {
   return schema;
 }
 
+// ---- Content-quality gate ------------------------------------------------
+// Length alone let junk through: 100 "x"s, emoji-only, whitespace/zero-width,
+// and repeated tokens all passed. These stats require actual, varied natural
+// language before we spend an AI call.
+const ZERO_WIDTH = /[\​-\‍\﻿\⁠\­]/g;
+
+export function contentStats(text: string): { words: number; unique: number; letters: number } {
+  const cleaned = (text ?? "").normalize("NFKC").replace(ZERO_WIDTH, "");
+  const words = cleaned.toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'+.#/-]*/gu) ?? [];
+  const letters = (cleaned.match(/\p{L}/gu) ?? []).length;
+  return { words: words.length, unique: new Set(words).size, letters };
+}
+
+/** True when the text reads like real, varied language (not filler/junk). */
+export function looksLikeContent(
+  text: string,
+  min: { words: number; unique: number; letters: number },
+): boolean {
+  const s = contentStats(text);
+  return s.words >= min.words && s.unique >= min.unique && s.letters >= min.letters;
+}
+
+export const RESUME_CONTENT_MIN = { words: 40, unique: 25, letters: 120 };
+export const JD_CONTENT_MIN = { words: 20, unique: 15, letters: 60 };
+
 export const TailorRequestSchema = z.object({
-  resume: z.string().min(200, "Resume text looks too short — paste the full resume (at least 200 characters)."),
-  jobDescription: z.string().min(100, "Job description looks too short — paste the full posting (at least 100 characters)."),
+  resume: z
+    .string()
+    .min(200, "Resume text looks too short — paste the full resume (at least 200 characters).")
+    .refine((t) => looksLikeContent(t, RESUME_CONTENT_MIN),
+      "That doesn't look like real resume text — paste your actual resume (varied, natural language)."),
+  jobDescription: z
+    .string()
+    .min(100, "Job description looks too short — paste the full posting (at least 100 characters).")
+    .refine((t) => looksLikeContent(t, JD_CONTENT_MIN),
+      "That doesn't look like a real job posting — paste the actual description (varied, natural language)."),
   jobTitle: z.string().max(200).optional().default(""),
   company: z.string().max(200).optional().default(""),
   emphasis: z.enum(["balanced", "technical", "leadership"]).optional().default("balanced"),
