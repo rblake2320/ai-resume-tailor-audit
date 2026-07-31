@@ -1,10 +1,10 @@
 # Resume Foundry
 
-**Honest AI resume tailoring. One profile, any job. Nothing fabricated, ever.**
+**Evidence-linked AI résumé tailoring. One profile, any job, with unsupported claims surfaced for human review.**
 
 Save your career history once, point it at any job posting (paste the text or just the URL), and get an honestly tailored, ATS-safe resume and cover letter — with a calibrated match score, a full diff of every change, a keyword gap analysis, and exports in DOCX, Markdown, plain text, and print/PDF.
 
-Powered by **Claude Opus 5** with structured outputs and adaptive thinking. Built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
+Uses a deployment-configured Anthropic API model with structured outputs and adaptive thinking. Built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
 
 ## Why this beats the usual tools
 
@@ -12,7 +12,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 
 | Principle | What it means here |
 |---|---|
-| **Honesty guarantee** | The model never adds a skill, title, date, or metric without evidence in your history. Keywords it *can't* honestly add are listed under "Not added — no evidence", with reasons. |
+| **Evidence discipline** | The model is instructed to cite résumé evidence and list unsupported keywords under "Not added — no evidence." Deterministic validation is being expanded; generated content still requires human review. |
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
 | **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
 | **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
@@ -30,7 +30,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 - **Exports** — DOCX (ATS-safe single column), Markdown, plain text, print/PDF, one-click copy.
 - **History** — past runs stored locally, reloadable, deletable.
 - **Career Ledger** — append-only, correction-aware evidence captured across school, work, projects, volunteering, and life transitions; encrypted at rest with portable backup and age-aware privacy controls.
-- **Career-path intelligence** — provenance-labelled BLS/O*NET trend and skills data, uncertainty-aware occupation classifications, and training suggestions tied to explicit evidence gaps.
+- **Career-path intelligence foundation** — tested BLS/O*NET adapters, provenance schemas, uncertainty-aware classification, and evidence-gap-linked training logic. Product ingestion/UI wiring remains in progress.
 - **Application operating system** — job inbox, immutable application packets, pipeline tracking, reminders, interview preparation, approved handoffs, official ATS connectors, and Gmail draft creation.
 - **Agent interfaces** — bearer-authenticated HTTP/OpenAPI operations and a stdio MCP server share one permission, approval, rate-limit, persistence, and audit boundary.
 

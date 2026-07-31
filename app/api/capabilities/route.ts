@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 export function GET() {
   return NextResponse.json({
     service: "resume-foundry",
-    version: "1.1.0",
+    version: "1.0.0",
     privacy: {
       profilePersistence: "browser-local-storage",
       careerEvidencePersistence: "encrypted-indexeddb",

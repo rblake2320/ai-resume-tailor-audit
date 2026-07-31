@@ -343,8 +343,8 @@ export default function Home() {
           </div>
           <div className="flex flex-col items-end gap-2 text-right">
             <Chip tone="good">🔒 Stored only in your browser</Chip>
-            <Chip tone="brass">No fabricated skills, ever</Chip>
-            <Chip tone="muted">Powered by Claude Opus 5</Chip>
+            <Chip tone="brass">Evidence-linked · human review required</Chip>
+            <Chip tone="muted">Anthropic model configured by deployment</Chip>
             <p className="max-w-[17rem] text-[11px] leading-snug text-ink-400">
               Your profile and history are saved only in this browser. When you click Forge,
               your resume and the job text are sent to Anthropic&rsquo;s API to generate the

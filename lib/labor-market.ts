@@ -12,9 +12,17 @@ export type LaborMarketSnapshot = z.infer<typeof LaborMarketSnapshotSchema>;
 export type Trend = "growing" | "stable" | "transforming" | "declining" | "insufficient_data";
 
 /** Documented policy thresholds, not BLS labels or outcome guarantees. */
-export function classifyOccupationTrend(snapshot: LaborMarketSnapshot): { trend: Trend; reasons: string[] } {
+export function classifyOccupationTrend(snapshot: LaborMarketSnapshot, now = new Date()): { trend: Trend; reasons: string[] } {
   const value = LaborMarketSnapshotSchema.parse(snapshot); const growth = value.projectedGrowthPercent;
+  const ageMs = now.getTime() - new Date(`${value.asOfDate}T00:00:00Z`).getTime();
+  const missing = [
+    growth === null ? "projected growth rate" : null,
+    value.employmentLevel === null ? "current employment level" : null,
+    value.projectionStartYear === null || value.projectionEndYear === null ? "projection period" : null,
+  ].filter(Boolean);
+  if (missing.length) return { trend: "insufficient_data", reasons: [`Missing required inputs: ${missing.join(", ")}.`] };
   if (growth === null) return { trend: "insufficient_data", reasons: ["No projected growth rate was supplied."] };
+  if (ageMs > 3 * 366 * 24 * 60 * 60 * 1000) return { trend: "insufficient_data", reasons: [`Source data is stale as of ${value.asOfDate}; refresh it before using a trend label.`] };
   const replacementRate = value.employmentLevel && value.replacementOpenings !== null ? value.replacementOpenings / value.employmentLevel * 100 : null;
   if (growth <= -2) return { trend: "declining", reasons: [`Projected employment change is ${growth}%.`, value.annualOpenings ? `${value.annualOpenings} annual openings may still exist; decline does not mean zero opportunity.` : "Openings were not supplied." ] };
   if (growth >= 5) return { trend: "growing", reasons: [`Projected employment change is ${growth}%.`, value.annualOpenings !== null ? `${value.annualOpenings} annual openings are reported.` : "Openings were not supplied."] };
@@ -41,8 +49,9 @@ export async function fetchOnetOccupation(code: string, credentials: { username:
   const response = await fetcher(`https://api-v2.onetcenter.org/online/occupations/${encodeURIComponent(code)}/summary`, { headers: { authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64")}`, accept: "application/json" } });
   if (!response.ok) throw new Error(`O*NET request failed (${response.status}).`);
   const value = await response.json() as Record<string, unknown>;
+  if (typeof value.updated !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value.updated)) throw new Error("O*NET response omitted a valid source update date.");
   return { source: "ONET" as const, sourceUrl: `https://www.onetonline.org/link/summary/${code}`, occupationCode: code, retrievedAt: new Date().toISOString(),
-    asOfDate: typeof value.updated === "string" ? value.updated : new Date().toISOString().slice(0, 10),
+    asOfDate: value.updated,
     uncertainty: "O*NET describes occupational characteristics; it does not guarantee an individual's fit, eligibility, hiring, wage, or outcome.", data: value };
 }
 

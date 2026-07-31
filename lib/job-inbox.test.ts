@@ -6,6 +6,9 @@ const input = { company: "Acme", title: "Platform Engineer", location: "Remote",
 
 describe("job inbox", () => {
   it("canonicalizes tracking URLs", () => expect(canonicalJobUrl(input.applicationUrl)).toBe("https://jobs.example.com/42"));
+  it("normalizes equivalent schemes, www hosts, default ports, and ad trackers", () => {
+    expect(canonicalJobUrl("http://www.jobs.example.com:80/42/?gclid=x&fbclid=y")).toBe("https://jobs.example.com/42");
+  });
   it("creates immutable revisions with SHA-256 content hashes", async () => {
     const first = await createJobSnapshot(input, [], new Date("2026-01-01T00:00:00Z"));
     const second = await createJobSnapshot({ ...input, description: `${description} New revision.` }, [first], new Date("2026-01-02T00:00:00Z"));
@@ -19,6 +22,13 @@ describe("job inbox", () => {
     const same = { ...first, id: crypto.randomUUID() };
     expect(duplicateKeys(first, same).sort()).toEqual(["canonicalUrl", "companyTitleLocation", "descriptionHash", "sourceId"].sort());
     expect(addJobSnapshot([first], same)).toMatchObject({ added: false, duplicateOf: first.id });
+  });
+  it("deduplicates strong source identity even when superficial imported text differs", async () => {
+    const first = await createJobSnapshot({ ...input, source: "lever", sourceId: "abc" });
+    const duplicate = await createJobSnapshot({ ...input, source: "lever", sourceId: "ABC", description: `${description} Tracking footer changed.` });
+    expect(addJobSnapshot([first], duplicate)).toMatchObject({ added: false, duplicateOf: first.id });
+    const revision = await createJobSnapshot({ ...input, source: "lever", sourceId: "abc", description: `${description} Real requirement added.` }, [first]);
+    expect(addJobSnapshot([first], revision).added).toBe(true);
   });
   it("imports quoted CSV and JSON arrays", () => {
     const csv = `company,title,location,description,url\n"Acme, Inc",Engineer,Remote,"${description}",https://example.com/job`;

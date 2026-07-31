@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertTailorResultEvidence,
   TailorRequestSchema,
   TailorResultSchema,
   tailorResultJsonSchema,
@@ -55,6 +56,28 @@ describe("TailorResultSchema", () => {
       evidence: ["Invented Rust experience"],
     };
     expect(() => TailorResultSchema.parse(dishonest)).toThrow(/Unsupported requirements/);
+  });
+});
+
+describe("deterministic evidence boundary", () => {
+  it("accepts source-backed evidence and output references", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: ["CI/CD"] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines"], tailoredText: ["Built CI pipelines"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nBuilt CI pipelines and improved CI/CD delivery.",
+    });
+    expect(() => assertTailorResultEvidence(result, "Engineer. Built CI pipelines for releases.")).not.toThrow();
+  });
+  it("withholds fabricated evidence, missing output references, and phantom added keywords", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { ...VALID_RESULT.keywords, added: ["Kubernetes"] },
+      requirement_evidence: [{ id: "k8s", requirement: "Kubernetes", category: "mandatory", state: "proven",
+        evidence: ["Ran a 500-node Kubernetes platform"], tailoredText: ["Managed Kubernetes"], recommendation: "" }],
+    });
+    expect(() => assertTailorResultEvidence(result, "Engineer with CI pipeline experience.")).toThrow(/failed evidence validation/);
   });
 });
 
