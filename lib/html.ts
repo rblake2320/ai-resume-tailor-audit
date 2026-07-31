@@ -2,10 +2,7 @@
 
 const DROP_TAGS = ["script", "style", "noscript", "svg", "iframe", "nav", "footer", "aside", "form", "head", "title", "template"];
 const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
-// Every element we promise to drop is scanned through its own closing tag.
-// Parsing nested markup inside a dropped region lets an unrelated closing tag
-// pop the hidden element and expose the remainder as prompt text.
-const RAW_DROP_TAGS = new Set(DROP_TAGS);
+const RAW_DROP_TAGS = new Set(["script", "style", "noscript", "iframe", "title"]);
 const RAW_VISIBLE_TAGS = new Set(["textarea", "xmp"]);
 
 const ENTITIES: Record<string, string> = {
@@ -96,6 +93,13 @@ export function htmlToText(html: string): string {
     if (closingName) {
       const matchingIndex = latestByName.get(closingName);
       if (matchingIndex !== undefined) {
+        // Inside a dropped structural region, malformed ancestor closing tags
+        // must not pop through still-open descendants and expose later text.
+        // Conservatively keep dropping until the actual top element closes.
+        if (hiddenDepth > 0 && openElements.at(-1)?.name !== closingName) {
+          cursor = close + 1;
+          continue;
+        }
         while (openElements.length > matchingIndex) {
           const element = openElements.pop()!;
           if (element.hides) hiddenDepth -= 1;

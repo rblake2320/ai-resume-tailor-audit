@@ -78,6 +78,13 @@ describe("htmlToText", () => {
     }
   });
 
+  it("keeps nested structural drop regions opaque until the outer close", () => {
+    for (const tag of ["svg", "nav", "footer", "aside", "form", "head", "template"]) {
+      const text = htmlToText(`<${tag}><${tag}>junk</${tag}>PAYLOAD</${tag}><p>Visible</p>`);
+      expect(text, tag).toBe("Visible");
+    }
+  });
+
   it("treats title as discarded RCDATA while retaining visible textarea text", () => {
     expect(htmlToText(`<title>Hidden </body> metadata</title><textarea>Visible &amp; literal </div> text</textarea>`))
       .toBe("Visible & literal </div> text");
