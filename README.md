@@ -64,6 +64,8 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 
 CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
 
+The labor-market route contracts and deployment boundaries are documented in [`docs/LABOR_MARKET_API.md`](docs/LABOR_MARKET_API.md).
+
 ## Architecture
 
 ```
