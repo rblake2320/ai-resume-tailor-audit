@@ -301,6 +301,28 @@ export function assertTailorResultEvidence(result: TailorResult, originalResume:
   if (violations.length) throw new HonestyValidationError([...new Set(violations)]);
 }
 
+/** Remove model-authored output metadata that is not present in the rendered documents. */
+export function reconcileTailorResultOutputReferences(result: TailorResult): TailorResult {
+  const output = comparableOutput(`${result.tailored_resume_markdown}\n${result.cover_letter_markdown}`);
+  const added = result.keywords.added.filter((keyword) => output.includes(comparableSource(keyword)));
+  const removed = result.keywords.added.filter((keyword) => !output.includes(comparableSource(keyword)));
+  return {
+    ...result,
+    keywords: {
+      ...result.keywords,
+      added,
+      not_added: [
+        ...result.keywords.not_added,
+        ...removed.map((keyword) => ({ keyword, reason: "Not present in the generated documents." })),
+      ],
+    },
+    requirement_evidence: result.requirement_evidence.map((requirement) => ({
+      ...requirement,
+      tailoredText: requirement.tailoredText.filter((text) => output.includes(comparableSource(text))),
+    })),
+  };
+}
+
 /**
  * JSON schema for the Claude structured-output format:
  * additionalProperties:false everywhere, and no numeric constraints

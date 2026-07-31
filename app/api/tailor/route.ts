@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
-import { assertTailorResultEvidence, HonestyValidationError, summarizeHonestyViolations, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
+import { assertTailorResultEvidence, HonestyValidationError, reconcileTailorResultOutputReferences, summarizeHonestyViolations, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 import { resolveModel } from "@/lib/anthropic-model";
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
             .map((b) => b.text)
             .join("");
-          const result = TailorResultSchema.parse(JSON.parse(text));
+          const result = reconcileTailorResultOutputReferences(TailorResultSchema.parse(JSON.parse(text)));
           assertTailorResultEvidence(result, parsed.resume);
           send({ type: "result", data: result });
         }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertTailorResultEvidence,
+  reconcileTailorResultOutputReferences,
   summarizeHonestyViolations,
   TailorRequestSchema,
   TailorResultSchema,
@@ -67,6 +68,20 @@ describe("deterministic evidence boundary", () => {
     requirement_evidence: [{ id: "evidence", requirement: "Evidence", category: "mandatory", state,
       evidence: [evidence], tailoredText: ["Supported claim"], recommendation: "" }],
     tailored_resume_markdown: "# Jane Doe\nSupported claim",
+  });
+  it("reconciles output-only metadata without weakening source evidence", () => {
+    const result = TailorResultSchema.parse({
+      ...VALID_RESULT,
+      keywords: { matched: [], added: ["CI/CD", "phantom keyword"], not_added: [] },
+      requirement_evidence: [{ id: "delivery", requirement: "Delivery", category: "mandatory", state: "proven",
+        evidence: ["Built CI pipelines"], tailoredText: ["Built CI/CD pipelines", "missing output text"], recommendation: "" }],
+      tailored_resume_markdown: "# Jane Doe\nBuilt CI/CD pipelines",
+    });
+    const reconciled = reconcileTailorResultOutputReferences(result);
+    expect(reconciled.keywords.added).toEqual(["CI/CD"]);
+    expect(reconciled.keywords.not_added).toContainEqual({ keyword: "phantom keyword", reason: "Not present in the generated documents." });
+    expect(reconciled.requirement_evidence[0].tailoredText).toEqual(["Built CI/CD pipelines"]);
+    expect(() => assertTailorResultEvidence(reconciled, "Built CI pipelines")).not.toThrow();
   });
   it("accepts source-backed evidence and output references", () => {
     const result = TailorResultSchema.parse({
