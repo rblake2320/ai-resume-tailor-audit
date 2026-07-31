@@ -3,6 +3,7 @@ import { z } from "zod";
 import { extractTitle, htmlToText } from "@/lib/html";
 import { assertPublicUrl, safeFetch, SsrfError } from "@/lib/ssrf";
 import { HttpLimitError, readJsonBody, readResponseText } from "@/lib/http-limits";
+import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,8 @@ export function assertPermittedJobUrl(url: URL): void {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const limited = enforcePublicRateLimit("fetch-job", { limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
   let rawBody: unknown;
   try {
     rawBody = await readJsonBody(req, FETCH_JOB_BODY_MAX_BYTES);

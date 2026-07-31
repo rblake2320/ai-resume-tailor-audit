@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { extractText } from "unpdf";
 import { HttpLimitError, readRequestBytes } from "@/lib/http-limits";
+import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,8 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 export const PARSE_RESUME_BODY_MAX_BYTES = MAX_BYTES + 64 * 1024;
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const limited = enforcePublicRateLimit("parse-resume", { limit: 30, windowMs: 60_000 });
+  if (limited) return limited;
   let form: FormData | null = null;
   try {
     const contentType = req.headers.get("content-type") ?? "";

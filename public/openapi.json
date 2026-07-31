@@ -57,6 +57,12 @@
           },
           "422": {
             "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
           }
         }
       }
@@ -107,6 +113,12 @@
           },
           "413": {
             "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
           }
         }
       }
@@ -145,8 +157,14 @@
           "415": {
             "$ref": "#/components/responses/Error"
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "500": {
             "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
           }
         }
       }
@@ -824,6 +842,71 @@
           }
         }
       }
+    },
+    "/api/jobs/import": {
+      "post": {
+        "operationId": "importJobsFromOfficialSource",
+        "tags": [
+          "Browser operations"
+        ],
+        "description": "Imports bounded job records from a configured official connector or forwarded alert.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "source"
+                ],
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "greenhouse",
+                      "lever",
+                      "usajobs",
+                      "email"
+                    ]
+                  },
+                  "query": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "string"
+                  },
+                  "maxPages": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Imported normalized job records"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/RateLimitUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -920,6 +1003,44 @@
             "default": false
           }
         }
+      },
+      "RateLimitError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "code"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "RATE_LIMITED"
+            ]
+          }
+        }
+      },
+      "RateLimitUnavailableError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "code"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "RATE_LIMIT_UNAVAILABLE"
+            ]
+          }
+        }
       }
     },
     "responses": {
@@ -929,6 +1050,46 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Configured fixed-window capacity is exhausted.",
+        "headers": {
+          "Retry-After": {
+            "description": "Whole seconds before retrying.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RateLimitError"
+            }
+          }
+        }
+      },
+      "RateLimitUnavailable": {
+        "description": "The required production safety limiter is unavailable or invalid.",
+        "headers": {
+          "Retry-After": {
+            "description": "Whole seconds before retrying.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RateLimitUnavailableError"
             }
           }
         }
