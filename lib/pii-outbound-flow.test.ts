@@ -125,6 +125,69 @@ describe("real browser outbound PII flow", () => {
     expect(String(requests[0].resume)).toContain("Jane@example.com");
   });
 
+  it("discards an in-flight result when a bound input changes", async () => {
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => { release = resolve; });
+    vi.mocked(fetch).mockImplementationOnce(async (_url, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      await responseReady;
+      const result = {
+        match_score_before: 1, match_score_after: 2, score_rationale: "Stale result",
+        changes: [], keywords: { matched: [], added: [], not_added: [] }, gap_analysis: [],
+        requirement_evidence: [], ats_checks: [], tailored_resume_markdown: "Stale resume", cover_letter_markdown: "Stale letter",
+      };
+      const stream = new ReadableStream({ start(controller) {
+        controller.enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "result", data: result })}\n`));
+        controller.close();
+      } });
+      return new Response(stream, { status: 200 });
+    });
+
+    await act(async () => { button("Forge my resume").click(); });
+    await act(async () => setValue(document.querySelector("#resume") as HTMLTextAreaElement, `${resume} changed`));
+    await act(async () => { release(); await responseReady; });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    expect(document.body.textContent).not.toContain("Stale resume");
+    expect(JSON.parse(localStorage.getItem("art:history") ?? "[]")).toEqual([]);
+    expect(document.body.textContent).toContain("Inputs changed");
+  });
+
+  it("makes erase-all reachable when a profile exists without history", async () => {
+    await act(async () => root.unmount());
+    document.body.replaceChildren();
+    localStorage.clear();
+    localStorage.setItem("art:profile", JSON.stringify({ candidateName: "Jane Doe", resume, extraInfo: "private", updatedAt: 1 }));
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => { root.render(React.createElement(Home)); });
+    expect(button("Erase all my data")).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it("focuses and contains the review dialog, cancels with Escape, and restores Forge focus", async () => {
+    await act(async () => setValue(
+      document.querySelector('[aria-label="Personal information protection mode"]') as HTMLSelectElement,
+      "review",
+    ));
+    const forge = button("Forge my resume");
+    forge.focus();
+    await act(async () => forge.click());
+    const dialog = document.querySelector('[role="alertdialog"]') as HTMLElement;
+    const protectedButton = button("Send protected copy");
+    const cancelButton = button("Cancel");
+    expect(document.activeElement).toBe(protectedButton);
+    expect(Array.from(dialog.parentElement?.children ?? []).filter((node) => node !== dialog).every((node) => (node as HTMLElement).inert)).toBe(true);
+
+    cancelButton.focus();
+    cancelButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(protectedButton);
+    protectedButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }));
+    expect(document.activeElement).toBe(cancelButton);
+
+    await act(async () => protectedButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(document.activeElement).toBe(forge);
+  });
+
   it("clears visible PII even when encrypted-vault deletion reports a failure", async () => {
     await act(async () => root.unmount());
     document.body.replaceChildren();
