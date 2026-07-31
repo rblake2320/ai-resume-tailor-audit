@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!packet?.checksums) throw new Error("The approved application packet must be presented for submission.");
     const integrity = await verifyApplicationPacket(packet);
     if (!integrity.valid) throw new Error(`Application packet failed integrity verification: ${integrity.errors.join(" ")}`);
-    assertApprovedPacket(preview, packet.checksums);
+    assertApprovedPacket(preview, packet);
     const use = { nonce: receipt.nonce, applicationId: preview.applicationId, provider, consumedAt: new Date().toISOString() };
 
     if (provider === "greenhouse") {
