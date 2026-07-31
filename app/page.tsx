@@ -28,6 +28,7 @@ import { CareerLedger } from "@/components/CareerLedger";
 import { CareerPathPlanner } from "@/components/CareerPathPlanner";
 import { Connections } from "@/components/Connections";
 import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
+import { SiteNav } from "@/components/SiteNav";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -401,6 +402,7 @@ export default function Home() {
 
   return (
     <div ref={pageRef} className="mx-auto max-w-6xl px-4 pb-24 pt-10 md:px-8">
+      <SiteNav current="/" />
       {/* Masthead */}
       <header className="rise mb-10 border-b border-ink-700 pb-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
