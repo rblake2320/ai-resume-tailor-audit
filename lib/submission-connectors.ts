@@ -1,7 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { canonicalJson } from "./canonical-json";
-import { protectPii } from "./pii";
+import { canonicalJson } from "./canonical-json.ts";
+import { protectPii } from "./pii.ts";
 
 export const SubmissionProviderSchema = z.enum(["greenhouse", "lever", "gmail"]);
 
@@ -202,6 +202,10 @@ export const SubmissionPreviewSchema = z.strictObject({
   personalDataCategories: z.array(z.string()),
   fields: z.record(z.string(), z.unknown()), createdAt: z.string().datetime(),
   target: SubmissionTargetSchema,
+  priorAttemptAcknowledgement: z.strictObject({
+    attemptId: z.string().uuid(),
+    statement: z.literal("I understand this exact packet may already have reached the provider and authorize one retry."),
+  }).optional(),
 }).superRefine((value, context) => {
   if (value.target.provider !== value.provider) {
     context.addIssue({ code: "custom", message: "Approved target provider must match the preview provider." });

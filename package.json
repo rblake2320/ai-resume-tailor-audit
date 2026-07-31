@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "mcp": "node --experimental-strip-types scripts/mcp-server.ts"
+    "mcp": "node --experimental-strip-types scripts/mcp-server.ts",
+    "submission-attempt:recover": "node --experimental-strip-types scripts/recover-submission-attempt.ts"
   },
   "license": "MIT",
   "type": "module",
