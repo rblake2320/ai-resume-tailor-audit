@@ -26,6 +26,7 @@ import { JobInbox } from "@/components/JobInbox";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { CareerLedger } from "@/components/CareerLedger";
 import { Connections } from "@/components/Connections";
+import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -705,6 +706,8 @@ export default function Home() {
         </div>
 
         <CareerLedger />
+
+        <SensitiveAttestationBoundary />
 
         <Connections />
 
