@@ -25,6 +25,7 @@ import { DictationButton } from "@/components/SpeechControls";
 import { JobInbox } from "@/components/JobInbox";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { CareerLedger } from "@/components/CareerLedger";
+import { CareerPathPlanner } from "@/components/CareerPathPlanner";
 import { Connections } from "@/components/Connections";
 import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
 
@@ -728,6 +729,7 @@ export default function Home() {
         </div>
 
         <CareerLedger />
+        <CareerPathPlanner />
 
         <SensitiveAttestationBoundary />
 

@@ -72,9 +72,10 @@ describe("labor-market product API", () => {
       body: JSON.stringify({ occupationCode: "15-1252.00" }),
     }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ profile: onetProfile });
+    const serialized = await response.text();
+    expect(JSON.parse(serialized)).toEqual({ profile: onetProfile });
     expect(source.lookupOnetOccupation).toHaveBeenCalledWith("15-1252.00");
-    expect(await response.clone().text()).not.toContain("password");
+    expect(serialized).not.toContain("password");
   });
 
   it("rejects oversized and malformed labor-market requests before provider work", async () => {
@@ -154,7 +155,19 @@ describe("career-path records", () => {
   });
 
   it("refuses missing or stale projection evidence rather than assigning a confident trend", () => {
-    expect(() => parseCurrentProjectionSnapshot({ ...projection, employmentLevel: null }, new Date("2026-07-31"))).toThrow(/missing required/i);
-    expect(() => parseCurrentProjectionSnapshot({ ...projection, asOfDate: "1999-01-01" }, new Date("2026-07-31"))).toThrow(/stale/i);
+    const now = new Date("2026-07-31T13:00:00Z");
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, employmentLevel: null }, now)).toThrow(/missing required/i);
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, asOfDate: "1999-01-01" }, now)).toThrow(/stale/i);
+    expect(() => parseCurrentProjectionSnapshot({ ...projection, asOfDate: "2027-01-01" }, now)).toThrow(/future/i);
+  });
+
+  it("cannot pair an O*NET profile with a different occupation's projection", () => {
+    expect(() => createCareerPathRecord({
+      profile: onetProfile,
+      projection: { ...projection, occupationCode: "29-1141" },
+      evidenceGaps: [],
+      trainingResources: [],
+      now: new Date("2026-07-31T12:00:00Z"),
+    })).toThrow(/occupation code/i);
   });
 });

@@ -14,7 +14,7 @@ describe("labor-market path intelligence", () => {
   it("preserves BLS series provenance, geography warning, as-of date, and observations", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "REQUEST_SUCCEEDED", Results: { series: [{ seriesID: "TEST", data: [{ year: "2026", period: "M01", value: "12.5", footnotes: [] }] }] } }), { status: 200 }));
     const result = await fetchBlsSeries(["TEST"], { startYear: 2026, endYear: 2026, fetcher, retrievedAt: new Date("2026-02-01T00:00:00Z") });
-    expect(result[0]).toMatchObject({ source: "BLS", seriesId: "TEST", asOfDate: "2026-12-31", geography: "As defined by BLS series", retrievedAt: "2026-02-01T00:00:00.000Z" });
+    expect(result[0]).toMatchObject({ kind: "observational_series", source: "BLS", seriesId: "TEST", asOfPeriod: "2026-M01", geography: "As defined by the BLS series metadata; verify before use.", retrievedAt: "2026-02-01T00:00:00.000Z" });
   });
   it("authenticates O*NET requests server-side and preserves provenance", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15" }), { status: 200 }));
@@ -23,9 +23,13 @@ describe("labor-market path intelligence", () => {
     expect(JSON.stringify(result)).not.toContain("secret"); expect((fetcher.mock.calls[0][1] as RequestInit).headers).toHaveProperty("authorization");
     const missingDate = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer" }), { status: 200 }));
     await expect(fetchOnetOccupation("15-1252.00", { username: "user", password: "secret" }, missingDate)).rejects.toThrow(/update date/);
+    const oversized = vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: "Developer", updated: "2026-01-15", padding: "x".repeat(600_000) }), { status: 200 }));
+    await expect(fetchOnetOccupation("15-1252.00", { username: "user", password: "secret" }, oversized)).rejects.toThrow(/size limit/);
+    expect((fetcher.mock.calls[0][1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });
   it("ranks training only when it maps to an explicit evidence gap", () => {
     const resources: TrainingResource[] = [{ id: "r1", title: "Security course", provider: "Community college", sourceUrl: "https://example.edu/security", skills: ["network security"], cost: { amount: 200, currency: "USD", note: "Published tuition" }, durationHours: 40, prerequisites: ["Networking basics"], accessibility: ["captions"], accreditation: "Regional", evidenceQuality: "accredited", asOfDate: "2026-01-01" }, { id: "r2", title: "Unrelated", provider: "Provider", sourceUrl: "https://example.com/other", skills: ["pottery"], cost: { amount: 0, currency: "USD", note: "Free" }, durationHours: 2, prerequisites: [], accessibility: [], accreditation: "", evidenceQuality: "provider_claim", asOfDate: "2026-01-01" }];
     const ranked = recommendTraining(["network security"], resources); expect(ranked).toHaveLength(1); expect(ranked[0].rationale).toContain("network security"); expect(ranked[0].resource.prerequisites).toEqual(["Networking basics"]);
+    expect(recommendTraining(["network security"], [{ ...resources[0], asOfDate: "1999-01-01" }], new Date("2026-07-31"))).toEqual([]);
   });
 });

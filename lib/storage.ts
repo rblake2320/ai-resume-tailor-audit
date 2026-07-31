@@ -4,6 +4,7 @@ import type { PrivacyMode } from "./pii";
 import { JobPostingSnapshotSchema, type JobPostingSnapshot } from "./schema";
 import type { ApplicationRecord } from "./applications";
 import { deleteCareerLedger } from "./career-vault";
+import { clearCareerPathRecords } from "./labor-market-storage";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -241,5 +242,6 @@ export async function clearAllData(): Promise<void> {
     }
   } catch (error) { throw new LocalPersistenceError("erasing local data", { cause: error }); }
   await deleteCareerLedger();
+  clearCareerPathRecords();
   window.dispatchEvent?.(new Event("resume-foundry:data-cleared"));
 }

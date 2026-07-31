@@ -20,8 +20,14 @@ Succession/recovery is owner-directed: the owner may place an encrypted recovery
 - stable: growth between thresholds without the transforming condition
 - insufficient data: no growth value
 
-Every result preserves employment level, growth rate, annual openings, replacement openings, geography, source URL, as-of date, projection years, retrieval time, and uncertainty statement. Decline never means “no jobs”; openings and replacement demand remain separate measures.
+Every saved result preserves employment level, growth rate, annual openings, replacement openings, geography, source URL, as-of date, projection years, retrieval time, and uncertainty statement. Missing required fields or a source date older than three years produces no trend classification. Decline never means “no jobs”; openings and replacement demand remain separate measures.
+
+The BLS Public Data API time-series method and the BLS Employment Projections program are separate data products. Resume Foundry exposes queried time series only as `observational_series`; it never converts those values into occupational growth projections. Until a projections-specific connector with authoritative field mapping exists, a projection snapshot must be imported explicitly and must pass the strict provenance schema. The UI keeps this boundary visible.
+
+O*NET lookup is performed server-side using deployment credentials (`ONET_USERNAME` and `ONET_PASSWORD`). Credentials are never accepted from or returned to the browser. Provider requests and responses are size-bounded, malformed or undated O*NET data fails closed, and tests inject provider adapters rather than making live calls.
 
 Training recommendations appear only when a resource maps to an explicit evidence gap. Each keeps provider/source, price and currency, duration, prerequisites, accessibility, accreditation, evidence quality, and as-of date. Rankings are scenarios, not promises of employment, wages, admission, certification, or fit.
+
+Saved path records are validated and stored browser-locally with a bounded history and malformed-state quarantine. They are removed by “Erase all my data.” Unlike the encrypted Career Ledger vault, this workspace record is not currently passphrase-encrypted; users handling sensitive evidence gaps should keep them in the encrypted ledger and avoid saving them here until those stores are unified.
 
 Primary sources: BLS developer resources (https://www.bls.gov/audience/developers.htm), BLS projections methodology (https://www.bls.gov/emp/documentation/data-overview.htm), O*NET Web Services (https://services.onetcenter.org/), and U.S. DOL youth career preparation (https://www.dol.gov/agencies/odep/program-areas/individuals/youth/career-preparation).
