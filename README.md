@@ -16,7 +16,7 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
 | **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
 | **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
-| **Local-first privacy** | Your profile and history live in your browser's localStorage. The app does not write a server-side copy. One click erases everything. |
+| **Local-first privacy** | Your working profile and run history stay browser-local. Long-lived career evidence uses an encrypted IndexedDB vault with portable encrypted backup, recovery drills, selective disclosure, and deletion controls. The app does not create a cloud profile. |
 | **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
 | **Legitimate source connectors** | Import official Greenhouse and Lever public boards, USAJOBS searches, forwarded alerts, CSV/JSON, URLs, or manual text. LinkedIn/Indeed scraping and automated apply remain prohibited. |
 
@@ -29,6 +29,10 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 - **Cover letter** — specific to your evidence and the posting, never generic filler.
 - **Exports** — DOCX (ATS-safe single column), Markdown, plain text, print/PDF, one-click copy.
 - **History** — past runs stored locally, reloadable, deletable.
+- **Career Ledger** — append-only, correction-aware evidence captured across school, work, projects, volunteering, and life transitions; encrypted at rest with portable backup and age-aware privacy controls.
+- **Career-path intelligence** — provenance-labelled BLS/O*NET trend and skills data, uncertainty-aware occupation classifications, and training suggestions tied to explicit evidence gaps.
+- **Application operating system** — job inbox, immutable application packets, pipeline tracking, reminders, interview preparation, approved handoffs, official ATS connectors, and Gmail draft creation.
+- **Agent interfaces** — bearer-authenticated HTTP/OpenAPI operations and a stdio MCP server share one permission, approval, rate-limit, persistence, and audit boundary.
 
 ## Quick start
 
@@ -56,6 +60,7 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 | `npm test` | Vitest unit tests (deterministic libs) |
 | `npm run lint` | ESLint (flat config: typescript-eslint + Next + react-hooks) |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run mcp` | Launch the stdio MCP tool server |
 
 CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
 
@@ -78,22 +83,24 @@ lib/
   html.ts                  # HTML → text for job fetch (tested)
   markdown.ts              # md → HTML render + md → ATS plain text (tested)
   docx-export.ts           # md → ATS-safe DOCX (docx package)
-  storage.ts               # localStorage profile + history
+  storage.ts               # browser-local working profile + run history
+  career-ledger.ts         # encrypted lifelong evidence ledger + portable recovery
+  agent-service.ts         # shared HTTP/MCP policy, approval, persistence, and audit boundary
 ```
 
 Design decisions worth knowing:
 
-- **No database, no auth.** Deliberate: privacy is a feature and setup is `npm install` + one key. Profile and history persistence is client-side; generation requests still pass through the app server to Anthropic.
+- **No cloud profile by default.** Working profile/history remain client-side and the career ledger is encrypted in IndexedDB. Agent automation has a separate durable server-side store and bearer-token boundary; it is not an internet-ready multi-tenant identity system.
 - **Structured outputs** (`output_config.format` with a strict JSON schema derived from Zod) guarantee a parseable result; the same Zod schema re-validates server-side.
 - **Streaming NDJSON** from the tailor route: live thinking summaries (`thinking: adaptive, display: summarized`), progress ticks, then the final validated result.
 - **Fonts are npm-installed** (Fraunces, Instrument Sans, JetBrains Mono via Fontsource) — builds are hermetic, no network font fetch.
 
-## Roadmap
+## Remaining production boundaries
 
-- Per-change accept/reject in the diff view
-- Multiple named profiles
-- Browser-extension job capture; LinkedIn partner-API import if/when access is granted
-- Side-by-side original vs. tailored view
+- External interoperability and authorized legal/security review for sensitive-work attestations
+- Independent youth-privacy, accessibility, labor-methodology, and security review of the lifelong ledger
+- Public multi-user identity/tenant isolation, deployment rate limiting, monitoring, retention policy, and disaster recovery
+- LinkedIn/Indeed automation remains prohibited without an official approved mechanism
 
 ## License
 
