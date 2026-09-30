@@ -2,20 +2,37 @@
 
 **Evidence-linked AI résumé tailoring. One profile, any job, with unsupported claims surfaced for human review.**
 
-Save your career history once, point it at any job posting (paste the text or just the URL), and get an honestly tailored, ATS-safe resume and cover letter — with a calibrated match score, a full diff of every change, a keyword gap analysis, and exports in DOCX, Markdown, plain text, and print/PDF.
+Save your career history once, point it at any job posting (paste the text or just the URL), and get an honestly tailored, ATS-safe resume and cover letter — with an estimated match score, a full diff of every change, a keyword gap analysis, and exports in DOCX, Markdown, plain text, and print/PDF.
 
 Uses a deployment-configured Anthropic API model with structured outputs and adaptive thinking. Built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
 
-## Why this beats the usual tools
+## September 30, 2026 maintenance review
 
-The 2026 market splits into distrusted black-box scorers, keyword-overlap trackers, template builders whose designs break real ATS parsing, and AI tools that quietly invent skills. Resume Foundry is built around the five things none of them combine:
+Updated to Next.js 16.3.8, the September 30 security release, with compatible
+dependency updates and zero npm audit findings at review time. Generation now
+rejects incomplete provider turns, validates streamed documents before browser
+persistence, enforces response budgets, and cancels upstream work on disconnect.
+The security-team review added DNS connection pinning, OAuth response validation,
+and bounded provider transport. Linux and Windows run the same CI checks.
+
+An optional, offline [Laya requirement-review tool](docs/LAYA_REVIEW.md) suggests
+categories for short public English job excerpts. Its retained 12-case smoke
+benchmark scored 10/12; suggestions require review and never control tailoring,
+evidence validation, or applications.
+
+Review findings and executable acceptance evidence are in
+[the dated review](docs/REVIEW_2026-09-30.md).
+
+## Product principles
+
+Resume Foundry organizes tailoring around evidence, reviewable changes, and simple document exports:
 
 | Principle | What it means here |
 |---|---|
 | **Evidence discipline** | The model is instructed to cite résumé evidence and list unsupported keywords under "Not added — no evidence." Deterministic validation is being expanded; generated content still requires human review. |
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
-| **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
-| **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
+| **Real parse view** | A "What the ATS sees" tab shows the app’s Markdown-to-text export. It is a formatting preview; employer ATS parsing varies and is not simulated here. |
+| **2026-aware scoring** | Model-estimated matching, contextual keywords, and score rationale for human review — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
 | **Local-first privacy** | Your working profile and run history stay browser-local. Long-lived career evidence uses an encrypted IndexedDB vault with portable encrypted backup, recovery drills, selective disclosure, and deletion controls. The app does not create a cloud profile. |
 | **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
 | **Legitimate source connectors** | Import official Greenhouse and Lever public boards, USAJOBS searches, forwarded alerts, CSV/JSON, URLs, or manual text. LinkedIn/Indeed scraping and automated apply remain prohibited. |
@@ -64,7 +81,7 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run mcp` | Launch the stdio MCP tool server |
 
-CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
+CI runs lint, typecheck, tests, build, and a high-severity dependency audit for main/master pushes and pull requests on Linux and Windows. Run `npm run verify` locally for the same checks with all audit severities enforced and machine-readable logs under `.resume-foundry/verification/`.
 
 The labor-market route contracts and deployment boundaries are documented in [`docs/LABOR_MARKET_API.md`](docs/LABOR_MARKET_API.md).
 Production environment profiles, Windows ACL provisioning, startup order, and failure diagnosis are documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).

@@ -2,6 +2,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { canonicalJson } from "./canonical-json.ts";
 import { protectPii } from "./pii.ts";
+import { providerFetch, providerJson } from "./provider-http.ts";
 
 export const SubmissionProviderSchema = z.enum(["greenhouse", "lever", "gmail"]);
 
@@ -316,7 +317,8 @@ export function assertApprovedPacket(preview: SubmissionPreview, packet: Approva
 type Fetcher = typeof fetch;
 async function retryRequest(url: string, init: RequestInit, fetcher: Fetcher, attempts = 3): Promise<Response> {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const response = await fetcher(url, init); if (response.ok) return response;
+    const response = await providerFetch(url, init, fetcher); if (response.ok) return response;
+    await response.body?.cancel("provider retry or rejection").catch(() => undefined);
     if (response.status !== 429 || attempt === attempts - 1) throw new Error(`Submission connector rejected the request (${response.status}).`);
     const delay = Math.min(Number(response.headers.get("retry-after") ?? "1") || 1, 5); await new Promise((resolve) => setTimeout(resolve, delay * 1000));
   }
@@ -326,7 +328,7 @@ async function retryRequest(url: string, init: RequestInit, fetcher: Fetcher, at
 type GreenhouseQuestion = { required?: boolean; fields?: { name?: string; type?: string }[] };
 export async function greenhouseRequiredFields(boardToken: string, jobId: string, fetcher: Fetcher = fetch): Promise<string[]> {
   const response = await retryRequest(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs/${encodeURIComponent(jobId)}?questions=true`, {}, fetcher);
-  const job = await response.json() as { questions?: GreenhouseQuestion[]; location_questions?: GreenhouseQuestion[]; data_compliance?: { requires_consent?: boolean }[] };
+  const job = await providerJson(response) as { questions?: GreenhouseQuestion[]; location_questions?: GreenhouseQuestion[]; data_compliance?: { requires_consent?: boolean }[] };
   const required = [...(job.questions ?? []), ...(job.location_questions ?? [])].filter((question) => question.required).flatMap((question) => question.fields ?? []).map((field) => field.name).filter((name): name is string => Boolean(name));
   if ((job.data_compliance ?? []).some((item) => item.requires_consent)) required.push("data_compliance");
   return [...new Set(["first_name", "last_name", "email", ...required])];
@@ -356,6 +358,7 @@ export async function submitGreenhouse(input: { apiKey: string; receipt: unknown
   validateFields(preview.fields, required);
   const response = await retryRequest(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs/${encodeURIComponent(jobId)}`,
     { method: "POST", headers: { authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}`, "content-type": "application/json" }, body: JSON.stringify(preview.fields) }, fetcher);
+  await response.body?.cancel("submission status consumed").catch(() => undefined);
   return { provider: "greenhouse" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
 }
 
@@ -375,6 +378,7 @@ export async function submitLever(input: { apiKey: string; receipt: unknown; app
     headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}` },
     body: JSON.stringify(preview.fields),
   }, fetcher);
+  await response.body?.cancel("submission status consumed").catch(() => undefined);
   return { provider: "lever" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
 }
 
@@ -383,6 +387,6 @@ export async function createGmailDraft(input: { accessToken: string; receipt: un
   if (preview.target.provider !== "gmail") throw new Error("Approval provider mismatch.");
   const raw = Buffer.from(preview.target.rawMessage, "utf8").toString("base64url");
   const response = await retryRequest("https://gmail.googleapis.com/gmail/v1/users/me/drafts", { method: "POST", headers: { authorization: `Bearer ${input.accessToken}`, "content-type": "application/json" }, body: JSON.stringify({ message: { raw } }) }, fetcher);
-  const body = await response.json() as { id?: string }; if (!body.id) throw new Error("Gmail did not return a draft identifier.");
+  const body = await providerJson(response, 64 * 1024) as { id?: string }; if (typeof body.id !== "string" || !body.id.trim()) throw new Error("Gmail did not return a draft identifier.");
   return { provider: "gmail" as const, draftId: body.id, sent: false, applicationId: preview.applicationId };
 }

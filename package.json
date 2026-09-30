@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
+    "test:browser": "node scripts/verify-browser.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "mcp": "node --experimental-strip-types scripts/mcp-server.ts",
@@ -17,20 +19,21 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
+    "@anthropic-ai/sdk": "^0.129.0",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "docx": "^9.7.1",
-    "next": "^16.2.12",
+    "next": "^16.3.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "undici": "^7.30.0",
     "unpdf": "^1.8.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^16.2.12",
+    "@next/eslint-plugin-next": "^16.3.8",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
@@ -40,17 +43,20 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "26.1.0",
     "jszip": "3.10.1",
-    "postcss": "^8.5.25",
+    "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "<6.1",
     "typescript-eslint": "^8.65.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "private": true,
   "overrides": {
-    "brace-expansion": "^5.0.9",
+    "brace-expansion": "^5.0.12",
     "minimatch": "^10.2.6",
-    "sharp": "^0.35.3",
-    "postcss": "^8.5.25"
+    "sharp": "^0.35.4",
+    "postcss": "^8.5.28"
+  },
+  "engines": {
+    "node": ">=24.17.0 <25"
   }
 }

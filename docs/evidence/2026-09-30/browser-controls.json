@@ -1,0 +1,260 @@
+[
+  {
+    "tag": "INPUT",
+    "id": "candidate-name",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "\ud83c\udf99 Dictate",
+    "aria": "Dictate master resume"
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Upload file",
+    "aria": "Upload resume file (PDF, .txt, or .md)"
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "resume",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "\ud83c\udf99 Dictate",
+    "aria": "Dictate additional career evidence"
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "extra",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "job-url",
+    "text": "",
+    "aria": "Job posting URL"
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Fetch posting",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "\ud83c\udf99 Dictate",
+    "aria": "Dictate job description"
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "job-description",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "job-title",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "job-company",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "SELECT",
+    "id": "tailoring-emphasis",
+    "text": "Emphasis: balancedEmphasis: technical depthEmphasis: leadership",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Clear job",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Save current job",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Import CSV/JSON",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "SELECT",
+    "id": "",
+    "text": "GreenhouseLeverUSAJOBSForwarded alert",
+    "aria": "Job source"
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": "Greenhouse board token"
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Import source",
+    "aria": null
+  },
+  {
+    "tag": "SELECT",
+    "id": "",
+    "text": "Protect automaticallyLet me review firstSend exactly what I entered",
+    "aria": "Personal information protection mode"
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Forge my resume \u2192",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": "Career vault passphrase"
+  },
+  {
+    "tag": "SELECT",
+    "id": "",
+    "text": "Age not specifiedUnder age of majorityAdult",
+    "aria": "Age privacy setting"
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Create encrypted ledger",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Look up O*NET",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Load observations",
+    "aria": null
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "TEXTAREA",
+    "id": "",
+    "text": "[]",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Validate and save path",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "INPUT",
+    "id": "",
+    "text": "",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Prepare immutable packet",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Save point now",
+    "aria": null
+  },
+  {
+    "tag": "BUTTON",
+    "id": "",
+    "text": "Erase all my data",
+    "aria": null
+  }
+]

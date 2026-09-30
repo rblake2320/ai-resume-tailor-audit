@@ -43,13 +43,25 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const client = new Anthropic();
   const encoder = new TextEncoder();
+  const upstream = new AbortController();
+  let closed = false;
+  const abort = () => upstream.abort();
+  req.signal.addEventListener("abort", abort, { once: true });
+  if (req.signal.aborted) abort();
+  const deadline = setTimeout(abort, 180_000);
+  const cleanup = () => {
+    clearTimeout(deadline);
+    req.signal.removeEventListener("abort", abort);
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (event: StreamEvent) =>
-        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      const send = (event: StreamEvent) => {
+        if (!closed && !req.signal.aborted) controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      };
 
       try {
+        upstream.signal.throwIfAborted();
         const msgStream = client.beta.messages.stream({
           model: resolveModel(),
           max_tokens: 64000,
@@ -61,7 +73,7 @@ export async function POST(req: NextRequest): Promise<Response> {
           },
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: buildUserPrompt(parsed) }],
-        }, { signal: req.signal });
+        }, { signal: upstream.signal, maxRetries: 0 });
 
         let chars = 0;
         let lastProgress = 0;
@@ -93,6 +105,8 @@ export async function POST(req: NextRequest): Promise<Response> {
             message:
               "The model declined this request. Remove any sensitive content from the inputs and try again.",
           });
+        } else if (final.stop_reason !== "end_turn") {
+          send({ type: "error", message: "The model stopped before completing the draft. No partial draft was returned. Try shorter inputs or retry when ready." });
         } else {
           const text = final.content
             .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
@@ -111,15 +125,22 @@ export async function POST(req: NextRequest): Promise<Response> {
           send({ type: "error", message: describeError(err) });
         }
       } finally {
-        controller.close();
+        cleanup();
+        if (!closed) { closed = true; controller.close(); }
       }
+    },
+    cancel() {
+      closed = true;
+      upstream.abort();
+      cleanup();
     },
   });
 
   return new Response(stream, {
     headers: {
       "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
+      "X-Accel-Buffering": "no",
     },
   });
 }
@@ -138,7 +159,7 @@ function describeError(err: unknown): string {
     return "Could not reach the Claude API. Check your network connection.";
   }
   if (err instanceof Anthropic.APIError) {
-    return `Claude API error (${err.status ?? "unknown"}): ${err.message}`;
+    return `Claude API error (${err.status ?? "unknown"}). Try again or ask the operator to check the provider configuration.`;
   }
   if (err instanceof z.ZodError || err instanceof SyntaxError) {
     return "The model returned an unexpected response shape. Try again.";

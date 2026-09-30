@@ -1,5 +1,6 @@
 import type { JobImportInput } from "./job-inbox";
 import { defaultSourcePermissions } from "./job-inbox";
+import { providerFetch, providerJson } from "./provider-http.ts";
 
 type Fetcher = typeof fetch;
 const TOKEN = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -14,8 +15,9 @@ function remote(value: string): "remote" | "hybrid" | "onsite" | "unspecified" {
 
 async function fetchJson(url: string, init: RequestInit, fetcher: Fetcher, attempts = 3): Promise<unknown> {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const response = await fetcher(url, init);
-    if (response.ok) return response.json();
+    const response = await providerFetch(url, init, fetcher);
+    if (response.ok) return providerJson(response);
+    await response.body?.cancel("provider retry or rejection").catch(() => undefined);
     if (![429, 502, 503, 504].includes(response.status) || attempt === attempts - 1) throw new Error(`Connector request failed (${response.status}).`);
     const retryAfter = Math.min(Number(response.headers.get("retry-after") ?? "0") || 0.05, 2);
     await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { scanResume } from "@/lib/ats";
 import { protectPii, restorePii, type PiiMatch, type PrivacyMode } from "@/lib/pii";
 import type { TailorResult } from "@/lib/schema";
+import { readTailorStream } from "@/lib/tailor-stream";
 import {
   addHistory,
   addSavePoint,
@@ -287,55 +288,15 @@ export default function Home() {
         throw new Error(data?.error ?? `Request failed (${res.status}).`);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finished = false;
-
-      while (!finished) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const event = JSON.parse(line) as
-            | { type: "thinking"; text: string }
-            | { type: "progress"; chars: number }
-            | { type: "result"; data: TailorResult }
-            | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED"; validation?: {
-              sourceCitationMismatch: number;
-              outputReferenceMismatch: number;
-              addedKeywordMismatch: number;
-            } };
-          if (generationId !== activeGenerationRef.current) return;
-          if (event.type === "thinking") setThinking((t) => t + event.text);
-          else if (event.type === "progress") setProgressChars(event.chars);
-          else if (event.type === "error") {
-            if (event.reasonCode === "EVIDENCE_VALIDATION_FAILED") {
-              const blockedReferences = event.validation
-                ? event.validation.sourceCitationMismatch
-                : 0;
-              const detail = blockedReferences > 0
-                ? ` ${blockedReferences} source citation${blockedReferences === 1 ? "" : "s"} could not be verified.`
-                : "";
-              throw new Error(`${event.message}${detail}`);
-            }
-            throw new Error(event.message);
-          }
-          else if (event.type === "result") {
-            const restoredResult = restorePii(event.data, restorationMap);
-            setResult(restoredResult);
-            try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
-            catch (failure) { reportPersistenceFailure(failure); }
-            setPhase("done");
-            finished = true;
-          }
-        }
-      }
-      if (!finished) throw new Error("The stream ended unexpectedly. Try again.");
+      const generated = await readTailorStream(res.body, (chars) => {
+        if (generationId === activeGenerationRef.current) setProgressChars(chars);
+      });
       if (generationId !== activeGenerationRef.current) return;
+      const restoredResult = restorePii(generated, restorationMap);
+      setResult(restoredResult);
+      try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
+      catch (failure) { reportPersistenceFailure(failure); }
+      setPhase("done");
       setTimeout(() => {
         if (generationId === activeGenerationRef.current) {
           resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -830,8 +791,8 @@ export default function Home() {
         )}
 
         {phase === "error" && (
-          <div className="rounded-xl border border-bad/40 bg-bad/10 p-4 text-sm text-bad">
-            {error}
+          <div role="alert" className="rounded-xl border border-bad/40 bg-bad/10 p-4 text-sm text-bad">
+            <p>{error}</p>
             <div className="mt-3"><ToolButton onClick={() => void forge()}>Retry generation</ToolButton></div>
           </div>
         )}
