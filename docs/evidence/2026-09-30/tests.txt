@@ -6,8 +6,8 @@
  RUN  v4.1.11 C:/Users/techai/ai-resume-tailor-review-20260930
 
 
- Test Files  54 passed (54)
-      Tests  554 passed (554)
-   Start at  13:49:31
-   Duration  17.26s (transform 3.69s, setup 0ms, import 9.41s, tests 37.68s, environment 1.78s)
+ Test Files  55 passed (55)
+      Tests  555 passed (555)
+   Start at  14:07:40
+   Duration  15.44s (transform 1.72s, setup 0ms, import 7.33s, tests 39.98s, environment 1.51s)
 

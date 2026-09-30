@@ -4,8 +4,8 @@
 
 Windows sensitive-storage ACL check passed (1 paths).
 ▲ Next.js 16.3.8
-- Local:         http://127.0.0.1:62921
-- Network:       http://127.0.0.1:62921
-✓ Ready in 110ms
-✓ Running next.config.ts took 29ms
-{"observedAt": "2026-09-30T18:51:38.087938+00:00", "server": "npm start production build", "generation": "synthetic intercepted NDJSON; no live Anthropic call", "checks": [{"scenario": "layout-240px", "status": "Worked"}, {"scenario": "layout-390px", "status": "Worked"}, {"scenario": "layout-1280px", "status": "Worked"}, {"scenario": "real-server-private-url-refused", "status": "Worked", "httpStatus": 400}, {"scenario": "real-server-capabilities", "status": "Worked"}, {"scenario": "synthetic-malformed-result-withheld", "status": "Worked"}, {"scenario": "synthetic-result-no-newline-tabs-edit-print", "status": "Worked"}, {"scenario": "browser-no-uncaught-errors", "status": "Worked"}]}
+- Local:         http://127.0.0.1:56737
+- Network:       http://127.0.0.1:56737
+✓ Ready in 108ms
+✓ Running next.config.ts took 26ms
+{"observedAt": "2026-09-30T19:09:42.221749+00:00", "server": "npm start production build", "generation": "synthetic intercepted NDJSON; no live Anthropic call", "checks": [{"scenario": "layout-240px", "status": "Worked"}, {"scenario": "layout-390px", "status": "Worked"}, {"scenario": "layout-1280px", "status": "Worked"}, {"scenario": "real-server-private-url-refused", "status": "Worked", "httpStatus": 400}, {"scenario": "real-server-capabilities", "status": "Worked"}, {"scenario": "synthetic-malformed-result-withheld", "status": "Worked"}, {"scenario": "synthetic-result-no-newline-tabs-edit-print", "status": "Worked"}, {"scenario": "browser-no-uncaught-errors", "status": "Worked"}]}

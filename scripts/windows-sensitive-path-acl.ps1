@@ -121,9 +121,18 @@ function Get-SecurityResult([string]$LiteralPath, [string]$ItemKind, [bool]$Requ
       if (-not $hasUsableFullControl) { $sid }
     }
   )
+  # The configured root/file remains owned by the service identity. Children
+  # created by an elevated process can default to Administrators ownership;
+  # these three identities already require effective FullControl (including
+  # WRITE_DAC and WRITE_OWNER). No additional owner/principal is trusted.
+  $ownerAllowed = if ($RequireProtected) {
+    $ownerSid -eq $currentSid.Value
+  } else {
+    $requiredSids -contains $ownerSid
+  }
   $secure =
     ((-not $RequireProtected) -or $acl.AreAccessRulesProtected) -and
-    $ownerSid -eq $currentSid.Value -and
+    $ownerAllowed -and
     $unexpectedAllowSids.Count -eq 0 -and
     $denyRuleCount -eq 0 -and
     $missingFullControlSids.Count -eq 0

@@ -39,3 +39,13 @@ Owner of this engineering review: independent security-review agent, operating i
 The initial Undici 8.11.2 candidate passed injected tests but **Failed** native transport because its dispatcher handler contract differed from Node 24 built-in fetch (`invalid onRequestStart method`). The compatible latest 7.x dependency, `undici ^7.30.0`, passed the same real transport scenario. This is why the compatibility decision follows executed transport evidence rather than the highest major version. Official dispatcher documentation: https://undici.nodejs.org/api/Dispatcher.
 
 All tests use injected/synthetic hosts and local fixtures. No externally controlled DNS server or public destination was attacked. This proves the implemented connection pinning and local lifecycle behavior, with hostname retention observed directly; TLS SNI follows the unchanged request hostname rather than an IP-rewritten URL.
+
+## Windows hosted-runner ownership correction
+
+Hosted Windows CI exposed a freshly created inherited child whose owner was Administrators despite an otherwise correct service/System/Administrators-only DACL (`windows-ci-inherited-child.txt`). Microsoft's object-ownership documentation explains that a new object's owner derives from the creator's token: https://learn.microsoft.com/en-us/windows/win32/secauthz/owner-of-a-new-object.
+
+**Failed before correction:** executed the committed pre-fix PowerShell security function against the same nine Windows security descriptors as the new regression; Administrators- and System-owned descendants were rejected. Evidence: `windows-acl-owner-policy-red.txt`.
+
+**Worked after correction:** 18/18 new and existing Windows ACL tests on this machine. The new test executes the shipped PowerShell `Get-SecurityResult` against nine real in-memory Windows security descriptors without elevation. It accepts descendants owned by the existing full-control identities (service, System, Administrators); configured roots/files still require exact service ownership and protected inheritance. It rejects a foreign Users owner, an extra allowed principal, a deny ACE and missing required full control. Existing native filesystem ACL, junction and deny-rule tests also pass. Evidence: `windows-acl-owner-policy-green.txt`.
+
+Security rationale: owner authority to alter DACLs adds no new access for these descendant owners because every accepted identity already has required effective FullControl, including WRITE_DAC and WRITE_OWNER. This change trusts no additional identity, weakens no root/configured-file condition and skips no hosted Windows test. The hosted CI rerun is owned by the parent implementation agent and remains separately recorded.
