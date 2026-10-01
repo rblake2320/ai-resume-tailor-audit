@@ -23,6 +23,13 @@ evidence validation, or applications.
 Review findings and executable acceptance evidence are in
 [the dated review](docs/REVIEW_2026-09-30.md).
 
+The follow-up connects selected vault evidence to tailoring, reviewed application
+snapshots to the audited agent service, explicit Google alert import/draft/calendar
+actions, and the browser to exact official-submission previews. Approved reminders
+can be downloaded as calendar events with display alarms. See
+[integration acceptance](docs/INTEGRATION_COMPLETION_2026-09-30.md) for executed
+outcomes and the live-account requirements.
+
 ## Product principles
 
 Resume Foundry organizes tailoring around evidence, reviewable changes, and simple document exports:
@@ -33,7 +40,7 @@ Resume Foundry organizes tailoring around evidence, reviewable changes, and simp
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
 | **Real parse view** | A "What the ATS sees" tab shows the app’s Markdown-to-text export. It is a formatting preview; employer ATS parsing varies and is not simulated here. |
 | **2026-aware scoring** | Model-estimated matching, contextual keywords, and score rationale for human review — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
-| **Local-first privacy** | Your working profile and run history stay browser-local. Long-lived career evidence uses an encrypted IndexedDB vault with portable encrypted backup, recovery drills, selective disclosure, and deletion controls. The app does not create a cloud profile. |
+| **Local-first privacy** | Your working profile and run history stay browser-local by default. Career evidence uses an encrypted IndexedDB vault with encrypted backup, selected disclosure, and deletion controls. Explicit agent-workspace publishing copies reviewed application packets to your configured server; credentials remain session-only. |
 | **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
 | **Legitimate source connectors** | Import official Greenhouse and Lever public boards, USAJOBS searches, forwarded alerts, CSV/JSON, URLs, or manual text. LinkedIn/Indeed scraping and automated apply remain prohibited. |
 
@@ -52,8 +59,16 @@ Resume Foundry organizes tailoring around evidence, reviewable changes, and simp
 - **Career-path evidence workspace** — server-side O*NET lookup, explicitly labeled BLS observational-series lookup, current occupational-projection snapshot import, provenance-preserving trend classification, and training suggestions limited to explicit evidence gaps. O*NET requires deployment credentials; projection imports remain user/operator supplied until an authoritative projections connector is added.
 - **Application operating system** — job inbox, immutable application packets, pipeline tracking, reminders, interview preparation, approved handoffs, official ATS connectors, and Gmail draft creation.
 - **Agent interfaces** — bearer-authenticated HTTP/OpenAPI operations and a stdio MCP server share one permission, approval, rate-limit, persistence, and audit boundary.
+- **Reviewed workspace bridge** — explicitly publish local application packets or restore a reviewed server snapshot; stale revisions stop replacement. PII consent is required to read and human approval is required to publish. The full encrypted vault is never synchronized.
+- **Google receiving workflows** — explicitly fetch matching alerts and review them before importing; review and approve unsent drafts and private calendar events with popup reminders. Provider read-back must match the approved action before a verified receipt is shown. [Setup](docs/GOOGLE_CONNECTIONS.md).
+- **Reminder calendar export** — download an approved reminder as an RFC 5545 event with a display alarm, then import it into your calendar. The app does not claim background notification delivery from browser-local state.
 
 ## Quick start
+
+After installing, building and adding this app's provider key to `.env.local`,
+run `npm run start:local` for the private workshop at `http://localhost:3100`.
+It provisions its own guarded storage and session credentials; optional Google
+and employer accounts still require their own explicit setup.
 
 ```bash
 git clone https://github.com/rblake2320/ai-resume-tailor-audit.git

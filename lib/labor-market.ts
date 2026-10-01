@@ -78,7 +78,7 @@ export const BlsObservationSeriesSchema = z.strictObject({
   observations: z.array(z.strictObject({
     year: z.number().int().min(1900).max(2200),
     period: z.string().regex(/^[A-Z]\d{2}$/u),
-    value: z.number().finite(),
+    value: z.number().finite().nullable(),
     footnotes: z.array(z.unknown()).max(100),
   })).min(1).max(5_000),
 });
@@ -147,7 +147,9 @@ function latestPeriod(observations: readonly { year: number; period: string }[])
 const BlsProviderRowSchema = z.object({
   year: z.string().regex(/^\d{4}$/u),
   period: z.string().regex(/^[A-Z]\d{2}$/u),
-  value: z.string().refine((value) => Number.isFinite(Number(value)), "BLS value is not finite."),
+  // BLS uses a dash for missing observations (including October 2025 CPS).
+  // Preserve the gap; never coerce it or an empty string to zero.
+  value: z.string().trim().refine((value) => value === "-" || /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/u.test(value) && Number.isFinite(Number(value)), "BLS value is not numeric or the official missing-value marker."),
   footnotes: z.array(z.unknown()).max(100).optional().default([]),
 });
 const BlsProviderResponseSchema = z.object({
@@ -198,7 +200,7 @@ export async function fetchBlsSeries(
     const observations = series.data.map((row) => ({
       year: Number(row.year),
       period: row.period,
-      value: Number(row.value),
+      value: row.value === "-" ? null : Number(row.value),
       footnotes: row.footnotes,
     }));
     return BlsObservationSeriesSchema.parse({

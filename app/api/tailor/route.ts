@@ -5,7 +5,7 @@ import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
 import { assertTailorResultEvidence, HonestyValidationError, reconcileTailorResultOutputReferences, summarizeHonestyViolations, TailorRequestSchema, TailorResultSchema, tailorResultJsonSchema } from "@/lib/schema";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
-import { resolveModel } from "@/lib/anthropic-model";
+import { resolveModel, resolveOutputBudget } from "@/lib/anthropic-model";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         upstream.signal.throwIfAborted();
         const msgStream = client.beta.messages.stream({
           model: resolveModel(),
-          max_tokens: 64000,
+          max_tokens: resolveOutputBudget(),
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
           thinking: { type: "adaptive", display: "summarized" },

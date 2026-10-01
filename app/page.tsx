@@ -28,6 +28,7 @@ import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { CareerLedger } from "@/components/CareerLedger";
 import { CareerPathPlanner } from "@/components/CareerPathPlanner";
 import { Connections } from "@/components/Connections";
+import { AgentWorkspace } from "@/components/AgentWorkspace";
 import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
 import { SiteNav } from "@/components/SiteNav";
 
@@ -57,6 +58,7 @@ export default function Home() {
   const [candidateName, setCandidateName] = useState(() => loadProfile()?.candidateName ?? "");
   const [resume, setResume] = useState(() => loadProfile()?.resume ?? "");
   const [extraInfo, setExtraInfo] = useState(() => loadProfile()?.extraInfo ?? "");
+  const [careerEvidence, setCareerEvidence] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState<{ candidateName: string; resume: string; extraInfo: string } | null>(
     null,
   );
@@ -245,8 +247,9 @@ export default function Home() {
   }, [jobUrl, jobTitle, invalidateResult]);
 
   const forge = useCallback(async (privacyOverride?: "protected" | "exact") => {
-    const fullResume = extraInfo.trim()
-      ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${extraInfo}`
+    const approvedBackground = [extraInfo.trim(), careerEvidence].filter(Boolean).join("\n\n");
+    const fullResume = approvedBackground
+      ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${approvedBackground}`
       : resume;
     const protectedResume = protectPii(fullResume, { candidateNames: candidateName ? [candidateName] : [] });
     if (privacyMode === "review" && !privacyOverride && protectedResume.matches.length > 0) {
@@ -317,7 +320,7 @@ export default function Home() {
       window.clearTimeout(timeout);
       if (generationId === activeGenerationRef.current) generationAbortRef.current = null;
     }
-  }, [candidateName, resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, careerEvidence, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
 
   const cancelGeneration = useCallback(() => {
     const controller = generationAbortRef.current;
@@ -810,16 +813,18 @@ export default function Home() {
           )}
         </div>
 
-        <CareerLedger />
+        <CareerLedger onDisclosure={(evidence) => { setCareerEvidence(evidence); invalidateResult(); }} />
+        {careerEvidence && <p role="status" className="text-xs text-brass-300">Selected career evidence is approved for tailoring in this session. It is not saved to your master profile.</p>}
         <CareerPathPlanner />
 
         <SensitiveAttestationBoundary />
 
         <Connections />
+        <AgentWorkspace />
 
         <ApplicationTracker
           result={result}
-          profile={{ resume, extraInfo }}
+          profile={{ resume, extraInfo: [extraInfo, careerEvidence].filter(Boolean).join("\n\n") }}
           job={{ company, title: jobTitle, description: jobText, applicationUrl: jobUrl }}
         />
 
@@ -887,7 +892,7 @@ export default function Home() {
                     try { await clearAllData(); }
                     catch (failure) { reportPersistenceFailure(failure); }
                     finally {
-                      setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo("");
+                      setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo(""); setCareerEvidence("");
                       setJobText(""); setJobUrl(""); setJobTitle(""); setCompany(""); setEmphasis("balanced");
                       setPrivacyMode("protect"); setPendingPii([]); setResult(null); setPhase("idle");
                       setThinking(""); setProgressChars(0); setError("");
@@ -945,8 +950,8 @@ export default function Home() {
       <footer className="mt-16 border-t border-ink-700 pt-6 text-center font-mono text-[11px] leading-relaxed text-ink-400">
         Honest tailoring only — nothing is invented, and keywords the model can’t evidence are listed, not faked.
         <br />
-        Your profile and history live in this browser’s localStorage. This app does not write a
-        server-side copy.
+        Your profile and history stay in this browser by default. Publishing through the agent
+        bridge explicitly copies the reviewed packets to your configured server.
       </footer>
     </div>
   );

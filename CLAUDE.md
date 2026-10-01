@@ -44,6 +44,6 @@ Requires `ANTHROPIC_API_KEY` in `.env.local` (see `.env.example`) for the tailor
 
 ## September 30, 2026 verification
 
-Run `npm run verify` for lint, typecheck, 555 tests, production build, and a zero-finding audit.
+Run `npm run verify` for lint, typecheck, the full test suite, production build, and a zero-finding audit.
 Production-browser acceptance uses `python scripts/browser-acceptance.py` against a loopback `npm start` server; generation faults are synthetic NDJSON, explicitly labeled.
 The optional Python Laya CLI is offline and advisory; see `docs/LAYA_REVIEW.md`. It never participates in evidence validation or application authorization.

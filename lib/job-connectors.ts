@@ -1,6 +1,7 @@
 import type { JobImportInput } from "./job-inbox";
 import { defaultSourcePermissions } from "./job-inbox";
 import { providerFetch, providerJson } from "./provider-http.ts";
+import { z } from "zod";
 
 type Fetcher = typeof fetch;
 const TOKEN = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -13,10 +14,10 @@ function plain(html: unknown): string {
 function iso(value: unknown): string | null { const candidate = text(value); if (!candidate) return null; const date = new Date(candidate); return Number.isNaN(date.getTime()) ? null : date.toISOString(); }
 function remote(value: string): "remote" | "hybrid" | "onsite" | "unspecified" { const n = value.toLowerCase(); return n.includes("remote") ? "remote" : n.includes("hybrid") ? "hybrid" : n.includes("on-site") || n.includes("onsite") ? "onsite" : "unspecified"; }
 
-async function fetchJson(url: string, init: RequestInit, fetcher: Fetcher, attempts = 3): Promise<unknown> {
+async function fetchJson(url: string, init: RequestInit, fetcher: Fetcher, attempts = 3, maxBytes = 8 * 1024 * 1024): Promise<unknown> {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const response = await providerFetch(url, init, fetcher);
-    if (response.ok) return providerJson(response);
+    if (response.ok) return providerJson(response, maxBytes);
     await response.body?.cancel("provider retry or rejection").catch(() => undefined);
     if (![429, 502, 503, 504].includes(response.status) || attempt === attempts - 1) throw new Error(`Connector request failed (${response.status}).`);
     const retryAfter = Math.min(Number(response.headers.get("retry-after") ?? "0") || 0.05, 2);
@@ -25,13 +26,35 @@ async function fetchJson(url: string, init: RequestInit, fetcher: Fetcher, attem
   throw new Error("Connector retry budget exhausted.");
 }
 
-export async function fetchGreenhouse(boardToken: string, fetcher: Fetcher = fetch): Promise<JobImportInput[]> {
+export async function fetchGreenhousePage(boardToken: string, options: { offset?: number; pageSize?: number; fetcher?: Fetcher } = {}) {
   if (!TOKEN.test(boardToken)) throw new Error("Invalid Greenhouse board token.");
-  const payload = await fetchJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs?content=true`, {}, fetcher) as { jobs?: Record<string, unknown>[] };
-  return (payload.jobs ?? []).map((job) => {
+  const { offset, pageSize } = z.object({ offset: z.number().int().min(0).max(10_000).default(0), pageSize: z.number().int().min(1).max(20).default(20) }).parse(options);
+  const fetcher = options.fetcher ?? fetch;
+  const base = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs`;
+  // Large boards can exceed the description response budget. Read compact
+  // metadata once, then hydrate a bounded, user-requested page with four workers.
+  const payload = z.object({ jobs: z.array(z.object({ id: z.union([z.number().int().nonnegative(), z.string().regex(/^\d{1,20}$/u)]) }).passthrough()).max(10_000) }).parse(await fetchJson(`${base}?content=false`, {}, fetcher));
+  const selected = payload.jobs.slice(offset, offset + pageSize);
+  const detailed: Record<string, unknown>[] = new Array(selected.length);
+  let cursor = 0;
+  const hydrate = async () => {
+    while (cursor < selected.length) {
+      const index = cursor++; const item = selected[index];
+      const detail = typeof item.content === "string" ? item : z.object({ id: z.union([z.string(), z.number()]), content: z.string().min(1) }).passthrough().parse(await fetchJson(`${base}/${encodeURIComponent(String(item.id))}`, {}, fetcher, 1, 1024 * 1024));
+      if (String(detail.id) !== String(item.id)) throw new Error("Greenhouse returned a different job identifier.");
+      detailed[index] = detail;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, selected.length) }, () => hydrate()));
+  const jobs: JobImportInput[] = detailed.map((job) => {
     const location = text((job.location as Record<string, unknown> | undefined)?.name);
     return { source: "greenhouse", sourceId: String(job.id ?? ""), permissions: defaultSourcePermissions("greenhouse"), company: boardToken, title: text(job.title) || "Untitled role", location, remoteStatus: remote(location), description: plain(job.content), applicationUrl: text(job.absolute_url), postedAt: iso(job.updated_at) };
   });
+  return { jobs, total: payload.jobs.length, nextOffset: offset + selected.length < payload.jobs.length ? offset + selected.length : null };
+}
+
+export async function fetchGreenhouse(boardToken: string, fetcher: Fetcher = fetch): Promise<JobImportInput[]> {
+  return (await fetchGreenhousePage(boardToken, { fetcher })).jobs;
 }
 
 export async function fetchLever(site: string, options: { maxPages?: number; pageSize?: number; fetcher?: Fetcher } = {}): Promise<JobImportInput[]> {

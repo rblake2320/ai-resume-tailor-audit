@@ -1,5 +1,12 @@
 export const DEFAULT_MODEL = "claude-opus-5";
 
+/** Deployment budget; never overridable by a browser request. */
+export function resolveOutputBudget(env: Record<string, string | undefined> = process.env): number {
+  const budget = env.RESUME_FOUNDRY_MAX_OUTPUT_TOKENS === undefined ? 16_000 : Number(env.RESUME_FOUNDRY_MAX_OUTPUT_TOKENS);
+  if (!Number.isInteger(budget) || budget < 1_024 || budget > 64_000) throw new Error("RESUME_FOUNDRY_MAX_OUTPUT_TOKENS must be an integer from 1024 through 64000.");
+  return budget;
+}
+
 /**
  * Resolves the Anthropic model id for the tailoring route.
  *

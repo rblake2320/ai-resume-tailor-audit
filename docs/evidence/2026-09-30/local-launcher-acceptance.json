@@ -1,0 +1,111 @@
+{
+  "checks": [
+    {
+      "scenario": "local-launcher-route/",
+      "status": "Worked",
+      "httpStatus": 200
+    },
+    {
+      "scenario": "local-launcher-route/how-it-works",
+      "status": "Worked",
+      "httpStatus": 200
+    },
+    {
+      "scenario": "local-launcher-route/about",
+      "status": "Worked",
+      "httpStatus": 200
+    },
+    {
+      "scenario": "local-launcher-route/api/capabilities",
+      "status": "Worked",
+      "httpStatus": 200
+    },
+    {
+      "scenario": "actual-local-launcher-authenticated-agent-workspace",
+      "status": "Worked",
+      "records": 0
+    },
+    {
+      "scenario": "live-public-Greenhouse-read-only-import",
+      "status": "Failed",
+      "httpStatus": 502,
+      "error": "Remote response is too large.",
+      "employerWrites": 0
+    },
+    {
+      "scenario": "live-public-Lever-read-only-import",
+      "status": "Worked",
+      "httpStatus": 200,
+      "count": 100,
+      "site": "palantir",
+      "maxPages": 1,
+      "employerWrites": 0
+    },
+    {
+      "scenario": "live-public-Greenhouse-paginated-import",
+      "status": "Worked",
+      "httpStatus": 200,
+      "count": 20,
+      "board": "anthropic",
+      "offset": 0,
+      "nextOffset": 20,
+      "total": 636,
+      "sourceIds": [
+        "4461450008",
+        "5391376008",
+        "5391381008",
+        "5400138008",
+        "5391313008",
+        "5205545008",
+        "5398438008",
+        "5382750008",
+        "5391151008",
+        "5183044008",
+        "5183051008",
+        "5183053008",
+        "5427309008",
+        "5358148008",
+        "5424310008",
+        "5076109008",
+        "5390735008",
+        "5117589008",
+        "5390746008",
+        "5192805008"
+      ],
+      "employerWrites": 0
+    },
+    {
+      "scenario": "live-public-Greenhouse-paginated-import",
+      "status": "Worked",
+      "httpStatus": 200,
+      "count": 20,
+      "board": "anthropic",
+      "offset": 20,
+      "nextOffset": 40,
+      "total": 636,
+      "sourceIds": [
+        "5387733008",
+        "5278230008",
+        "5226862008",
+        "5383335008",
+        "4461444008",
+        "5390765008",
+        "5390778008",
+        "5390770008",
+        "5439830008",
+        "5390902008",
+        "5390750008",
+        "5390787008",
+        "5426933008",
+        "5300430008",
+        "5382518008",
+        "5432554008",
+        "5439499008",
+        "5406982008",
+        "5432573008",
+        "5409008008"
+      ],
+      "employerWrites": 0
+    }
+  ]
+}

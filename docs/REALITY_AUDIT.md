@@ -1,5 +1,8 @@
 # Resume Foundry wiring audit — September 30, 2026 (America/Chicago)
 
+Historical findings at `d72e056`. The subsequently implemented connections and
+their executed acceptance are recorded in [integration completion](INTEGRATION_COMPLETION_2026-09-30.md).
+
 Verdict: useful tested components, with incomplete product integration. The
 earlier enhancement checks are not an assertion that every advertised workflow
 is connected or that this product covers every market pain point.

@@ -14,8 +14,10 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
 
   useEffect(() => {
     const cleared = () => { setJobs([]); setMessage("Job Inbox erased from this browser."); };
+    const imported = () => { setJobs(loadJobInbox()); setMessage("Imported Google job alert added to Job Inbox."); };
     window.addEventListener("resume-foundry:data-cleared", cleared);
-    return () => window.removeEventListener("resume-foundry:data-cleared", cleared);
+    window.addEventListener("resume-foundry:jobs-imported", imported);
+    return () => { window.removeEventListener("resume-foundry:data-cleared", cleared); window.removeEventListener("resume-foundry:jobs-imported", imported); };
   }, []);
 
   async function addInputs(inputs: JobImportInput[]) {

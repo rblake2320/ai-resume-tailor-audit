@@ -362,24 +362,113 @@ export async function submitGreenhouse(input: { apiKey: string; receipt: unknown
   return { provider: "greenhouse" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
 }
 
+const LeverQuestionSchema = z.object({
+  name: z.string().min(1).optional(), id: z.string().min(1).optional(),
+  type: z.string().min(1), required: z.boolean(),
+  options: z.array(z.object({ text: z.string(), optionId: z.string().optional() })).optional(),
+});
+const LeverFormSchema = z.object({ data: z.object({
+  personalInformation: z.array(LeverQuestionSchema.extend({ name: z.string().min(1) })).min(2).max(100),
+  customQuestions: z.array(z.object({ id: z.string().min(1), fields: z.array(LeverQuestionSchema).max(100) })).max(100).default([]),
+  urls: z.array(LeverQuestionSchema.extend({ name: z.string().min(1) })).max(100).default([]),
+  eeoQuestions: z.record(z.string(), LeverQuestionSchema).default({}),
+}) });
+type LeverQuestion = z.infer<typeof LeverQuestionSchema>;
+
+function leverAnswer(question: LeverQuestion, value: unknown, label: string): unknown {
+  const empty = value === undefined || value === null || (typeof value === "string" && !value.trim()) || (Array.isArray(value) && !value.length);
+  if (empty) {
+    if (question.required) throw new Error(`Required Lever submission field is missing: ${label}.`);
+    return question.type === "multiple-select" ? [] : null;
+  }
+  if (question.type === "multiple-select") {
+    if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) throw new Error(`Lever ${label} must be an array of selected options.`);
+  } else if (!["text", "textarea", "dropdown", "multiple-choice", "file-upload"].includes(question.type) || typeof value !== "string") {
+    throw new Error(`Unsupported or invalid Lever field type for ${label}: ${question.type}.`);
+  }
+  if (["dropdown", "multiple-choice", "multiple-select"].includes(question.type)) {
+    const allowed = new Set((question.options ?? []).map((option) => option.optionId ?? option.text));
+    const selected = Array.isArray(value) ? value : [value];
+    if (selected.some((entry) => !allowed.has(String(entry)))) throw new Error(`Lever ${label} contains an invalid option.`);
+  }
+  return value;
+}
+
+async function leverRequest(url: string, init: RequestInit, fetcher: Fetcher): Promise<Response> {
+  // Upload/apply requests are non-idempotent: never automatically replay them.
+  // The attempt ledger and a new human-approved retry handle uncertainty.
+  const response = await providerFetch(url, init, fetcher);
+  if (!response.ok) {
+    await response.body?.cancel("Lever request rejected").catch(() => undefined);
+    throw new Error(`Lever submission connector rejected the request (${response.status}).`);
+  }
+  return response;
+}
+
 export async function submitLever(input: { apiKey: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {
   const preview = verifySubmissionApproval(input.receipt, input.approvalSecret);
   if (preview.target.provider !== "lever") throw new Error("Approval provider mismatch.");
   const { postingId, requiredFields } = preview.target;
   validateFields(preview.fields, [...new Set(["name", "email", ...requiredFields])]);
-  // The key stays in a header: a query-string credential lands in provider
-  // access logs, proxy logs, and any telemetry that records request URLs.
-  // Lever's authenticated Opportunities API uses the v1 apply endpoint. The
-  // public v0 postings URL (which includes the site token) is an import API,
-  // not the employer-authorized submission contract.
   const url = `https://api.lever.co/v1/postings/${encodeURIComponent(postingId)}/apply`;
-  const response = await retryRequest(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}` },
-    body: JSON.stringify(preview.fields),
-  }, fetcher);
-  await response.body?.cancel("submission status consumed").catch(() => undefined);
-  return { provider: "lever" as const, accepted: true, status: response.status, applicationId: preview.applicationId };
+  const authorization = `Basic ${Buffer.from(`${input.apiKey}:`).toString("base64")}`;
+  const formResponse = await leverRequest(url, { headers: { authorization } }, fetcher);
+  const parsed = LeverFormSchema.safeParse(await providerJson(formResponse, 1024 * 1024));
+  if (!parsed.success) throw new Error("Lever returned an invalid application form schema.");
+  const form = parsed.data.data;
+  if (!["fullName", "email"].every((name) => form.personalInformation.some((question) => question.name === name))) throw new Error("Lever application form is missing its identity fields.");
+  const fields = preview.fields;
+  const resume = fields.resume_text;
+  if (typeof resume !== "string" || !resume.trim()) throw new Error("Lever requires the exact approved resume_text for upload.");
+  if (fields.fullName !== undefined && fields.fullName !== fields.name) throw new Error("Lever fullName disagrees with the approved name.");
+  if (fields.additionalInformation !== undefined && fields.cover_letter_text !== undefined && fields.additionalInformation !== fields.cover_letter_text) throw new Error("Lever additionalInformation disagrees with the approved cover letter.");
+  const allowed = new Set(["first_name", "last_name", "name", "fullName", "email", "resume_text", "cover_letter_text", "customQuestions", "urls", "eeoResponses", ...form.personalInformation.map((question) => question.name)]);
+  for (const name of Object.keys(fields)) if (!allowed.has(name)) throw new Error(`Unsupported Lever submission field: ${name}.`);
+  const names = form.personalInformation.map((question) => question.name);
+  if (new Set(names).size !== names.length || !names.includes("resume")) throw new Error("Lever form has duplicate fields or does not support a resume upload.");
+  if (fields.resume !== undefined) throw new Error("Lever resume must come from approved resume_text, not a supplied URI.");
+  if (fields.cover_letter_text && !names.includes("additionalInformation")) throw new Error("Lever form does not support the approved cover letter as additional information.");
+  if (new Set(form.customQuestions.map((set) => set.id)).size !== form.customQuestions.length || new Set(form.urls.map((question) => question.name)).size !== form.urls.length) throw new Error("Lever form contains duplicate question identifiers.");
+  const personalInformation = form.personalInformation.map((question) => {
+    const value = question.name === "fullName" ? fields.name
+      : question.name === "resume" ? resume
+      : question.name === "additionalInformation" ? (fields.cover_letter_text ?? fields.additionalInformation)
+      : fields[question.name];
+    if (question.type === "file-upload" && question.name !== "resume" && value != null) throw new Error(`Unsupported Lever file upload: ${question.name}.`);
+    return { name: question.name, value: leverAnswer(question, value, question.name) };
+  });
+  const suppliedCustom = z.array(z.strictObject({ id: z.string(), fields: z.array(z.strictObject({ value: z.unknown() })) })).parse(fields.customQuestions ?? []);
+  if (new Set(suppliedCustom.map((set) => set.id)).size !== suppliedCustom.length || suppliedCustom.some((set) => !form.customQuestions.some((question) => question.id === set.id))) throw new Error("Lever custom question sets do not match the application form.");
+  const customQuestions = form.customQuestions.map((set) => {
+    const supplied = suppliedCustom.find((candidate) => candidate.id === set.id);
+    if (supplied && supplied.fields.length !== set.fields.length) throw new Error(`Lever custom question field order/length must match the form: ${set.id}.`);
+    return { id: set.id, fields: set.fields.map((question, index) => {
+      const value = supplied?.fields[index]?.value;
+      if (question.type === "file-upload" && value != null && value !== "") throw new Error(`Unsupported Lever custom file upload: ${set.id}[${index}].`);
+      return { value: leverAnswer(question, value, `${set.id}[${index}]`) };
+    }) };
+  });
+  const suppliedUrls = z.array(z.strictObject({ name: z.string(), value: z.string() })).parse(fields.urls ?? []);
+  if (new Set(suppliedUrls.map((answer) => answer.name)).size !== suppliedUrls.length || suppliedUrls.some((answer) => !form.urls.some((question) => question.name === answer.name))) throw new Error("Lever URL answers do not match the application form.");
+  const urls = form.urls.map((question) => ({ name: question.name, value: leverAnswer(question, suppliedUrls.find((answer) => answer.name === question.name)?.value, question.name) }));
+  const suppliedEeo = z.record(z.string(), z.unknown()).parse(fields.eeoResponses ?? {});
+  for (const key of Object.keys(suppliedEeo)) if (!Object.hasOwn(form.eeoQuestions, key)) throw new Error(`Unknown Lever EEO question: ${key}.`);
+  const eeoResponses = Object.fromEntries(Object.entries(form.eeoQuestions).map(([key, question]) => [key, leverAnswer(question, suppliedEeo[key], key)]));
+
+  // Validate the entire fetched form before any file upload or application
+  // write. Never infer required screening/EEO answers from the resume.
+  const uploadBody = new FormData();
+  uploadBody.append("file", new Blob([resume], { type: "text/plain;charset=utf-8" }), "approved-resume.txt");
+  const uploadResponse = await leverRequest("https://api.lever.co/v1/uploads", { method: "POST", headers: { authorization }, body: uploadBody }, fetcher);
+  const upload = z.object({ data: z.object({ uri: z.string().url() }) }).safeParse(await providerJson(uploadResponse, 64 * 1024));
+  if (!upload.success) throw new Error("Lever did not return an uploaded resume URI.");
+  const uploadUrl = new URL(upload.data.data.uri);
+  if (uploadUrl.origin !== "https://api.lever.co" || !/^\/v1\/uploads\/[^/]+$/u.test(uploadUrl.pathname) || uploadUrl.username || uploadUrl.password || uploadUrl.search || uploadUrl.hash) throw new Error("Lever returned an unexpected upload URI.");
+  personalInformation.find((field) => field.name === "resume")!.value = upload.data.data.uri;
+  const response = await leverRequest(url, { method: "POST", headers: { authorization, "content-type": "application/json" }, body: JSON.stringify({ personalInformation, customQuestions, urls, eeoResponses }) }, fetcher);
+  const result = z.object({ data: z.object({ applicationId: z.string().min(1) }) }).safeParse(await providerJson(response, 64 * 1024));
+  if (response.status !== 201 || !result.success || !result.data.data.applicationId.trim()) throw new Error("Lever did not return a created application identifier; check the provider before authorizing another attempt.");
+  return { provider: "lever" as const, accepted: true, status: response.status, applicationId: preview.applicationId, providerApplicationId: result.data.data.applicationId };
 }
 
 export async function createGmailDraft(input: { accessToken: string; receipt: unknown; approvalSecret: string }, fetcher: Fetcher = fetch) {

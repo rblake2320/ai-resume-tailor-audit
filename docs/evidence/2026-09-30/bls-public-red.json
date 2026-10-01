@@ -1,0 +1,7 @@
+{
+  "scenario": "live-public-BLS-observations",
+  "status": "Failed",
+  "httpStatus": 503,
+  "error": "Labor-market provider is unavailable or returned invalid data.",
+  "projectionClaim": false
+}

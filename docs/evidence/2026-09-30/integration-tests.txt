@@ -1,0 +1,12 @@
+
+> ai-resume-tailor@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.11 C:/Users/techai/ai-resume-tailor-review-20260930
+
+
+ Test Files  67 passed (67)
+      Tests  599 passed (599)
+   Start at  23:24:11
+   Duration  15.59s (transform 4.10s, setup 0ms, import 13.21s, tests 56.30s, environment 4.34s)
