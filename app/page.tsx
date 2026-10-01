@@ -198,6 +198,8 @@ export default function Home() {
   );
 
   const uploadResume = useCallback(async (file: File) => {
+    const started = Date.now();
+    let failureReason: "network" | "provider" | "validation" = "network";
     setUploading(true);
     setNotice("");
     try {
@@ -205,10 +207,12 @@ export default function Home() {
       fd.append("file", file);
       const res = await fetch("/api/parse-resume", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
+      if (!res.ok) { failureReason = res.status >= 500 ? "provider" : "validation"; throw new Error(data.error ?? "Upload failed."); }
       invalidateResult();
       setResume(data.text);
+      trackPilotEvent("upload_completed", { durationMs: Date.now() - started });
     } catch (err) {
+      trackPilotEvent("upload_failed", { durationMs: Date.now() - started, reason: failureReason });
       setNotice(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);

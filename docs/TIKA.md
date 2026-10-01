@@ -3,7 +3,8 @@
 The résumé upload now supports PDF, DOCX, legacy DOC, RTF, ODT, UTF-8 TXT and
 Markdown. Binary document formats use Apache Tika 4.1.0 through the fixed private
 endpoint `http://127.0.0.1:9998/tika/json/text`; only extracted text is returned.
-Author metadata, file names, parser exception contents and uploaded bytes are
+Opted-in upload success/error events include elapsed time and a coarse error
+category in the owner dashboard. Author metadata, file names, parser exception contents and uploaded bytes are
 excluded from tester analytics. Uploading does not invoke an AI provider.
 
 Run `npm run tika:start` with Docker Desktop running. `npm run tika:stop` stops

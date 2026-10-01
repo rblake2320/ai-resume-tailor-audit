@@ -40,7 +40,7 @@ attempt; it is an owner-run acceptance check, not a CI mock or an unlimited load
 `POST /api/pilot/login`: `{code}`. `POST /api/pilot/logout`.
 `POST /api/pilot/consent`: `{consent:true,version:"2026-10-01-v1"}`.
 `DELETE /api/pilot/data`: own withdrawal/deletion only.
-`POST /api/pilot/events`: `{event,sessionId,details?}`. Names: session_started, demo_opened, generation_started, generation_completed, generation_failed, generation_cancelled, job_saved, job_imported, resume_edited, export_downloaded, print_opened. Details: durationMs integer 0–300000; score 0–100; count 0–10000; device mobile/desktop; format docx/print; reason network/timeout/validation/cancelled/provider/storage/unknown. Extra fields rejected.
+`POST /api/pilot/events`: `{event,sessionId,details?}`. Names: upload_completed, upload_failed, session_started, demo_opened, generation_started, generation_completed, generation_failed, generation_cancelled, job_saved, job_imported, resume_edited, export_downloaded, print_opened. Details: durationMs integer 0–300000; score 0–100; count 0–10000; device mobile/desktop; format docx/print; reason network/timeout/validation/cancelled/provider/storage/unknown. Extra fields rejected.
 `POST /api/pilot/feedback`: rating integer 1–5, accuracy accurate/minor_issues/major_issues/not_tested, goal tailor_resume/cover_letter/job_import/tracking/other, outcome not_applied/applied/interview/offer/not_tested, comment string ≤2000, reviewed:true. Extra fields rejected.
 Owner POST `/api/pilot/admin/login` `{secret}`, GET `/api/pilot/admin/export?offset=0`, POST `/api/pilot/admin/logout`.
 

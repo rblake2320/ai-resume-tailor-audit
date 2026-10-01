@@ -13,6 +13,8 @@ with sync_playwright() as p:
     page.get_by_label('Invite code').fill(bundle['invites'][1]['code'])
     page.get_by_role('button',name='Enter',exact=True).click()
     expect(page.locator('#resume')).to_be_visible(timeout=30000)
+    page.get_by_role('button',name='Allow usage sharing').click()
+    expect(page.get_by_role('button',name='Withdraw and delete shared data')).to_be_visible()
     for extension in ['docx','pdf','rtf','odt']:
         started=time.monotonic()
         with page.expect_response(lambda r:'/api/parse-resume' in r.url) as response:
@@ -31,6 +33,17 @@ with sync_playwright() as p:
     assert page.locator('#resume').input_value()==before
     checks.append(dict(scenario='hosted-disguised-upload-refused-preserves-profile',status='Worked'))
     page.screenshot(path=str(root/'pilot/hosted-tika-upload.png'),full_page=True)
+    owner=browser.new_page()
+    owner.goto(base+'/pilot/admin')
+    owner.get_by_label('Owner secret').fill(bundle['ADMIN_SECRET'])
+    owner.get_by_role('button',name='Enter',exact=True).click()
+    expect(owner.locator('#steps')).to_contain_text('Documents uploaded',timeout=15000)
+    exported=owner.evaluate("async()=>await(await fetch('/api/pilot/admin/export')).json()")
+    assert exported['eventCounts'].get('upload_completed',0)==4 and exported['eventCounts'].get('upload_failed',0)==1
+    assert 'TypeScript' not in json.dumps(exported)
+    checks.append(dict(scenario='owner-receives-content-free-upload-success-and-error-events',status='Worked'))
+    page.get_by_role('button',name='Withdraw and delete shared data').click()
+    expect(page.get_by_role('button',name='Allow usage sharing')).to_be_visible()
     browser.close()
 report=dict(observedAt=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),url=base,transport='real public gateway/native upload/private Tika Docker',paidCalls=0,checks=checks)
 (root/'tika-fixtures/hosted-acceptance.json').write_text(json.dumps(report,indent=2),encoding='utf-8')

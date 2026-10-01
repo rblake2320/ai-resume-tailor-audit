@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-01T22:27:54Z",
+  "observedAt": "2026-10-01T22:33:47Z",
   "url": "https://resume-foundry-private-pilot.rblake2320.workers.dev",
   "transport": "real public gateway/native upload/private Tika Docker",
   "paidCalls": 0,
@@ -7,25 +7,29 @@
     {
       "scenario": "hosted-upload-docx",
       "status": "Worked",
-      "durationMs": 234
+      "durationMs": 3985
     },
     {
       "scenario": "hosted-upload-pdf",
       "status": "Worked",
-      "durationMs": 157
+      "durationMs": 437
     },
     {
       "scenario": "hosted-upload-rtf",
       "status": "Worked",
-      "durationMs": 171
+      "durationMs": 172
     },
     {
       "scenario": "hosted-upload-odt",
       "status": "Worked",
-      "durationMs": 157
+      "durationMs": 156
     },
     {
       "scenario": "hosted-disguised-upload-refused-preserves-profile",
+      "status": "Worked"
+    },
+    {
+      "scenario": "owner-receives-content-free-upload-success-and-error-events",
       "status": "Worked"
     }
   ]

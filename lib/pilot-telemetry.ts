@@ -1,5 +1,5 @@
-export type PilotEvent = "session_started" | "generation_started" | "generation_completed" | "generation_failed" | "generation_cancelled" | "job_saved" | "job_imported" | "resume_edited" | "export_downloaded" | "print_opened" | "demo_opened";
-export type PilotDetails = { durationMs?: number; score?: number; device?: "mobile" | "desktop"; reason?: "provider" | "timeout" | "cancelled"; format?: "docx" | "print"; count?: number };
+export type PilotEvent = "upload_completed" | "upload_failed" | "session_started" | "generation_started" | "generation_completed" | "generation_failed" | "generation_cancelled" | "job_saved" | "job_imported" | "resume_edited" | "export_downloaded" | "print_opened" | "demo_opened";
+export type PilotDetails = { durationMs?: number; score?: number; device?: "mobile" | "desktop"; reason?: "provider" | "timeout" | "cancelled" | "validation" | "network"; format?: "docx" | "print"; count?: number };
 let enabled = false;
 let sessionId = "";
 
