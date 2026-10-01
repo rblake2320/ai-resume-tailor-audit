@@ -30,6 +30,7 @@ if (pilot) {
   catch { throw new Error("Provision the private pilot owner bundle before starting the tester origin."); }
   if (typeof bundle.ORIGIN_SECRET !== "string" || bundle.ORIGIN_SECRET.length < 32) throw new Error("Invalid pilot origin credential.");
   env.RESUME_FOUNDRY_PILOT_MODE = "true";
+  env.RESUME_FOUNDRY_DOCUMENT_PARSER = "tika";
   env.RESUME_FOUNDRY_PILOT_ORIGIN_SECRET = bundle.ORIGIN_SECRET;
   env.RESUME_FOUNDRY_PILOT_AI_ENABLED = args.includes("--free-ai") ? "true" : "false";
   env.RESUME_FOUNDRY_GENERATION_PROVIDER = "ollama";

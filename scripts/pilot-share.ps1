@@ -7,6 +7,17 @@ if (-not (Test-Path -LiteralPath $bundlePath)) { throw 'Provision the private in
 if (-not (Test-Path -LiteralPath (Join-Path $repoRoot '.next\BUILD_ID'))) { throw 'Run npm run verify first.' }
 $ownerBundle = Get-Content -LiteralPath $bundlePath -Raw | ConvertFrom-Json
 $originHeaders = @{ 'x-resume-pilot-origin' = $ownerBundle.ORIGIN_SECRET }
+& docker compose -p resume-foundry-parser -f tika/compose.yaml up -d
+if ($LASTEXITCODE -ne 0) { throw 'Private Tika parser startup failed. Ensure Docker Desktop is running.' }
+$tikaReady = $false
+for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    try {
+        $tikaVersion = (Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:9998/health' -TimeoutSec 2).Content
+        if ($tikaVersion -match '^Apache Tika 4\.1\.0\s*$') { $tikaReady = $true; break }
+    } catch { }
+    Start-Sleep -Milliseconds 500
+}
+if (-not $tikaReady) { throw 'Pinned Apache Tika did not become ready. Inspect the dedicated Docker container logs.' }
 function Test-PilotOrigin([string] $Url) {
     try {
         $caps = Invoke-RestMethod -Uri "$Url/api/capabilities" -Headers $originHeaders -TimeoutSec 5

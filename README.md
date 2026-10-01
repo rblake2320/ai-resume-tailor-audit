@@ -62,7 +62,7 @@ Resume Foundry organizes tailoring around evidence, reviewable changes, and simp
 
 ## Features
 
-- **Master profile** — paste or upload (PDF / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
+- **Master profile** — paste or upload (PDF / DOCX / DOC / RTF / ODT / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
 - **Personal-information shield** — locally masks supported contact/identifier forms and an explicitly supplied candidate name before generation, with review and exact-text escape hatches. Its documented limits are in [docs/PII_PROTECTION.md](docs/PII_PROTECTION.md).
 - **Job by URL** — paste a public careers-page link and a bounded HTML response is fetched and extracted server-side. LinkedIn and Indeed automation is rejected; paste those postings manually.
 - **Instant keyword scan** — deterministic, client-side coverage check the moment both fields are filled. Transparent baseline before the AI pass.
@@ -80,6 +80,11 @@ Resume Foundry organizes tailoring around evidence, reviewable changes, and simp
 - **Reminder calendar export** — download an approved reminder as an RFC 5545 event with a display alarm, then import it into your calendar. The app does not claim background notification delivery from browser-local state.
 
 ## Quick start
+
+Start the private document parser with `npm run tika:start` (Docker Desktop
+required). Apache Tika 4.1.0 extracts PDF, DOCX, legacy DOC, RTF and ODT uploads;
+TXT and Markdown stay native. The parser has no internet route and is reached
+through a loopback-only gateway. [Setup and receiving evidence](docs/TIKA.md).
 
 After installing, building and adding this app's provider key to `.env.local`,
 run `npm run start:local` for the private workshop at `http://localhost:3100`.

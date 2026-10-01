@@ -456,7 +456,7 @@ export default function Home() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label htmlFor="resume" className="text-xs text-ink-300">
-                    Master resume — paste it, or upload PDF / .txt / .md
+                    Master resume — paste it, or upload PDF / Word / RTF / ODT / .txt / .md
                   </label>
                   <div className="flex items-center gap-2">
                   <DictationButton
@@ -470,7 +470,7 @@ export default function Home() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    aria-label="Upload resume file (PDF, .txt, or .md)"
+                    aria-label="Upload résumé file (PDF, Word, RTF, ODT, TXT or Markdown)"
                     className="cursor-pointer rounded-md border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 transition hover:border-brass-400/60 hover:text-brass-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {uploading ? <Spinner /> : "Upload file"}
@@ -479,7 +479,7 @@ export default function Home() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.txt,.md,text/plain,application/pdf"
+                    accept=".pdf,.docx,.doc,.rtf,.odt,.txt,.md"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];

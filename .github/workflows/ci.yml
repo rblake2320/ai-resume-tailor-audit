@@ -58,3 +58,10 @@ jobs:
 
       - name: Pilot dependency security audit
         run: npm audit --prefix pilot --audit-level=high
+
+      - name: Actual Apache Tika container extraction
+        if: runner.os == 'Linux'
+        run: |
+          npm run tika:start
+          node -e "for(let n=0;n<60;n++){try{if((await fetch('http://127.0.0.1:9998/health')).ok)break;}catch{}if(n===59)process.exit(1);await new Promise(r=>setTimeout(r,500));}"
+          npm run test:tika:live

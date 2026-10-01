@@ -25,6 +25,9 @@ await writeFile(secretsFile, JSON.stringify(Object.fromEntries(["SESSION_SECRET"
   return [name, owner[name]];
 }))), { mode: 0o600 });
 const cli = path.resolve("pilot", "node_modules", "wrangler", "bin", "wrangler.js");
+// Refresh/check the existing owner OAuth session before remote service mutations.
+const authenticated = spawnSync(process.execPath, [cli, "whoami"], { windowsHide: true, encoding: "utf8" });
+if (authenticated.status !== 0) throw new Error("Cloudflare owner authentication could not be checked. Run Wrangler login in your own shell.");
 for (const args of [["d1", "migrations", "apply", config.d1_databases[0].database_name, "--remote"], ["deploy"], ["secret", "bulk", secretsFile]]) {
   const result = spawnSync(process.execPath, [cli, ...args, "--config", file], { windowsHide: true, stdio: "inherit" });
   if (result.status !== 0) throw new Error("Pilot deployment stopped. See the classified CLI result above; credentials were not printed.");
