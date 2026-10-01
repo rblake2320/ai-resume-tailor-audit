@@ -1,0 +1,15 @@
+{
+  "name": "resume-foundry-private-pilot-gateway",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --ip 127.0.0.1",
+    "test": "node --test test/*.test.mjs",
+    "seed": "node scripts/invite-seed.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "miniflare": "5.20260930.0-alpha",
+    "wrangler": "4.145.0"
+  }
+}

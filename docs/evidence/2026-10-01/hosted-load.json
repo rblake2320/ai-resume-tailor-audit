@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-01T12:22:32.522Z",
+  "scenario": "public-authenticated-capabilities-200-reads-20-concurrent",
+  "status": "Worked",
+  "requests": 200,
+  "concurrency": 20,
+  "errors": 0,
+  "p95Ms": 2643,
+  "durationMs": 25125,
+  "paidCalls": 0,
+  "generationCalls": 0
+}

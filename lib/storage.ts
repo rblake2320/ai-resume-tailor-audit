@@ -6,6 +6,7 @@ import type { ApplicationRecord } from "./applications";
 import { ApplicationRecordSchema } from "./application-record-schema";
 import { deleteCareerLedger } from "./career-vault";
 import { clearCareerPathRecords } from "./labor-market-storage";
+import { scopedLocalStorage } from "./browser-scope";
 
 /**
  * Local-first persistence. The profile and history live only in this
@@ -42,7 +43,7 @@ export class LocalPersistenceError extends Error {
 
 function availableStorage(): Storage | null {
   if (typeof window === "undefined") return null;
-  try { return window.localStorage ?? null; }
+  try { return scopedLocalStorage(); }
   catch { return null; }
 }
 

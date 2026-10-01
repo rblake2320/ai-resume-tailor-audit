@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { pilotBoundary } from "./lib/pilot-boundary";
 
 export function contentSecurityPolicy(nonce: string, development = process.env.NODE_ENV === "development"): string {
   return [
@@ -19,6 +20,8 @@ export function contentSecurityPolicy(nonce: string, development = process.env.N
 }
 
 export function proxy(request: NextRequest) {
+  const denied = pilotBoundary(request);
+  if (denied) return denied;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const policy = contentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
@@ -30,11 +33,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [{
-    source: "/((?!_next/static|_next/image|favicon.ico).*)",
-    missing: [
-      { type: "header", key: "next-router-prefetch" },
-      { type: "header", key: "purpose", value: "prefetch" },
-    ],
-  }],
+  // Pilot origin admission includes static assets and prefetch requests.
+  matcher: ["/:path*"],
 };

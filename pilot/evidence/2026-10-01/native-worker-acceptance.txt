@@ -1,0 +1,28 @@
+
+> test
+> node --test test/*.test.mjs
+
+▶ actual workerd + SQLite D1 + native HTTP receiving security acceptance
+  ✔ anonymous, code-in-query, forged tokens, CSRF and invalid invite fail closed (58.7301ms)
+  ✔ default consent off; no telemetry stored until explicit versioned consent (39.3205ms)
+  ✔ strict bounded telemetry rejects text/URLs/actor overrides; feedback requires review (40.9113ms)
+  ✔ receiving native strips credentials/spoofed participant; all privileged routes blocked (49.1964ms)
+  ✔ separate admin role, bounded export, own deletion preserves other participant (44.4064ms)
+  ✔ owner dashboard renders actual D1 feedback as text with cards and JSON download (69.1368ms)
+  ✔ durable caps cannot be reset by withdraw/reconsent; concurrent feedback atomic (2839.6557ms)
+  ✔ AI explicit flag + atomic per-tester/global caps admit exactly bounded native forwards (217.0524ms)
+  ✔ invalid origin rejected before network; no arbitrary upstream URLs (266.1141ms)
+  ✔ admin export paginates bounded records while aggregates cover all 30-day rows (41.543ms)
+  ✔ failed login admission cap is durable and atomic without collecting identifiers (37.1639ms)
+  ✔ logout and invite disable revoke signed-cookie replay (20.4171ms)
+  ✔ 30-day telemetry/2-day operational retention expires actual D1 rows (54.149ms)
+✔ actual workerd + SQLite D1 + native HTTP receiving security acceptance (4207.855ms)
+✔ native seed secures output before generating, stores hashes, fsyncs, refuses overwrite (1804.918ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4776.1649

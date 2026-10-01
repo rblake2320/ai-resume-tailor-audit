@@ -6,6 +6,22 @@ Save your career history once, point it at any job posting (paste the text or ju
 
 Uses a deployment-configured Anthropic API model with structured outputs and adaptive thinking. Built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
 
+## Invite-only tester pilot — October 1, 2026
+
+[Open the live tester pilot](https://resume-foundry-private-pilot.rblake2320.workers.dev).
+An invite code is required. This profile runs real tailoring with the existing
+local Qwen instruction model and keeps paid providers disabled. Testers can
+generate and export documents, save jobs and application packets, and explicitly
+opt in to usage, errors, ratings and reviewed written feedback. Their résumé and
+job content are excluded from the telemetry schema.
+
+The Cloudflare gateway and dedicated D1 feedback store are hosted; the application
+and free model run on the owner's PC, which must stay on. Run `npm run pilot:share`
+from the built checkout to recover/redeploy the dedicated tester origin. It
+preserves invite credentials and never starts or downloads a model. Daily limits
+are three generation attempts per invite and ten total, with one inference at a
+time. [Owner operation and executed evidence](docs/PILOT_2026-10-01.md).
+
 ## September 30, 2026 maintenance review
 
 Updated to Next.js 16.3.8, the September 30 security release, with compatible

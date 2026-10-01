@@ -31,6 +31,8 @@ import { Connections } from "@/components/Connections";
 import { AgentWorkspace } from "@/components/AgentWorkspace";
 import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
 import { SiteNav } from "@/components/SiteNav";
+import { usePilot } from "@/components/PilotPanel";
+import { trackPilotEvent } from "@/lib/pilot-telemetry";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -47,6 +49,7 @@ function validJobUrl(value: string): boolean {
 }
 
 export default function Home() {
+  const pilot = usePilot();
   // True only after client hydration — lets us read localStorage without SSR mismatch.
   const hydrated = useSyncExternalStore(
     noopSubscribe,
@@ -247,6 +250,7 @@ export default function Home() {
   }, [jobUrl, jobTitle, invalidateResult]);
 
   const forge = useCallback(async (privacyOverride?: "protected" | "exact") => {
+    if (pilot.enabled && !pilot.aiEnabled) { setError("Live AI is paused for this tester pilot. Explore the labelled sample result while the credit budget is configured."); setPhase("error"); return; }
     const approvedBackground = [extraInfo.trim(), careerEvidence].filter(Boolean).join("\n\n");
     const fullResume = approvedBackground
       ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${approvedBackground}`
@@ -259,6 +263,8 @@ export default function Home() {
     const sendProtected = privacyOverride === "protected" || (privacyMode === "protect" && privacyOverride !== "exact");
     const outboundResume = sendProtected ? protectedResume.text : fullResume;
     const restorationMap = sendProtected ? protectedResume.matches : [];
+    const startedAt = performance.now();
+    trackPilotEvent("generation_started");
     setPendingPii([]);
     const controller = new AbortController();
     const generationId = ++activeGenerationRef.current;
@@ -271,6 +277,7 @@ export default function Home() {
       generationAbortRef.current = null;
       controller.abort();
       setError("Generation timed out after three minutes. Your inputs are safe; retry when ready.");
+      trackPilotEvent("generation_failed", { reason: "timeout", durationMs: GENERATION_TIMEOUT_MS });
       setPhase("error");
     }, GENERATION_TIMEOUT_MS);
     setPhase("working");
@@ -297,6 +304,7 @@ export default function Home() {
       if (generationId !== activeGenerationRef.current) return;
       const restoredResult = restorePii(generated, restorationMap);
       setResult(restoredResult);
+      trackPilotEvent("generation_completed", { durationMs: performance.now() - startedAt, score: restoredResult.match_score_after });
       try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
       catch (failure) { reportPersistenceFailure(failure); }
       setPhase("done");
@@ -308,6 +316,7 @@ export default function Home() {
     } catch (err) {
       if (generationId !== activeGenerationRef.current) return;
       const cancelled = controller.signal.aborted;
+      trackPilotEvent(cancelled ? "generation_cancelled" : "generation_failed", { reason: cancelled ? "cancelled" : "provider", durationMs: performance.now() - startedAt });
       setError(
         cancelled
           ? cancelReasonRef.current === "timeout"
@@ -320,12 +329,13 @@ export default function Home() {
       window.clearTimeout(timeout);
       if (generationId === activeGenerationRef.current) generationAbortRef.current = null;
     }
-  }, [candidateName, resume, extraInfo, careerEvidence, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, careerEvidence, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure, pilot.enabled, pilot.aiEnabled]);
 
   const cancelGeneration = useCallback(() => {
     const controller = generationAbortRef.current;
     if (!controller) return;
     cancelReasonRef.current = "cancelled";
+    trackPilotEvent("generation_cancelled", { reason: "cancelled" });
     activeGenerationRef.current += 1;
     generationAbortRef.current = null;
     controller.abort();
@@ -400,10 +410,10 @@ export default function Home() {
           <div className="flex flex-col items-end gap-2 text-right">
             <Chip tone="good">🔒 Stored only in your browser</Chip>
             <Chip tone="brass">Evidence-linked · human review required</Chip>
-            <Chip tone="muted">Anthropic model configured by deployment</Chip>
+            <Chip tone="muted">{pilot.enabled ? "Free local Qwen model" : "Anthropic model configured by deployment"}</Chip>
             <p className="max-w-[17rem] text-[11px] leading-snug text-ink-400">
               Your profile and history are saved only in this browser. When you click Forge,
-              your resume and the job text are sent to Anthropic&rsquo;s API to generate the
+              your resume and the job text are sent to {pilot.enabled ? "the local pilot model" : "Anthropic's API"} to generate the
               result; this app keeps no server-side copy.
             </p>
           </div>
@@ -695,7 +705,7 @@ export default function Home() {
           {privacyMode === "exact" && (
             <p role="status" className="mt-3 text-xs text-warn">
               Exact mode may send your name, email addresses, phone numbers, profile links,
-              addresses, or other identifiers to Anthropic. You can switch back at any time.
+              addresses, or other identifiers to the configured AI processor. You can switch back at any time.
             </p>
           )}
         </div>
@@ -744,7 +754,7 @@ export default function Home() {
             ref={forgeButtonRef}
             type="button"
             onClick={() => void forge()}
-            disabled={!ready}
+            disabled={!ready || pilot.enabled && !pilot.aiEnabled}
             className="group relative rounded-xl border border-brass-400/60 bg-gradient-to-b from-brass-400/25 to-brass-500/10 px-10 py-4 font-display text-xl font-semibold text-brass-300 shadow-[0_8px_30px_rgba(240,180,92,0.15)] transition hover:from-brass-400/35 hover:shadow-[0_8px_40px_rgba(240,180,92,0.28)] disabled:opacity-35 disabled:shadow-none"
           >
             {phase === "working" ? (
@@ -752,7 +762,7 @@ export default function Home() {
                 <Spinner /> Forging…
               </span>
             ) : (
-              "Forge my resume →"
+              pilot.enabled && !pilot.aiEnabled ? "Live AI paused — explore the sample above" : "Forge my resume →"
             )}
           </button>
           {phase === "working" && (
@@ -817,10 +827,10 @@ export default function Home() {
         {careerEvidence && <p role="status" className="text-xs text-brass-300">Selected career evidence is approved for tailoring in this session. It is not saved to your master profile.</p>}
         <CareerPathPlanner />
 
-        <SensitiveAttestationBoundary />
+        {!pilot.enabled && <SensitiveAttestationBoundary />}
 
-        <Connections />
-        <AgentWorkspace />
+        {!pilot.enabled && <Connections />}
+        {!pilot.enabled && <AgentWorkspace />}
 
         <ApplicationTracker
           result={result}

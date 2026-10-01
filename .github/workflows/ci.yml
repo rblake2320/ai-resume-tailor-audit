@@ -47,5 +47,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install pilot gateway dependencies
+        run: npm ci --prefix pilot
+
+      - name: Test pilot gateway on actual workerd and local D1
+        run: npm test --prefix pilot
+
       - name: Security audit
         run: npm audit --audit-level=high
+
+      - name: Pilot dependency security audit
+        run: npm audit --prefix pilot --audit-level=high

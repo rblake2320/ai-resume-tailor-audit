@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { TailorResult } from "@/lib/schema";
 import { mdToAtsText, mdToHtml } from "@/lib/markdown";
 import { downloadDocx } from "@/lib/docx-export";
 import { Chip, CopyButton, ScoreDial, ToolButton, downloadText } from "./ui";
 import { ReadAloudControls } from "./SpeechControls";
 import { EvidenceWorkspace } from "./EvidenceWorkspace";
+import { trackPilotEvent } from "@/lib/pilot-telemetry";
 
 const KIND_LABEL: Record<TailorResult["changes"][number]["kind"], string> = {
   reworded: "Reworded",
@@ -28,13 +29,16 @@ export function ResultView({
   result,
   slug,
   onResultChange,
+  sample = false,
 }: {
   result: TailorResult;
   slug: string;
   onResultChange?: (result: TailorResult) => void;
+  sample?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("resume");
   const [editing, setEditing] = useState(false);
+  const edited = useRef(false);
   const resumeHtml = useMemo(() => mdToHtml(result.tailored_resume_markdown), [result]);
   const coverHtml = useMemo(() => mdToHtml(result.cover_letter_markdown), [result]);
   const atsText = useMemo(() => mdToAtsText(result.tailored_resume_markdown), [result]);
@@ -187,14 +191,14 @@ export function ResultView({
               </ToolButton>
             )}
             <CopyButton text={tab === "ats" ? atsText : activeMd} />
-            <ToolButton onClick={() => downloadDocx(activeMd, `${activeName}.docx`)}>.docx</ToolButton>
+            <ToolButton onClick={() => { void downloadDocx(activeMd, `${activeName}.docx`).then(() => { if (!sample) trackPilotEvent("export_downloaded", { format: "docx" }); }); }}>.docx</ToolButton>
             <ToolButton onClick={() => downloadText(activeMd, `${activeName}.md`, "text/markdown")}>
               .md
             </ToolButton>
             <ToolButton onClick={() => downloadText(mdToAtsText(activeMd), `${activeName}.txt`)}>
               .txt
             </ToolButton>
-            <ToolButton onClick={() => window.print()}>Print / PDF</ToolButton>
+            <ToolButton onClick={() => { window.print(); if (!sample) trackPilotEvent("print_opened", { format: "print" }); }}>Print / PDF</ToolButton>
           </div>
         </div>
         <div
@@ -212,14 +216,16 @@ export function ResultView({
                 id="manual-document-editor"
                 aria-label={tab === "cover" ? "Edit cover letter manually" : "Edit tailored resume manually"}
                 value={activeMd}
-                onChange={(event) =>
+                onBlur={() => { if (edited.current && !sample) trackPilotEvent("resume_edited"); edited.current = false; }}
+                onChange={(event) => {
+                  edited.current = edited.current || event.target.value !== activeMd;
                   onResultChange?.({
                     ...result,
                     ...(tab === "cover"
                       ? { cover_letter_markdown: event.target.value }
                       : { tailored_resume_markdown: event.target.value }),
-                  })
-                }
+                  });
+                }}
                 className="h-[38rem] w-full resize-y rounded-lg border border-ink-700 bg-ink-950 p-5 font-mono text-xs leading-relaxed text-ink-100 outline-none focus:border-brass-400/60"
               />
             </div>

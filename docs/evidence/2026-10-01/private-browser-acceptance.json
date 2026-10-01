@@ -1,0 +1,86 @@
+{
+  "observedAt": "2026-10-01T12:24:37.703886+00:00",
+  "server": "npm start production build",
+  "generation": "synthetic intercepted NDJSON; no live Anthropic call",
+  "checks": [
+    {
+      "scenario": "layout-240px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "layout-390px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "layout-1280px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "real-server-private-url-refused",
+      "status": "Worked",
+      "httpStatus": 400
+    },
+    {
+      "scenario": "real-server-capabilities",
+      "status": "Worked"
+    },
+    {
+      "scenario": "real-server-google-status",
+      "status": "Worked",
+      "configuration": {
+        "connected": false,
+        "configured": false
+      }
+    },
+    {
+      "scenario": "synthetic-malformed-result-withheld",
+      "status": "Worked"
+    },
+    {
+      "scenario": "synthetic-result-no-newline-tabs-edit-print",
+      "status": "Worked"
+    },
+    {
+      "scenario": "browser-job-inbox-save-deduplicate",
+      "status": "Worked"
+    },
+    {
+      "scenario": "browser-exact-submission-review-unsigned-consent-and-server-allowlist-refusal",
+      "status": "Worked",
+      "providerRequests": 0
+    },
+    {
+      "scenario": "browser-approved-reminder-calendar-download",
+      "status": "Worked",
+      "delivery": "RFC5545 calendar event with display alarm; import required"
+    },
+    {
+      "scenario": "browser-packet-state-reminder-interview-prep",
+      "status": "Worked",
+      "submission": "manual bookkeeping; no employer request",
+      "reminder": "local state; no notification delivered"
+    },
+    {
+      "scenario": "browser-handoff-missing-destination-refused",
+      "status": "Worked"
+    },
+    {
+      "scenario": "browser-encrypted-vault-wrong-key-backup-restore-and-tracker-reload",
+      "status": "Worked"
+    },
+    {
+      "scenario": "browser-selected-vault-evidence-only-reaches-tailor-request",
+      "status": "Worked",
+      "generation": "intercepted output, actual outgoing request inspected"
+    },
+    {
+      "scenario": "browser-server-agent-consent-publish-read-conflict-and-restore",
+      "status": "Worked",
+      "records": 1
+    },
+    {
+      "scenario": "browser-no-uncaught-errors",
+      "status": "Worked"
+    }
+  ]
+}

@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export function GET() {
+  if (process.env.RESUME_FOUNDRY_PILOT_MODE === "true") return NextResponse.json({
+    service: "resume-foundry", version: "1.0.0", mode: "invite-only-tester-pilot",
+    authentication: "cloudflare-gateway-invite-session-and-private-origin-admission",
+    generationEnabled: process.env.RESUME_FOUNDRY_PILOT_AI_ENABLED === "true",
+    generationProcessor: "local-ollama-qwen3-vl-8b-instruct-no-paid-fallback",
+    privacy: { profilePersistence: "participant-scoped-browser-storage", careerEvidencePersistence: "participant-scoped-encrypted-indexeddb", serverSideProfileCopy: false, telemetry: "content-free-explicit-opt-in", feedback: "voluntary-reviewed-owner-visible", sharedDataRetentionDays: 30 },
+    operations: ["fetchJob", "importJobs", "parseResume", "careerEvidence", "privateTracker", "calendarFile", "testerFeedback"],
+    disabled: ["agentWorkspace", "googleAccountConnection", "officialEmployerSubmissions", "mcp"],
+  }, { headers: { "cache-control": "no-store" } });
   return NextResponse.json({
     service: "resume-foundry",
     version: "1.0.0",

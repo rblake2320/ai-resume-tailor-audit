@@ -37,9 +37,27 @@ beforeEach(() => {
   });
   provider.finalMessage.mockResolvedValue({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(result) }] });
 });
-afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); vi.restoreAllMocks(); });
 
 describe("tailoring completion boundary", () => {
+  it("refuses a paid provider in pilot mode even when a paid key exists", async () => {
+    vi.stubEnv("RESUME_FOUNDRY_PILOT_MODE", "true");
+    vi.stubEnv("RESUME_FOUNDRY_GENERATION_PROVIDER", "anthropic");
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    expect(provider.stream).not.toHaveBeenCalled();
+  });
+  it("runs the local pilot path and never falls back to a paid provider on failure", async () => {
+    vi.stubEnv("RESUME_FOUNDRY_PILOT_MODE", "true");
+    vi.stubEnv("RESUME_FOUNDRY_GENERATION_PROVIDER", "ollama");
+    const transport = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("unavailable", { status: 503 }));
+    const body = await (await POST(request())).text();
+    expect(body).toContain('"type":"error"');
+    expect(body).not.toContain('"type":"result"');
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0][0]).toBe("http://127.0.0.1:11434/api/chat");
+    expect(provider.stream).not.toHaveBeenCalled();
+  });
   it("returns an evidence-checked completed draft", async () => {
     const events = (await (await POST(request())).text()).trim().split("\n").map((line) => JSON.parse(line));
     expect(events.at(-1)).toMatchObject({ type: "result", data: result });

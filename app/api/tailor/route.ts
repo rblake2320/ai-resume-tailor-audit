@@ -6,6 +6,7 @@ import { assertTailorResultEvidence, HonestyValidationError, reconcileTailorResu
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 import { resolveModel, resolveOutputBudget } from "@/lib/anthropic-model";
+import { generateLocalTailor, LocalTailorError } from "@/lib/local-tailor";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -21,7 +22,9 @@ type StreamEvent =
 export async function POST(req: NextRequest): Promise<Response> {
   const limited = enforcePublicRateLimit("tailor", { limit: 10, windowMs: 60_000 });
   if (limited) return limited;
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const local = process.env.RESUME_FOUNDRY_GENERATION_PROVIDER === "ollama";
+  if (process.env.RESUME_FOUNDRY_PILOT_MODE === "true" && !local) return Response.json({ error: "Paid providers are disabled for the free tester pilot." }, { status: 503 });
+  if (!local && !process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: "ANTHROPIC_API_KEY is not set. Copy .env.example to .env.local and add your key." },
       { status: 500 },
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ error: message }, { status: err instanceof HttpLimitError ? err.status : 400 });
   }
 
-  const client = new Anthropic();
+  const client = local ? null : new Anthropic();
   const encoder = new TextEncoder();
   const upstream = new AbortController();
   let closed = false;
@@ -62,6 +65,13 @@ export async function POST(req: NextRequest): Promise<Response> {
 
       try {
         upstream.signal.throwIfAborted();
+        if (local) {
+          send({ type: "progress", chars: 0 });
+          const result = await generateLocalTailor(parsed, upstream.signal);
+          send({ type: "result", data: result });
+          return;
+        }
+        if (!client) throw new Error("Generation provider is unavailable.");
         const msgStream = client.beta.messages.stream({
           model: resolveModel(),
           max_tokens: resolveOutputBudget(),
@@ -146,6 +156,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 function describeError(err: unknown): string {
+  if (err instanceof LocalTailorError) return err.message;
   if (err instanceof HonestyValidationError) {
     return "The generated draft failed evidence validation and was withheld. No unverified draft was returned; review the source résumé and try again.";
   }
