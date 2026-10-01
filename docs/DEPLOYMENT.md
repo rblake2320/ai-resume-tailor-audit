@@ -46,6 +46,25 @@ npm start -- --hostname 127.0.0.1 --port 3000
 
 ## Full single-host capability layout
 
+For a private local workshop, `npm run start:local` creates ignored local storage,
+applies the Windows storage gate, generates reusable private agent/approval keys
+without printing them, and binds `http://localhost:3100` to loopback. Use
+`npm run start:local -- --port 3101` for another port. Provider keys stay in
+ignored `.env.local`. The optional bridge credentials are in the private
+`.resume-foundry/local-runtime/operator/local-config.json`; do not paste them
+into chat, commit them, or expose the workshop publicly. No employer account is
+enabled by this launcher. On other platforms its new secret directory/files use
+owner-only creation modes; it does not claim Windows ACL verification there.
+
+Google writes also require the private nonce directory. Connect with only the
+needed scopes, then use the UI's separate review and approval. See
+[Google workflow verification](GOOGLE_CONNECTIONS.md). `RESUME_FOUNDRY_MAX_OUTPUT_TOKENS`
+sets a deployment-side generation cap from 1024 through 64000; default 16000.
+Incomplete provider turns remain withheld. After explicit owner approval of the
+credit consumption, `npm run test:browser -- --live-generation-approved` runs
+one live generation with an 8192 output-token cap and zero SDK retries, alongside
+the offline fault scenarios. Its result is retained under `.resume-foundry/browser`.
+
 Keep related state under one private durable root, but use separate files and directories. Example names—not secrets—are:
 
 ```text

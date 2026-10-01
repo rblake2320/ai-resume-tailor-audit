@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { scanResume } from "@/lib/ats";
 import { protectPii, restorePii, type PiiMatch, type PrivacyMode } from "@/lib/pii";
 import type { TailorResult } from "@/lib/schema";
+import { readTailorStream } from "@/lib/tailor-stream";
 import {
   addHistory,
   addSavePoint,
@@ -27,8 +28,11 @@ import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { CareerLedger } from "@/components/CareerLedger";
 import { CareerPathPlanner } from "@/components/CareerPathPlanner";
 import { Connections } from "@/components/Connections";
+import { AgentWorkspace } from "@/components/AgentWorkspace";
 import { SensitiveAttestationBoundary } from "@/components/SensitiveAttestationBoundary";
 import { SiteNav } from "@/components/SiteNav";
+import { usePilot } from "@/components/PilotPanel";
+import { trackPilotEvent } from "@/lib/pilot-telemetry";
 
 type Phase = "idle" | "working" | "done" | "error";
 
@@ -45,6 +49,7 @@ function validJobUrl(value: string): boolean {
 }
 
 export default function Home() {
+  const pilot = usePilot();
   // True only after client hydration — lets us read localStorage without SSR mismatch.
   const hydrated = useSyncExternalStore(
     noopSubscribe,
@@ -56,6 +61,7 @@ export default function Home() {
   const [candidateName, setCandidateName] = useState(() => loadProfile()?.candidateName ?? "");
   const [resume, setResume] = useState(() => loadProfile()?.resume ?? "");
   const [extraInfo, setExtraInfo] = useState(() => loadProfile()?.extraInfo ?? "");
+  const [careerEvidence, setCareerEvidence] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState<{ candidateName: string; resume: string; extraInfo: string } | null>(
     null,
   );
@@ -192,6 +198,8 @@ export default function Home() {
   );
 
   const uploadResume = useCallback(async (file: File) => {
+    const started = Date.now();
+    let failureReason: "network" | "provider" | "validation" = "network";
     setUploading(true);
     setNotice("");
     try {
@@ -199,10 +207,12 @@ export default function Home() {
       fd.append("file", file);
       const res = await fetch("/api/parse-resume", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
+      if (!res.ok) { failureReason = res.status >= 500 ? "provider" : "validation"; throw new Error(data.error ?? "Upload failed."); }
       invalidateResult();
       setResume(data.text);
+      trackPilotEvent("upload_completed", { durationMs: Date.now() - started });
     } catch (err) {
+      trackPilotEvent("upload_failed", { durationMs: Date.now() - started, reason: failureReason });
       setNotice(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);
@@ -244,8 +254,10 @@ export default function Home() {
   }, [jobUrl, jobTitle, invalidateResult]);
 
   const forge = useCallback(async (privacyOverride?: "protected" | "exact") => {
-    const fullResume = extraInfo.trim()
-      ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${extraInfo}`
+    if (pilot.enabled && !pilot.aiEnabled) { setError("Live AI is paused for this tester pilot. Explore the labelled sample result while the credit budget is configured."); setPhase("error"); return; }
+    const approvedBackground = [extraInfo.trim(), careerEvidence].filter(Boolean).join("\n\n");
+    const fullResume = approvedBackground
+      ? `${resume}\n\n--- Additional background the candidate provided (use as honest evidence, do not print verbatim) ---\n${approvedBackground}`
       : resume;
     const protectedResume = protectPii(fullResume, { candidateNames: candidateName ? [candidateName] : [] });
     if (privacyMode === "review" && !privacyOverride && protectedResume.matches.length > 0) {
@@ -255,6 +267,8 @@ export default function Home() {
     const sendProtected = privacyOverride === "protected" || (privacyMode === "protect" && privacyOverride !== "exact");
     const outboundResume = sendProtected ? protectedResume.text : fullResume;
     const restorationMap = sendProtected ? protectedResume.matches : [];
+    const startedAt = performance.now();
+    trackPilotEvent("generation_started");
     setPendingPii([]);
     const controller = new AbortController();
     const generationId = ++activeGenerationRef.current;
@@ -267,6 +281,7 @@ export default function Home() {
       generationAbortRef.current = null;
       controller.abort();
       setError("Generation timed out after three minutes. Your inputs are safe; retry when ready.");
+      trackPilotEvent("generation_failed", { reason: "timeout", durationMs: GENERATION_TIMEOUT_MS });
       setPhase("error");
     }, GENERATION_TIMEOUT_MS);
     setPhase("working");
@@ -287,55 +302,16 @@ export default function Home() {
         throw new Error(data?.error ?? `Request failed (${res.status}).`);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finished = false;
-
-      while (!finished) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const event = JSON.parse(line) as
-            | { type: "thinking"; text: string }
-            | { type: "progress"; chars: number }
-            | { type: "result"; data: TailorResult }
-            | { type: "error"; message: string; reasonCode?: "EVIDENCE_VALIDATION_FAILED"; validation?: {
-              sourceCitationMismatch: number;
-              outputReferenceMismatch: number;
-              addedKeywordMismatch: number;
-            } };
-          if (generationId !== activeGenerationRef.current) return;
-          if (event.type === "thinking") setThinking((t) => t + event.text);
-          else if (event.type === "progress") setProgressChars(event.chars);
-          else if (event.type === "error") {
-            if (event.reasonCode === "EVIDENCE_VALIDATION_FAILED") {
-              const blockedReferences = event.validation
-                ? event.validation.sourceCitationMismatch
-                : 0;
-              const detail = blockedReferences > 0
-                ? ` ${blockedReferences} source citation${blockedReferences === 1 ? "" : "s"} could not be verified.`
-                : "";
-              throw new Error(`${event.message}${detail}`);
-            }
-            throw new Error(event.message);
-          }
-          else if (event.type === "result") {
-            const restoredResult = restorePii(event.data, restorationMap);
-            setResult(restoredResult);
-            try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
-            catch (failure) { reportPersistenceFailure(failure); }
-            setPhase("done");
-            finished = true;
-          }
-        }
-      }
-      if (!finished) throw new Error("The stream ended unexpectedly. Try again.");
+      const generated = await readTailorStream(res.body, (chars) => {
+        if (generationId === activeGenerationRef.current) setProgressChars(chars);
+      });
       if (generationId !== activeGenerationRef.current) return;
+      const restoredResult = restorePii(generated, restorationMap);
+      setResult(restoredResult);
+      trackPilotEvent("generation_completed", { durationMs: performance.now() - startedAt, score: restoredResult.match_score_after });
+      try { setHistory(addHistory({ jobTitle, company, result: restoredResult })); }
+      catch (failure) { reportPersistenceFailure(failure); }
+      setPhase("done");
       setTimeout(() => {
         if (generationId === activeGenerationRef.current) {
           resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -344,6 +320,7 @@ export default function Home() {
     } catch (err) {
       if (generationId !== activeGenerationRef.current) return;
       const cancelled = controller.signal.aborted;
+      trackPilotEvent(cancelled ? "generation_cancelled" : "generation_failed", { reason: cancelled ? "cancelled" : "provider", durationMs: performance.now() - startedAt });
       setError(
         cancelled
           ? cancelReasonRef.current === "timeout"
@@ -356,12 +333,13 @@ export default function Home() {
       window.clearTimeout(timeout);
       if (generationId === activeGenerationRef.current) generationAbortRef.current = null;
     }
-  }, [candidateName, resume, extraInfo, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure]);
+  }, [candidateName, resume, extraInfo, careerEvidence, jobText, jobTitle, company, emphasis, privacyMode, reportPersistenceFailure, pilot.enabled, pilot.aiEnabled]);
 
   const cancelGeneration = useCallback(() => {
     const controller = generationAbortRef.current;
     if (!controller) return;
     cancelReasonRef.current = "cancelled";
+    trackPilotEvent("generation_cancelled", { reason: "cancelled" });
     activeGenerationRef.current += 1;
     generationAbortRef.current = null;
     controller.abort();
@@ -436,10 +414,10 @@ export default function Home() {
           <div className="flex flex-col items-end gap-2 text-right">
             <Chip tone="good">🔒 Stored only in your browser</Chip>
             <Chip tone="brass">Evidence-linked · human review required</Chip>
-            <Chip tone="muted">Anthropic model configured by deployment</Chip>
+            <Chip tone="muted">{pilot.enabled ? "Free local Qwen model" : "Anthropic model configured by deployment"}</Chip>
             <p className="max-w-[17rem] text-[11px] leading-snug text-ink-400">
               Your profile and history are saved only in this browser. When you click Forge,
-              your resume and the job text are sent to Anthropic&rsquo;s API to generate the
+              your resume and the job text are sent to {pilot.enabled ? "the local pilot model" : "Anthropic's API"} to generate the
               result; this app keeps no server-side copy.
             </p>
           </div>
@@ -482,7 +460,7 @@ export default function Home() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label htmlFor="resume" className="text-xs text-ink-300">
-                    Master resume — paste it, or upload PDF / .txt / .md
+                    Master resume — paste it, or upload PDF / Word / RTF / ODT / .txt / .md
                   </label>
                   <div className="flex items-center gap-2">
                   <DictationButton
@@ -496,7 +474,7 @@ export default function Home() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    aria-label="Upload resume file (PDF, .txt, or .md)"
+                    aria-label="Upload résumé file (PDF, Word, RTF, ODT, TXT or Markdown)"
                     className="cursor-pointer rounded-md border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs text-ink-100 transition hover:border-brass-400/60 hover:text-brass-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {uploading ? <Spinner /> : "Upload file"}
@@ -505,7 +483,7 @@ export default function Home() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.txt,.md,text/plain,application/pdf"
+                    accept=".pdf,.docx,.doc,.rtf,.odt,.txt,.md"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -731,7 +709,7 @@ export default function Home() {
           {privacyMode === "exact" && (
             <p role="status" className="mt-3 text-xs text-warn">
               Exact mode may send your name, email addresses, phone numbers, profile links,
-              addresses, or other identifiers to Anthropic. You can switch back at any time.
+              addresses, or other identifiers to the configured AI processor. You can switch back at any time.
             </p>
           )}
         </div>
@@ -780,7 +758,7 @@ export default function Home() {
             ref={forgeButtonRef}
             type="button"
             onClick={() => void forge()}
-            disabled={!ready}
+            disabled={!ready || pilot.enabled && !pilot.aiEnabled}
             className="group relative rounded-xl border border-brass-400/60 bg-gradient-to-b from-brass-400/25 to-brass-500/10 px-10 py-4 font-display text-xl font-semibold text-brass-300 shadow-[0_8px_30px_rgba(240,180,92,0.15)] transition hover:from-brass-400/35 hover:shadow-[0_8px_40px_rgba(240,180,92,0.28)] disabled:opacity-35 disabled:shadow-none"
           >
             {phase === "working" ? (
@@ -788,7 +766,7 @@ export default function Home() {
                 <Spinner /> Forging…
               </span>
             ) : (
-              "Forge my resume →"
+              pilot.enabled && !pilot.aiEnabled ? "Live AI paused — explore the sample above" : "Forge my resume →"
             )}
           </button>
           {phase === "working" && (
@@ -830,8 +808,8 @@ export default function Home() {
         )}
 
         {phase === "error" && (
-          <div className="rounded-xl border border-bad/40 bg-bad/10 p-4 text-sm text-bad">
-            {error}
+          <div role="alert" className="rounded-xl border border-bad/40 bg-bad/10 p-4 text-sm text-bad">
+            <p>{error}</p>
             <div className="mt-3"><ToolButton onClick={() => void forge()}>Retry generation</ToolButton></div>
           </div>
         )}
@@ -849,16 +827,18 @@ export default function Home() {
           )}
         </div>
 
-        <CareerLedger />
+        <CareerLedger onDisclosure={(evidence) => { setCareerEvidence(evidence); invalidateResult(); }} />
+        {careerEvidence && <p role="status" className="text-xs text-brass-300">Selected career evidence is approved for tailoring in this session. It is not saved to your master profile.</p>}
         <CareerPathPlanner />
 
-        <SensitiveAttestationBoundary />
+        {!pilot.enabled && <SensitiveAttestationBoundary />}
 
-        <Connections />
+        {!pilot.enabled && <Connections />}
+        {!pilot.enabled && <AgentWorkspace />}
 
         <ApplicationTracker
           result={result}
-          profile={{ resume, extraInfo }}
+          profile={{ resume, extraInfo: [extraInfo, careerEvidence].filter(Boolean).join("\n\n") }}
           job={{ company, title: jobTitle, description: jobText, applicationUrl: jobUrl }}
         />
 
@@ -926,7 +906,7 @@ export default function Home() {
                     try { await clearAllData(); }
                     catch (failure) { reportPersistenceFailure(failure); }
                     finally {
-                      setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo("");
+                      setHistory([]); setSavePoints([]); setCandidateName(""); setResume(""); setExtraInfo(""); setCareerEvidence("");
                       setJobText(""); setJobUrl(""); setJobTitle(""); setCompany(""); setEmphasis("balanced");
                       setPrivacyMode("protect"); setPendingPii([]); setResult(null); setPhase("idle");
                       setThinking(""); setProgressChars(0); setError("");
@@ -984,8 +964,8 @@ export default function Home() {
       <footer className="mt-16 border-t border-ink-700 pt-6 text-center font-mono text-[11px] leading-relaxed text-ink-400">
         Honest tailoring only — nothing is invented, and keywords the model can’t evidence are listed, not faked.
         <br />
-        Your profile and history live in this browser’s localStorage. This app does not write a
-        server-side copy.
+        Your profile and history stay in this browser by default. Publishing through the agent
+        bridge explicitly copies the reviewed packets to your configured server.
       </footer>
     </div>
   );

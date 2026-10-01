@@ -1,0 +1,94 @@
+
+ RUN  v4.1.10 C:/Users/techai/ai-resume-tailor-review-20260930
+
+ ❯ lib/tailor-route.test.ts (8 tests | 7 failed) 33ms
+     × withholds even valid JSON when the provider stopped with max_tokens 5ms
+     × withholds even valid JSON when the provider stopped with model_context_window_exceeded 2ms
+     × withholds even valid JSON when the provider stopped with pause_turn 1ms
+     × withholds even valid JSON when the provider stopped with tool_use 2ms
+     × withholds even valid JSON when the provider stopped with null 1ms
+     × withholds empty documents and impossible match scores 1ms
+     × disables automatic retries of costly generation 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds even valid JSON when the provider stopped with max_tokens
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds even valid JSON when the provider stopped with model_context_window_exceeded
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds even valid JSON when the provider stopped with pause_turn
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds even valid JSON when the provider stopped with tool_use
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds even valid JSON when the provider stopped with null
+AssertionError: expected '{"type":"result","data":{"match_score…' not to contain '"type":"result"'
+
+- Expected
++ Received
+
+- "type":"result"
++ {"type":"result","data":{"match_score_before":50,"match_score_after":65,"score_rationale":"Evidence-based estimate.","changes":[],"keywords":{"matched":[],"added":[],"not_added":[]},"gap_analysis":[],"requirement_evidence":[],"ats_checks":[],"tailored_resume_markdown":"# Example Candidate","cover_letter_markdown":"Dear Hiring Manager, I built reliable systems."}}
++
+
+ ❯ lib/tailor-route.test.ts:51:24
+     49|       provider.finalMessage.mockResolvedValue({ stop_reason, content: …
+     50|       const body = await (await POST(request())).text();
+     51|       expect(body).not.toContain('"type":"result"');
+       |                        ^
+     52|       expect(body).toContain('"type":"error"');
+     53|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > withholds empty documents and impossible match scores
+AssertionError: expected '{"type":"result","data":{"match_score…' not to contain '"type":"result"'
+
+- Expected
++ Received
+
+- "type":"result"
++ {"type":"result","data":{"match_score_before":50,"match_score_after":1000,"score_rationale":"Evidence-based estimate.","changes":[],"keywords":{"matched":[],"added":[],"not_added":[]},"gap_analysis":[],"requirement_evidence":[],"ats_checks":[],"tailored_resume_markdown":" ","cover_letter_markdown":"Dear Hiring Manager, I built reliable systems."}}
++
+
+ ❯ lib/tailor-route.test.ts:56:54
+     54|   it("withholds empty documents and impossible match scores", async ()…
+     55|     provider.finalMessage.mockResolvedValue({ stop_reason: "end_turn",…
+     56|     expect(await (await POST(request())).text()).not.toContain('"type"…
+       |                                                      ^
+     57|   });
+     58|   it("disables automatic retries of costly generation", async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  lib/tailor-route.test.ts > tailoring completion boundary > disables automatic retries of costly generation
+AssertionError: expected { …(1) } to match object { maxRetries: +0 }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "maxRetries": 0,
++   "signal": AbortSignal {
++     Symbol(kEvents): Map {},
++     Symbol(events.maxEventTargetListeners): 0,
++     Symbol(events.maxEventTargetListenersWarned): false,
++     Symbol(kHandlers): Map {},
++     Symbol(kAborted): false,
++     Symbol(kReason): undefined,
++     Symbol(kComposite): false,
++   },
+  }
+
+ ❯ lib/tailor-route.test.ts:60:46
+     58|   it("disables automatic retries of costly generation", async () => {
+     59|     await (await POST(request())).text();
+     60|     expect(provider.stream.mock.calls[0][1]).toMatchObject({ maxRetrie…
+       |                                              ^
+     61|   });
+     62| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed (8)
+   Start at  13:26:34
+   Duration  358ms (transform 71ms, setup 0ms, import 199ms, tests 33ms, environment 0ms)
+

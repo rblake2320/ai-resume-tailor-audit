@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { extractText } from "unpdf";
 import { HttpLimitError, readRequestBytes } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
+import { extractWithTika, DocumentExtractionError, DOCUMENT_TEXT_MAX_CHARS } from "@/lib/tika";
 
 export const runtime = "nodejs";
 
@@ -32,13 +33,20 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (file.size > MAX_BYTES) {
     return Response.json({ error: "File too large (max 10 MB)." }, { status: 413 });
   }
+  if (file.size === 0) return Response.json({ error: "The résumé file is empty." }, { status: 422 });
 
   const name = file.name.toLowerCase();
+  const extension = name.split(".").at(-1) ?? "";
   try {
+    if (["pdf", "doc", "docx", "rtf", "odt"].includes(extension) && (extension !== "pdf" || process.env.RESUME_FOUNDRY_DOCUMENT_PARSER !== "unpdf")) {
+      const text = await extractWithTika(new Uint8Array(await file.arrayBuffer()), extension, req.signal);
+      return Response.json({ text, parser: "apache-tika", parserVersion: "4.1.0" });
+    }
     if (name.endsWith(".pdf") || file.type === "application/pdf") {
       const buffer = new Uint8Array(await file.arrayBuffer());
       const { text } = await extractText(buffer, { mergePages: true });
       const cleaned = text.trim();
+      if (cleaned.length > DOCUMENT_TEXT_MAX_CHARS) return Response.json({ error: "Résumé text exceeds 100,000 characters." }, { status: 413 });
       if (!cleaned) {
         return Response.json(
           { error: "No selectable text found in this PDF — it may be a scanned image. Paste the text instead." },
@@ -47,14 +55,18 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
       return Response.json({ text: cleaned });
     }
-    if (name.endsWith(".txt") || name.endsWith(".md") || file.type.startsWith("text/")) {
-      return Response.json({ text: (await file.text()).trim() });
+    if (name.endsWith(".txt") || name.endsWith(".md")) {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()).trim();
+      if (!text) return Response.json({ error: "The résumé file is empty. Upload readable text or paste it." }, { status: 422 });
+      if (text.length > DOCUMENT_TEXT_MAX_CHARS) return Response.json({ error: "Résumé text exceeds 100,000 characters." }, { status: 413 });
+      return Response.json({ text });
     }
     return Response.json(
-      { error: "Unsupported file type. Upload a PDF, .txt, or .md file — or paste the text." },
+      { error: "Unsupported file type. Upload PDF, DOCX, DOC, RTF, ODT, TXT or Markdown — or paste the text." },
       { status: 415 },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof DocumentExtractionError) return Response.json({ error: error.message }, { status: error.status });
     return Response.json(
       { error: "Could not read that file. Paste the resume text instead." },
       { status: 422 },

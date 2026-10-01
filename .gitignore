@@ -31,3 +31,6 @@ Thumbs.db
 *.log
 *.tsbuildinfo
 .resume-foundry/
+.venv-laya/
+__pycache__/
+laya-review.json

@@ -1,0 +1,98 @@
+
+ RUN  v4.1.11 C:/Users/techai/ai-resume-tailor-review-20260930
+
+ ❯ lib/ssrf-pinning.test.ts (4 tests | 4 failed) 24ms
+     × passes a dispatcher pinned to the validated addresses and preserves the HTTPS hostname 20ms
+     × cannot use a dispatcher for a different hostname 1ms
+     × revalidates redirects and creates a fresh pinned dispatcher for every hop 1ms
+     × destroys the dispatcher when fetching fails 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/ssrf-pinning.test.ts > safeFetch DNS pinning > passes a dispatcher pinned to the validated addresses and preserves the HTTPS hostname
+AssertionError: expected [ …(2) ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+  [
+    "https://jobs.example/careers",
+    {
+-     "dispatcher": Any<Object>,
+      "redirect": "manual",
+    },
+  ]
+
+ ❯ lib/ssrf-pinning.test.ts:25:37
+     23|     const response = await safeFetch("https://jobs.example/careers", {…
+     24|     expect(await response.text()).toBe("fixture");
+     25|     expect(transport.mock.calls[0]).toEqual([new URL("https://jobs.exa…
+       |                                     ^
+     26|     expect(state.agents).toHaveLength(1);
+     27|     const callback = vi.fn();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  lib/ssrf-pinning.test.ts > safeFetch DNS pinning > cannot use a dispatcher for a different hostname
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ lib/ssrf-pinning.test.ts:38:26
+     36|     await safeFetch("https://jobs.example/", {});
+     37|     const callback = vi.fn();
+     38|     expect(state.agents).toHaveLength(1);
+       |                          ^
+     39|     state.agents[0].lookup("rebound.example", {}, callback);
+     40|     expect(callback).toHaveBeenCalledWith(expect.objectContaining({ re…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  lib/ssrf-pinning.test.ts > safeFetch DNS pinning > revalidates redirects and creates a fresh pinned dispatcher for every hop
+AssertionError: expected [] to have a length of 2 but got +0
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ lib/ssrf-pinning.test.ts:47:26
+     45|     expect(await (await safeFetch("https://jobs.example/", {})).text()…
+     46|     expect(lookup).toHaveBeenCalledTimes(2);
+     47|     expect(state.agents).toHaveLength(2);
+       |                          ^
+     48|     expect(state.agents.every((agent) => agent.close.mock.calls.length…
+     49|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  lib/ssrf-pinning.test.ts > safeFetch DNS pinning > destroys the dispatcher when fetching fails
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ lib/ssrf-pinning.test.ts:54:26
+     52|     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fixtur…
+     53|     await expect(safeFetch("https://jobs.example/", {})).rejects.toThr…
+     54|     expect(state.agents).toHaveLength(1);
+       |                          ^
+     55|     expect(state.agents[0].destroy).toHaveBeenCalledOnce();
+     56|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  13:32:46
+   Duration  172ms (transform 25ms, setup 0ms, import 38ms, tests 24ms, environment 0ms)
+

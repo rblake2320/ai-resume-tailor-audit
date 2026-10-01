@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-01T04:21:55.805799+00:00",
+  "scenario": "live-BLS-built-route-retains-2025-missing-period",
+  "status": "Worked",
+  "httpStatus": 200,
+  "seriesId": "LNS14000000",
+  "periods": 12,
+  "numericObservations": 11,
+  "missingPeriods": [
+    "2025-M10"
+  ],
+  "missingValue": null,
+  "modelCalls": 0,
+  "employerWrites": 0,
+  "source": "https://www.bls.gov/cps/methods/2025-federal-government-shutdown-impact-cps.htm"
+}

@@ -251,15 +251,25 @@ describe("authorized submission connectors", () => {
     // path with a site token. Current official Lever documentation specifies
     // POST /postings/:posting/apply under https://api.lever.co/v1.
     const receipt = issueSubmissionApproval(preview("lever"), secret);
-    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
-    await submitLever({ apiKey: "lever-secret", receipt, approvalSecret: secret }, fetcher);
-    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: { personalInformation: [
+        { name: "fullName", type: "text", required: true }, { name: "email", type: "text", required: true }, { name: "resume", type: "file-upload", required: true },
+      ] } }))
+      .mockResolvedValueOnce(Response.json({ data: { uri: "https://api.lever.co/v1/uploads/fixture-resume.txt" } }, { status: 201 }))
+      .mockResolvedValueOnce(Response.json({ data: { applicationId: "lever-created-1" } }, { status: 201 }));
+    const result = await submitLever({ apiKey: "lever-secret", receipt, approvalSecret: secret }, fetcher);
+    expect(result).toMatchObject({ accepted: true, applicationId: "app-1", providerApplicationId: "lever-created-1" });
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.lever.co/v1/postings/222/apply");
+    expect(fetcher.mock.calls[1][0]).toBe("https://api.lever.co/v1/uploads");
+    const [url, init] = fetcher.mock.calls[2] as [string, RequestInit];
     expect(url).toBe("https://api.lever.co/v1/postings/222/apply");
     expect(url).not.toContain("approved-site");
     expect(url).not.toContain("lever-secret");
     expect(init.method).toBe("POST");
     expect(init.headers).toMatchObject({ "content-type": "application/json", authorization: expect.stringMatching(/^Basic /u) });
-    expect(JSON.parse(String(init.body))).toEqual(preview("lever").fields);
+    expect(JSON.parse(String(init.body))).toMatchObject({ personalInformation: [
+      { name: "fullName", value: "Ada Lovelace" }, { name: "email", value: "ada@example.com" }, { name: "resume", value: "https://api.lever.co/v1/uploads/fixture-resume.txt" },
+    ] });
   });
 
   it("requires employer-provided Lever required-field configuration", () => {

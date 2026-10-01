@@ -1,0 +1,6 @@
+Pre-fix committed ACL policy; same nine security descriptors as regression test.
+[{"name":"root-current","secure":true},{"name":"root-admin","secure":false},{"name":"root-system","secure":false},{"name":"child-admin","secure":false},{"name":"child-system","secure":false},{"name":"child-users","secure":false},{"name":"child-admin-unexpected-allow","secure":false},{"name":"child-admin-deny","secure":false},{"name":"child-admin-missing-system","secure":false}]
+#< CLIXML
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04"><Obj S="progress" RefId="0"><TN RefId="0"><T>System.Management.Automation.PSCustomObject</T><T>System.Object</T></TN><MS><I64 N="SourceId">1</I64><PR N="Record"><AV>Preparing modules for first use.</AV><AI>0</AI><Nil /><PI>-1</PI><PC>-1</PC><T>Completed</T><SR>-1</SR><SD> </SD></PR></MS></Obj></Objs>
+Expected descendant Administrators and System ownership secure=true; original returned false for both.
+Exit: 0

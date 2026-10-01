@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "scenario": "ONET-credentialed-route",
+      "status": "Blocked",
+      "httpStatus": 503,
+      "error": "Labor-market provider is unavailable or returned invalid data."
+    },
+    {
+      "scenario": "USAJOBS-credentialed-route",
+      "status": "Blocked",
+      "httpStatus": 503,
+      "error": "USAJOBS credentials are not configured."
+    }
+  ]
+}

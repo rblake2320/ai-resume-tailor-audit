@@ -8,15 +8,21 @@ import {
 import { deleteCareerLedger, hasCareerLedger, loadCareerLedger, migrateLegacyPlaintextCareerLedger, saveCareerLedger } from "@/lib/career-vault";
 import { ToolButton } from "@/components/ui";
 import { loadCareerBackupMarker, saveCareerBackupMarker } from "@/lib/storage";
+import { discloseCareerEvidence } from "@/lib/career-disclosure";
 
-export function CareerLedger() {
+export function CareerLedger({ onDisclosure }: { onDisclosure?: (evidence: string) => void }) {
+  const [selected, setSelected] = useState<string[]>([]);
   const [ledger, setLedger] = useState<Ledger | null>(null);
   const [title, setTitle] = useState(""); const [description, setDescription] = useState("");
   const [category, setCategory] = useState<"project" | "coursework" | "paid_work" | "volunteering" | "other">("project");
   const [passphrase, setPassphrase] = useState(""); const [status, setStatus] = useState("Checking encrypted career vault…");
   const [legacyDetected, setLegacyDetected] = useState(false);
   const [vaultExists, setVaultExists] = useState(false); const [ageBand, setAgeBand] = useState<"minor" | "adult" | "unspecified">("unspecified");
-  useEffect(() => { void hasCareerLedger().then((exists) => { setVaultExists(exists); setStatus(exists ? "Encrypted ledger found. Enter its passphrase to unlock." : "No ledger yet. Choose a passphrase to create one."); }).catch((error: unknown) => setStatus(error instanceof Error ? error.message : "Vault unavailable.")); }, []);
+  useEffect(() => {
+    void hasCareerLedger().then((exists) => { setVaultExists(exists); setStatus(exists ? "Encrypted ledger found. Enter its passphrase to unlock." : "No ledger yet. Choose a passphrase to create one."); }).catch((error: unknown) => setStatus(error instanceof Error ? error.message : "Vault unavailable."));
+    const clear = () => { setLedger(null); setPassphrase(""); setSelected([]); setVaultExists(false); setStatus("Career ledger cleared from this session."); };
+    window.addEventListener("resume-foundry:data-cleared", clear); return () => window.removeEventListener("resume-foundry:data-cleared", clear);
+  }, []);
 
   async function ensureLedger() {
     try { const next = ledger ?? createCareerLedger(crypto.randomUUID(), new Date(), ageBand); await saveCareerLedger(next, passphrase); setLedger(next); setVaultExists(true); setStatus("Encrypted private career ledger ready."); }
@@ -32,12 +38,14 @@ export function CareerLedger() {
   }
   async function add() {
     if (!ledger || !title.trim() || !description.trim()) { setStatus("Create the ledger and enter a title and description first."); return; }
+    try {
     const next = await appendCareerEvent(ledger, {
       occurredAt: new Date().toISOString(), category, title: title.trim(), description: description.trim(), originalSource: "",
       claimState: "fact", verification: "self_reported", skills: [], measurableResult: "", collaborators: [], context: "",
       confidence: 1, tags: [], occupationCodes: [], evidence: [], visibility: "private", supersedesEventId: null, correctionReason: "",
     });
     await saveCareerLedger(next, passphrase); setLedger(next); setTitle(""); setDescription(""); setStatus("Entry appended and encrypted. Earlier history was not rewritten.");
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Entry could not be saved."); }
   }
   async function downloadBackup() {
     if (!ledger) return;
@@ -58,8 +66,21 @@ export function CareerLedger() {
     try { const restored = await importEncryptedCareerLedger(JSON.parse(await file.text()), passphrase); await saveCareerLedger(restored, passphrase); setLedger(restored); setVaultExists(true); setStatus("Backup decrypted, integrity-checked, and restored."); }
     catch (error) { setStatus(error instanceof Error ? error.message : "Restore failed."); }
   }
-  async function removeEvent(eventId: string) { if (!ledger || !confirm("Permanently erase this event's content? A non-content deletion receipt remains.")) return; const next = await deleteCareerEvent(ledger, eventId, "Owner-requested item deletion"); await saveCareerLedger(next, passphrase); setLedger(next); setStatus("Event content erased; deletion receipt retained."); }
-  async function deleteAccountData() { if (!confirm("Delete the entire encrypted Career Ledger from this browser? Download a backup first if needed.")) return; await deleteCareerLedger(); setLedger(null); setVaultExists(false); setStatus("Career Ledger deleted from this browser."); }
+  async function removeEvent(eventId: string) {
+    if (!ledger || !confirm("Permanently erase this event's content? A non-content deletion receipt remains.")) return;
+    try { const next = await deleteCareerEvent(ledger, eventId, "Owner-requested item deletion"); await saveCareerLedger(next, passphrase); setLedger(next); setSelected((ids) => ids.filter((id) => id !== eventId)); onDisclosure?.(""); setStatus("Event content erased; deletion receipt retained. Prior tailoring disclosure revoked."); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Entry deletion failed."); }
+  }
+  async function deleteAccountData() {
+    if (!confirm("Delete the entire encrypted Career Ledger from this browser? Download a backup first if needed.")) return;
+    try { await deleteCareerLedger(); setLedger(null); setVaultExists(false); setPassphrase(""); setSelected([]); onDisclosure?.(""); setStatus("Career Ledger deleted from this browser."); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Ledger deletion failed."); }
+  }
+  async function disclose() {
+    if (!ledger || !onDisclosure) return;
+    try { const packet = await discloseCareerEvidence(ledger, selected); onDisclosure(packet.text); setStatus(`${packet.count} selected entries approved for the next tailoring request. Private source links and unconfirmed skills are excluded.`); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Evidence disclosure failed."); }
+  }
   const active = ledger ? currentCareerEvents(ledger) : [];
   const lastBackup = loadCareerBackupMarker();
   return <section className="rounded-xl border border-ink-700 bg-ink-900/70 p-4" aria-labelledby="career-ledger-heading">
@@ -71,7 +92,8 @@ export function CareerLedger() {
       {ledger.privacy.ageBand === "minor" && <p className="mt-3 rounded border border-amber-600/40 p-2 text-xs text-amber-300">Minor privacy mode: private by default, no public profile, optional guardian assistance does not transfer ownership. Control review due {ledger.privacy.ageOfMajorityReviewDueAt ? new Date(ledger.privacy.ageOfMajorityReviewDueAt).toLocaleDateString() : "when adulthood is reached"}.</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2"><ToolButton onClick={() => void downloadBackup()}>Download encrypted backup</ToolButton><label className="cursor-pointer rounded border border-ink-600 px-3 py-2 text-xs text-paper">Restore backup<input type="file" accept="application/json" className="sr-only" onChange={(event) => void restore(event.target.files?.[0])}/></label><ToolButton onClick={() => void deleteAccountData()}>Delete entire ledger</ToolButton></div>
       <p className="mt-2 text-[10px] text-ink-400">{lastBackup ? `Last backup: ${new Date(lastBackup).toLocaleString()}` : "No recovery backup recorded yet. Browser storage alone is not a decades-long backup."}</p>
-      <ol className="mt-3 space-y-2">{active.slice().reverse().map((entry) => <li key={entry.id} className="rounded border border-ink-700 bg-ink-950 p-3"><div className="flex flex-wrap justify-between gap-2"><strong className="text-sm text-paper">{entry.title}</strong><span className="font-mono text-[10px] text-ink-400">#{entry.sequence} · {entry.verification.replaceAll("_", " ")} · {entry.visibility}</span></div><p className="mt-1 text-xs text-ink-300">{entry.description}</p><button type="button" onClick={() => void removeEvent(entry.id)} className="mt-2 text-[10px] text-red-300 underline">Erase this item</button></li>)}</ol>
+      <ol className="mt-3 space-y-2">{active.slice().reverse().map((entry) => <li key={entry.id} className="rounded border border-ink-700 bg-ink-950 p-3"><div className="flex flex-wrap justify-between gap-2"><strong className="text-sm text-paper">{entry.title}</strong><span className="font-mono text-[10px] text-ink-400">#{entry.sequence} · {entry.verification.replaceAll("_", " ")} · {entry.visibility}</span></div><p className="mt-1 text-xs text-ink-300">{entry.description}</p>{onDisclosure && <label className="mt-2 flex gap-2 text-xs text-ink-300"><input type="checkbox" aria-label={`Select evidence: ${entry.title}`} checked={selected.includes(entry.id)} onChange={() => setSelected((ids) => ids.includes(entry.id) ? ids.filter((id) => id !== entry.id) : [...ids, entry.id])}/>Include this title, description, reported results and confirmed skills in tailoring</label>}<button type="button" onClick={() => void removeEvent(entry.id)} className="mt-2 text-[10px] text-red-300 underline">Erase this item</button></li>)}</ol>
+      {onDisclosure && <div className="mt-3 flex flex-wrap gap-2"><ToolButton onClick={() => void disclose()}>Use selected evidence for tailoring</ToolButton><ToolButton onClick={() => { onDisclosure(""); setSelected([]); setStatus("Career evidence removed from the next tailoring request."); }}>Clear tailoring evidence</ToolButton></div>}
       <p className="mt-3 text-[10px] text-ink-500">Every entry is hash-chained. Corrections become linked new events; AI suggestions remain unconfirmed until you approve them.</p>
     </>}
   </section>;

@@ -1,0 +1,159 @@
+{
+  "model": "convaiinnovations/laya",
+  "runtimeVersion": "0.3.20",
+  "checkpointRevision": "55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851",
+  "reviewedAt": "2026-09-30T18:41:26Z",
+  "inputSha256": "8b002d1ecff672d08a674215ca6508767f78ba14e74c1349249cf217a75404ba",
+  "device": "cpu",
+  "loadMs": 3119.64,
+  "advisoryOnly": true,
+  "confidenceCalibrated": false,
+  "correct": 10,
+  "labeled": 12,
+  "results": [
+    {
+      "text": "Applicants must have three years of Python experience.",
+      "suggestedCategory": "mandatory",
+      "expected": "mandatory",
+      "probabilities": {
+        "mandatory": 0.816,
+        "preferred": 0.1138,
+        "responsibility": 0.0432,
+        "logistics": 0.027
+      },
+      "latencyMs": 141.93
+    },
+    {
+      "text": "A bachelor's degree in computer science is required.",
+      "suggestedCategory": "mandatory",
+      "expected": "mandatory",
+      "probabilities": {
+        "mandatory": 0.9548,
+        "preferred": 0.0158,
+        "responsibility": 0.02,
+        "logistics": 0.0094
+      },
+      "latencyMs": 137.42
+    },
+    {
+      "text": "Minimum qualification: active nursing license.",
+      "suggestedCategory": "mandatory",
+      "expected": "mandatory",
+      "probabilities": {
+        "mandatory": 0.8013,
+        "preferred": 0.0694,
+        "responsibility": 0.0904,
+        "logistics": 0.0389
+      },
+      "latencyMs": 133.22
+    },
+    {
+      "text": "AWS certification is preferred but not required.",
+      "suggestedCategory": "preferred",
+      "expected": "preferred",
+      "probabilities": {
+        "mandatory": 0.0833,
+        "preferred": 0.8605,
+        "responsibility": 0.0302,
+        "logistics": 0.0261
+      },
+      "latencyMs": 133.03
+    },
+    {
+      "text": "Nice to have: experience with Kubernetes.",
+      "suggestedCategory": "preferred",
+      "expected": "preferred",
+      "probabilities": {
+        "mandatory": 0.1503,
+        "preferred": 0.6849,
+        "responsibility": 0.0937,
+        "logistics": 0.071
+      },
+      "latencyMs": 135.19
+    },
+    {
+      "text": "Bonus points for prior work in financial services.",
+      "suggestedCategory": "preferred",
+      "expected": "preferred",
+      "probabilities": {
+        "mandatory": 0.0503,
+        "preferred": 0.8907,
+        "responsibility": 0.0313,
+        "logistics": 0.0277
+      },
+      "latencyMs": 137.37
+    },
+    {
+      "text": "You will review code and maintain automated tests.",
+      "suggestedCategory": "responsibility",
+      "expected": "responsibility",
+      "probabilities": {
+        "mandatory": 0.1346,
+        "preferred": 0.1175,
+        "responsibility": 0.6845,
+        "logistics": 0.0634
+      },
+      "latencyMs": 135.54
+    },
+    {
+      "text": "Responsibilities include supporting customers and documenting releases.",
+      "suggestedCategory": "responsibility",
+      "expected": "responsibility",
+      "probabilities": {
+        "mandatory": 0.0002,
+        "preferred": 0.0002,
+        "responsibility": 0.9994,
+        "logistics": 0.0002
+      },
+      "latencyMs": 134.82
+    },
+    {
+      "text": "In this role, design and build accessible web interfaces.",
+      "suggestedCategory": "responsibility",
+      "expected": "responsibility",
+      "probabilities": {
+        "mandatory": 0.1184,
+        "preferred": 0.2003,
+        "responsibility": 0.6241,
+        "logistics": 0.0572
+      },
+      "latencyMs": 136.52
+    },
+    {
+      "text": "This position is hybrid, with two days per week in the Austin office.",
+      "suggestedCategory": "logistics",
+      "expected": "logistics",
+      "probabilities": {
+        "mandatory": 0.0429,
+        "preferred": 0.0743,
+        "responsibility": 0.125,
+        "logistics": 0.7578
+      },
+      "latencyMs": 142.77
+    },
+    {
+      "text": "Salary range: $100,000 to $130,000 annually.",
+      "suggestedCategory": "responsibility",
+      "expected": "logistics",
+      "probabilities": {
+        "mandatory": 0.2974,
+        "preferred": 0.1944,
+        "responsibility": 0.3347,
+        "logistics": 0.1735
+      },
+      "latencyMs": 147.6
+    },
+    {
+      "text": "Travel is required up to 20 percent of working time.",
+      "suggestedCategory": "mandatory",
+      "expected": "logistics",
+      "probabilities": {
+        "mandatory": 0.7592,
+        "preferred": 0.0719,
+        "responsibility": 0.0672,
+        "logistics": 0.1018
+      },
+      "latencyMs": 135.55
+    }
+  ]
+}

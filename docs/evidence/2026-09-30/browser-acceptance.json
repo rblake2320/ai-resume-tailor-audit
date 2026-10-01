@@ -1,0 +1,40 @@
+{
+  "observedAt": "2026-09-30T19:09:42.221749+00:00",
+  "server": "npm start production build",
+  "generation": "synthetic intercepted NDJSON; no live Anthropic call",
+  "checks": [
+    {
+      "scenario": "layout-240px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "layout-390px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "layout-1280px",
+      "status": "Worked"
+    },
+    {
+      "scenario": "real-server-private-url-refused",
+      "status": "Worked",
+      "httpStatus": 400
+    },
+    {
+      "scenario": "real-server-capabilities",
+      "status": "Worked"
+    },
+    {
+      "scenario": "synthetic-malformed-result-withheld",
+      "status": "Worked"
+    },
+    {
+      "scenario": "synthetic-result-no-newline-tabs-edit-print",
+      "status": "Worked"
+    },
+    {
+      "scenario": "browser-no-uncaught-errors",
+      "status": "Worked"
+    }
+  ]
+}

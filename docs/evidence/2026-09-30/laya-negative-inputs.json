@@ -1,0 +1,26 @@
+[
+  {
+    "scenario": "empty",
+    "status": "Worked",
+    "exitCode": 2,
+    "reportPublished": false
+  },
+  {
+    "scenario": "oversized-excerpt",
+    "status": "Worked",
+    "exitCode": 2,
+    "reportPublished": false
+  },
+  {
+    "scenario": "bad-category",
+    "status": "Worked",
+    "exitCode": 2,
+    "reportPublished": false
+  },
+  {
+    "scenario": "input-byte-budget",
+    "status": "Worked",
+    "exitCode": 2,
+    "reportPublished": false
+  }
+]

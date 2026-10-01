@@ -1,0 +1,50 @@
+verify (windows-latest)	Test	2026-09-30T19:01:34.7110442Z  ^[[32m✓^[[39m lib/agent-route.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 64^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:34.8588400Z  ^[[32m✓^[[39m lib/agent-contract.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:34.9446197Z  ^[[32m✓^[[39m lib/markdown.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.1632795Z  ^[[32m✓^[[39m lib/security-headers.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 13^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.1709615Z  ^[[32m✓^[[39m lib/anthropic-model.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.4053854Z  ^[[32m✓^[[39m lib/deployment-runbook.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 5^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.4213660Z  ^[[32m✓^[[39m lib/canonical-json.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 20^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.6658397Z  ^[[32m✓^[[39m lib/handoff.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 12^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.7766618Z  ^[[32m✓^[[39m lib/storage-clear-independence.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:35.8981023Z  ^[[32m✓^[[39m lib/prompts.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 8^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:36.1271330Z  ^[[32m✓^[[39m lib/workflow-policy.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 8^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:36.1866142Z  ^[[32m✓^[[39m lib/career-path-ui.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 19^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:36.5508669Z  ^[[32m✓^[[39m lib/node-strip-compat.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 230^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.8804616Z  ^[[32m✓^[[39m lib/provider-http.security.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 15110^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.8810566Z      ^[[33m^[[2m✓^[[22m^[[39m aborts an actual upstream that never returns headers at the 15 second deadline ^[[33m 15010^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.8970533Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9003186Z ^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m^[[1m^[[41m Failed Tests 1 ^[[49m^[[22m^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9005110Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9008844Z ^[[41m^[[1m FAIL ^[[22m^[[49m lib/windows-sensitive-path-acl.test.ts^[[2m > ^[[22mWindows sensitive-path ACL startup boundary^[[2m > ^[[22mapplies and independently verifies an ACL only inside a disposable temporary directory
+verify (windows-latest)	Test	2026-09-30T19:01:47.9206769Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9232123Z ^[[31m^[[1mAssertionError^[[22m: promise rejected "Error: Command failed: powershell.exe -No… { …(6) }" instead of resolving^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9316911Z ^[[36m ^[[2m❯^[[22m lib/windows-sensitive-path-acl.test.ts:^[[2m209:8^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9317860Z     ^[[90m207|^[[39m       ^[[35mawait^[[39m ^[[34mexpect^[[39m(
+verify (windows-latest)	Test	2026-09-30T19:01:47.9318941Z     ^[[90m208|^[[39m         runWindowsAclScript({ targetPath: root, mode: "verify", kind: …
+verify (windows-latest)	Test	2026-09-30T19:01:47.9320089Z     ^[[90m209|^[[39m       )^[[33m.^[[39mresolves^[[33m.^[[39m^[[34mtoMatchObject^[[39m({
+verify (windows-latest)	Test	2026-09-30T19:01:47.9320793Z     ^[[90m   |^[[39m        ^[[31m^^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9321313Z     ^[[90m210|^[[39m         secure^[[33m:^[[39m ^[[35mtrue^[[39m^[[33m,^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9321713Z     ^[[90m211|^[[39m       })^[[33m;^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9321886Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9323371Z ^[[31m^[[1mCaused by: Error^[[22m: Command failed: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File D:\a\ai-resume-tailor-audit\ai-resume-tailor-audit\scripts\windows-sensitive-path-acl.ps1 -Mode verify -TargetPath C:\Users\RUNNER~1\AppData\Local\Temp\rf-acl-test-rSNYEj -Kind directory
+verify (windows-latest)	Test	2026-09-30T19:01:47.9324668Z ^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9325003Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9341234Z ^[[31m^[[1mSerialized Error:^[[22m^[[39m ^[[90m{ code: 3, killed: false, signal: null, cmd: 'powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File D:\a\ai-resume-tailor-audit\ai-resume-tailor-audit\scripts\windows-sensitive-path-acl.ps1 -Mode verify -TargetPath C:\Users\RUNNER~1\AppData\Local\Temp\rf-acl-test-rSNYEj -Kind directory', stdout: '{"secure":false,"ownerSid":"S-1-5-32-544","inheritanceProtected":false,"unexpectedAllowSids":[],"currentUserHasFullControl":true,"missingFullControlSids":[],"denyRuleCount":0,"inheritedRuleCount":3,"checkedItemCount":2}\r\n', stderr: '' }^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9353591Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9354035Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9355670Z ^[[2m Test Files ^[[22m ^[[1m^[[31m1 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m53 passed^[[39m^[[22m^[[90m (54)^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9358426Z ^[[2m      Tests ^[[22m ^[[1m^[[31m1 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m553 passed^[[39m^[[22m^[[90m (554)^[[39m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9360265Z ^[[2m   Start at ^[[22m 19:01:14
+verify (windows-latest)	Test	2026-09-30T19:01:47.9362339Z ^[[2m   Duration ^[[22m 33.01s^[[2m (transform 1.56s, setup 0ms, import 9.05s, tests 51.73s, environment 1.61s)^[[22m
+verify (windows-latest)	Test	2026-09-30T19:01:47.9362963Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9362974Z 
+verify (windows-latest)	Test	2026-09-30T19:01:47.9395641Z ##[error]AssertionError: promise rejected "Error: Command failed: powershell.exe -No… { …(6) }" instead of resolving
+verify (windows-latest)	Test	 ❯ lib/windows-sensitive-path-acl.test.ts:209:8
+verify (windows-latest)	Test	
+verify (windows-latest)	Test	Caused by: Caused by: Error: Command failed: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File D:\a\ai-resume-tailor-audit\ai-resume-tailor-audit\scripts\windows-sensitive-path-acl.ps1 -Mode verify -TargetPath C:\Users\RUNNER~1\AppData\Local\Temp\rf-acl-test-rSNYEj -Kind directory
+verify (windows-latest)	Test	
+verify (windows-latest)	Test	⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+verify (windows-latest)	Test	Serialized Error: { code: 3, killed: false, signal: null, cmd: 'powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File D:\a\ai-resume-tailor-audit\ai-resume-tailor-audit\scripts\windows-sensitive-path-acl.ps1 -Mode verify -TargetPath C:\Users\RUNNER~1\AppData\Local\Temp\rf-acl-test-rSNYEj -Kind directory', stdout: '{"secure":false,"ownerSid":"S-1-5-32-544","inheritanceProtected":false,"unexpectedAllowSids":[],"currentUserHasFullControl":true,"missingFullControlSids":[],"denyRuleCount":0,"inheritedRuleCount":3,"checkedItemCount":2}\r\n', stderr: '' }
+verify (windows-latest)	Test	
+verify (windows-latest)	Test	2026-09-30T19:01:48.1196962Z ##[error]Process completed with exit code 1.

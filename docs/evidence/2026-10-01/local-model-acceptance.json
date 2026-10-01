@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T12:01:37.904Z",
+  "scenario": "real-resident-local-model-tailoring",
+  "status": "Worked",
+  "durationMs": 15009,
+  "provider": "local-ollama",
+  "model": "qwen3-vl:8b-instruct",
+  "paidCalls": 0,
+  "documents": [
+    512,
+    765
+  ],
+  "evidenceRows": 6
+}

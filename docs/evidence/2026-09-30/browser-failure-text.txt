@@ -1,0 +1,170 @@
+Resume Foundry
+Workshop
+How it works
+About
+
+EST. ONE PROFILE · ANY JOB
+
+Resume Foundry
+
+Save your career history once. Point it at any job posting. Get an honestly tailored, ATS-safe resume and cover letter — with every change accounted for.
+
+🔒 Stored only in your browser
+Evidence-linked · human review required
+Anthropic model configured by deployment
+
+Your profile and history are saved only in this browser. When you click Forge, your resume and the job text are sent to Anthropic’s API to generate the result; this app keeps no server-side copy.
+
+01
+Your profile
+saved locally ✓
+Your name for privacy protection
+
+Optional. Protect mode masks this exact name locally; it never guesses which words are a person’s name.
+
+Master resume — paste it, or upload PDF / .txt / .md
+🎙 Dictate
+Upload file
+
+422 chars
+
+Everything else — projects, wins, metrics, constraints that never fit on the resume
+🎙 Dictate
+
+Used as honest evidence when tailoring — more material, better results.
+
+02
+The job
+paste a link or the posting text
+Fetch posting
+🎙 Dictate
+Job description
+Job title (optional)
+Company (optional)
+Tailoring emphasis
+Emphasis: balanced
+Emphasis: technical depth
+Emphasis: leadership
+Clear job
+Job Inbox
+
+Immutable posting snapshots stored only in this browser.
+
+Save current job
+Import CSV/JSON
+Greenhouse
+Lever
+USAJOBS
+Forwarded alert
+Import source
+
+Official feeds only. LinkedIn and Indeed remain manual/guided handoff sources; Foundry does not scrape or automate them.
+
+No saved jobs yet. Load or paste a posting, then save it here.
+
+instant scan
+15/17 top job keywords in your resume
+(88% coverage — before any AI)
+· seek
+✓ software
+✓ engineer
+✓ develop
+✓ reliable
+✓ collaborate
+✓ product
+✓ managers
+✓ review
+· code
+✓ improve
+✓ testing
+✓ document
+✓ releases
+✓ accessible
+✓ interfaces
+✓ typescript
+
+Deterministic keyword check, computed in your browser — the transparent baseline the AI pass improves on.
+
+Personal information shield
+
+Contact details and the name you explicitly enter above are replaced locally before generation and restored afterward. Names are never guessed. You can review detected fields or send your exact text whenever you choose.
+
+Read-aloud uses your browser/device voice. Dictation starts only when you press its button and may use your browser or operating-system speech provider.
+
+Protect automatically
+Let me review first
+Send exactly what I entered
+Forge my resume →
+The generated documents were invalid and were withheld. Try again.
+Retry generation
+Career ledger
+
+Keep projects, work, learning, volunteering, caregiving, and evidence for future uses you cannot predict yet.
+
+No ledger yet. Choose a passphrase to create one.
+
+Age not specified
+Under age of majority
+Adult
+Create encrypted ledger
+Restore encrypted backup
+Career path evidence
+
+O*NET describes occupations. BLS time series show observations. Trend labels require a separate, current occupational-projection snapshot with full provenance.
+
+Look up an O*NET occupation, then import an authoritative projection snapshot.
+
+O*NET-SOC code
+Look up O*NET
+Optional BLS observational series
+Authoritative projection snapshot (JSON)
+Explicit evidence gaps (one per line or comma-separated)
+Training resource catalog (JSON array)
+Validate and save path
+
+Projection and training JSON are user-supplied and unverified by Resume Foundry. Saved path records are browser-local but not passphrase-encrypted yet. Keep sensitive evidence in the encrypted Career Ledger.
+
+Sensitive-work employer attestations
+
+Cryptographically verified employer attestation — not a security clearance or government endorsement.
+
+A future authorized issuer may confirm a narrowly approved, unclassified predicate without disclosing a program, customer, contract, duties, technology, location, facility, clearance level, or classified content. Current clearance and access verification remains with the applicable government and employing organization process.
+
+Synthetic profile only. No real clearance data, DISS integration, or public pilot is enabled.
+
+Email & calendar connections
+
+Choose only the permissions you need. Tokens remain encrypted and unavailable to browser scripts.
+
+Not configured on this server.
+
+Read job-alert email
+Create email drafts
+Manage your interview events
+Connect Google
+Application tracker
+
+Each packet keeps the exact job, profile, résumé, cover letter, and checksums used.
+
+Prepare immutable packet
+0
+Applications
+0%
+Response rate
+0%
+Interview conversion
+0
+Awaiting follow-up
+Analytics detail
+Save points
+
+Automatic recovery checkpoints stay in this browser; the newest 12 are kept.
+
+Save point now
+Automatic checkpoint
+9/30/2026, 1:44:39 PM · draft
+✕
+Past runs (stored only in this browser)
+Erase all my data
+Honest tailoring only — nothing is invented, and keywords the model can’t evidence are listed, not faked.
+Your profile and history live in this browser’s localStorage. This app does not write a server-side copy.

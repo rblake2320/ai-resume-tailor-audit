@@ -2,27 +2,67 @@
 
 **Evidence-linked AI résumé tailoring. One profile, any job, with unsupported claims surfaced for human review.**
 
-Save your career history once, point it at any job posting (paste the text or just the URL), and get an honestly tailored, ATS-safe resume and cover letter — with a calibrated match score, a full diff of every change, a keyword gap analysis, and exports in DOCX, Markdown, plain text, and print/PDF.
+Save your career history once, point it at any job posting (paste the text or just the URL), and get an honestly tailored, ATS-safe resume and cover letter — with an estimated match score, a full diff of every change, a keyword gap analysis, and exports in DOCX, Markdown, plain text, and print/PDF.
 
 Uses a deployment-configured Anthropic API model with structured outputs and adaptive thinking. Built with Next.js 16, React 19, TypeScript, and Tailwind CSS 4.
 
-## Why this beats the usual tools
+## Invite-only tester pilot — October 1, 2026
 
-The 2026 market splits into distrusted black-box scorers, keyword-overlap trackers, template builders whose designs break real ATS parsing, and AI tools that quietly invent skills. Resume Foundry is built around the five things none of them combine:
+[Open the live tester pilot](https://resume-foundry-private-pilot.rblake2320.workers.dev).
+An invite code is required. This profile runs real tailoring with the existing
+local Qwen instruction model and keeps paid providers disabled. Testers can
+generate and export documents, save jobs and application packets, and explicitly
+opt in to usage, errors, ratings and reviewed written feedback. Their résumé and
+job content are excluded from the telemetry schema.
+
+The Cloudflare gateway and dedicated D1 feedback store are hosted; the application
+and free model run on the owner's PC, which must stay on. Run `npm run pilot:share`
+from the built checkout to recover/redeploy the dedicated tester origin. It
+preserves invite credentials and never starts or downloads a model. Daily limits
+are three generation attempts per invite and ten total, with one inference at a
+time. [Owner operation and executed evidence](docs/PILOT_2026-10-01.md).
+
+## September 30, 2026 maintenance review
+
+Updated to Next.js 16.3.8, the September 30 security release, with compatible
+dependency updates and zero npm audit findings at review time. Generation now
+rejects incomplete provider turns, validates streamed documents before browser
+persistence, enforces response budgets, and cancels upstream work on disconnect.
+The security-team review added DNS connection pinning, OAuth response validation,
+and bounded provider transport. Linux and Windows run the same CI checks.
+
+An optional, offline [Laya requirement-review tool](docs/LAYA_REVIEW.md) suggests
+categories for short public English job excerpts. Its retained 12-case smoke
+benchmark scored 10/12; suggestions require review and never control tailoring,
+evidence validation, or applications.
+
+Review findings and executable acceptance evidence are in
+[the dated review](docs/REVIEW_2026-09-30.md).
+
+The follow-up connects selected vault evidence to tailoring, reviewed application
+snapshots to the audited agent service, explicit Google alert import/draft/calendar
+actions, and the browser to exact official-submission previews. Approved reminders
+can be downloaded as calendar events with display alarms. See
+[integration acceptance](docs/INTEGRATION_COMPLETION_2026-09-30.md) for executed
+outcomes and the live-account requirements.
+
+## Product principles
+
+Resume Foundry organizes tailoring around evidence, reviewable changes, and simple document exports:
 
 | Principle | What it means here |
 |---|---|
 | **Evidence discipline** | The model is instructed to cite résumé evidence and list unsupported keywords under "Not added — no evidence." Deterministic validation is being expanded; generated content still requires human review. |
 | **Transparent diff** | Every change is logged and classified: reworded, reordered, removed, or emphasized. You stay accountable for your own resume. |
-| **Real parse view** | A "What the ATS sees" tab shows the exact plain text a parser extracts — if it reads cleanly there, it reads cleanly in Workday, Greenhouse, Lever, and iCIMS. |
-| **2026-aware scoring** | Semantic matching, no keyword stuffing (modern ATS penalize it), calibrated scores with the arithmetic explained — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
-| **Local-first privacy** | Your working profile and run history stay browser-local. Long-lived career evidence uses an encrypted IndexedDB vault with portable encrypted backup, recovery drills, selective disclosure, and deletion controls. The app does not create a cloud profile. |
+| **Real parse view** | A "What the ATS sees" tab shows the app’s Markdown-to-text export. It is a formatting preview; employer ATS parsing varies and is not simulated here. |
+| **2026-aware scoring** | Model-estimated matching, contextual keywords, and score rationale for human review — plus an instant, deterministic keyword scan that runs in your browser before any AI. |
+| **Local-first privacy** | Your working profile and run history stay browser-local by default. Career evidence uses an encrypted IndexedDB vault with encrypted backup, selected disclosure, and deletion controls. Explicit agent-workspace publishing copies reviewed application packets to your configured server; credentials remain session-only. |
 | **Job Inbox** | Save immutable, SHA-256-addressed posting snapshots; import CSV/JSON in bulk; skip duplicates by source ID, canonical URL, company/title/location, or description hash. |
 | **Legitimate source connectors** | Import official Greenhouse and Lever public boards, USAJOBS searches, forwarded alerts, CSV/JSON, URLs, or manual text. LinkedIn/Indeed scraping and automated apply remain prohibited. |
 
 ## Features
 
-- **Master profile** — paste or upload (PDF / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
+- **Master profile** — paste or upload (PDF / DOCX / DOC / RTF / ODT / .txt / .md) your resume once, plus an "everything else" field for projects, wins, and metrics that never fit on one page. Auto-saved locally.
 - **Personal-information shield** — locally masks supported contact/identifier forms and an explicitly supplied candidate name before generation, with review and exact-text escape hatches. Its documented limits are in [docs/PII_PROTECTION.md](docs/PII_PROTECTION.md).
 - **Job by URL** — paste a public careers-page link and a bounded HTML response is fetched and extracted server-side. LinkedIn and Indeed automation is rejected; paste those postings manually.
 - **Instant keyword scan** — deterministic, client-side coverage check the moment both fields are filled. Transparent baseline before the AI pass.
@@ -35,8 +75,21 @@ The 2026 market splits into distrusted black-box scorers, keyword-overlap tracke
 - **Career-path evidence workspace** — server-side O*NET lookup, explicitly labeled BLS observational-series lookup, current occupational-projection snapshot import, provenance-preserving trend classification, and training suggestions limited to explicit evidence gaps. O*NET requires deployment credentials; projection imports remain user/operator supplied until an authoritative projections connector is added.
 - **Application operating system** — job inbox, immutable application packets, pipeline tracking, reminders, interview preparation, approved handoffs, official ATS connectors, and Gmail draft creation.
 - **Agent interfaces** — bearer-authenticated HTTP/OpenAPI operations and a stdio MCP server share one permission, approval, rate-limit, persistence, and audit boundary.
+- **Reviewed workspace bridge** — explicitly publish local application packets or restore a reviewed server snapshot; stale revisions stop replacement. PII consent is required to read and human approval is required to publish. The full encrypted vault is never synchronized.
+- **Google receiving workflows** — explicitly fetch matching alerts and review them before importing; review and approve unsent drafts and private calendar events with popup reminders. Provider read-back must match the approved action before a verified receipt is shown. [Setup](docs/GOOGLE_CONNECTIONS.md).
+- **Reminder calendar export** — download an approved reminder as an RFC 5545 event with a display alarm, then import it into your calendar. The app does not claim background notification delivery from browser-local state.
 
 ## Quick start
+
+Start the private document parser with `npm run tika:start` (Docker Desktop
+required). Apache Tika 4.1.0 extracts PDF, DOCX, legacy DOC, RTF and ODT uploads;
+TXT and Markdown stay native. The parser has no internet route and is reached
+through a loopback-only gateway. [Setup and receiving evidence](docs/TIKA.md).
+
+After installing, building and adding this app's provider key to `.env.local`,
+run `npm run start:local` for the private workshop at `http://localhost:3100`.
+It provisions its own guarded storage and session credentials; optional Google
+and employer accounts still require their own explicit setup.
 
 ```bash
 git clone https://github.com/rblake2320/ai-resume-tailor-audit.git
@@ -64,7 +117,7 @@ The USAJOBS connector additionally reads `USAJOBS_API_KEY` and `USAJOBS_USER_AGE
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run mcp` | Launch the stdio MCP tool server |
 
-CI runs lint, typecheck, tests, build, and a high-severity dependency audit on every push and PR.
+CI runs lint, typecheck, tests, build, and a high-severity dependency audit for main/master pushes and pull requests on Linux and Windows. Run `npm run verify` locally for the same checks with all audit severities enforced and machine-readable logs under `.resume-foundry/verification/`.
 
 The labor-market route contracts and deployment boundaries are documented in [`docs/LABOR_MARKET_API.md`](docs/LABOR_MARKET_API.md).
 Production environment profiles, Windows ACL provisioning, startup order, and failure diagnosis are documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).

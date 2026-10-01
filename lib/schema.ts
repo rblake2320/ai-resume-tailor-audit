@@ -25,10 +25,10 @@ export const RequirementEvidenceSchema = z.strictObject({
 
 export const TailorResultSchema = z.strictObject({
   match_score_before: z
-    .int()
+    .int().min(0).max(100)
     .describe("How well the ORIGINAL resume matches the job, 0-100"),
   match_score_after: z
-    .int()
+    .int().min(0).max(100)
     .describe("How well the TAILORED resume matches the job, 0-100"),
   score_rationale: z
     .string()
@@ -98,12 +98,12 @@ export const TailorResultSchema = z.strictObject({
       "ATS-parseability checks performed on the tailored resume: standard section headers, no tables/columns, contact info in body, dates parseable, keywords in context",
     ),
   tailored_resume_markdown: z
-    .string()
+    .string().trim().min(1).max(100_000)
     .describe(
       "The complete tailored resume in clean Markdown: # Name, contact line, ## Summary, ## Experience, ## Education, ## Skills. ATS-safe single column.",
     ),
   cover_letter_markdown: z
-    .string()
+    .string().trim().min(1).max(100_000)
     .describe(
       "A tailored, specific cover letter in Markdown, 250-350 words, referencing real items from the resume and the job posting. No placeholders except [Hiring Manager] if no name is known.",
     ),

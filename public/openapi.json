@@ -562,7 +562,17 @@
           "415": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-resume-foundry-human-approval",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/api/agent/applications.open_handoff": {
@@ -937,6 +947,12 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 20
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000,
+                    "description": "Greenhouse metadata/detail page offset (20 jobs per request)."
                   }
                 }
               }
@@ -1078,6 +1094,257 @@
           },
           "503": {
             "$ref": "#/components/responses/RateLimitUnavailable"
+          }
+        }
+      }
+    },
+    "/api/agent/workspace.read": {
+      "post": {
+        "operationId": "workspace_read",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced workspace.read. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/agent/workspace.publish": {
+      "post": {
+        "operationId": "workspace_publish",
+        "tags": [
+          "Agent operations"
+        ],
+        "description": "Policy-enforced workspace.publish. Every allowed or denied call is audited.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentOperationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-resume-foundry-human-approval",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/submissions/preview": {
+      "post": {
+        "operationId": "reviewBrowserSubmission",
+        "description": "Human-authenticated, bounded preview of an integrity-checked ready browser application. Creates no provider action.",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-resume-foundry-human-approval",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "record",
+                  "target",
+                  "fields"
+                ],
+                "properties": {
+                  "record": {
+                    "type": "object",
+                    "description": "Current ApplicationPacket and ready state only; no tracker history or contacts."
+                  },
+                  "target": {
+                    "$ref": "#/components/schemas/SubmissionTarget"
+                  },
+                  "fields": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exact packet-bound review preview"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/connections/google/actions": {
+      "post": {
+        "operationId": "googleReceivingWorkflow",
+        "description": "Same-origin sealed-cookie Google workflow. Read alerts explicitly; review and approve exact writes with expiring single-use receipts. Requires deployment OAuth and private nonce storage.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "operation",
+                      "query"
+                    ],
+                    "properties": {
+                      "operation": {
+                        "const": "read_alerts"
+                      },
+                      "query": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "operation",
+                      "action"
+                    ],
+                    "properties": {
+                      "operation": {
+                        "const": "review"
+                      },
+                      "action": {
+                        "type": "object",
+                        "description": "Reviewed calendar_event or email_draft, validated against the server schema."
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "operation",
+                      "approvalId"
+                    ],
+                    "properties": {
+                      "operation": {
+                        "const": "approve"
+                      },
+                      "approvalId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Alerts, an expiring exact review or a read-back verified receiving receipt."
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "description": "Expired, mismatched or replayed approval"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "502": {
+            "description": "Provider action unavailable or unverifiable"
+          },
+          "503": {
+            "description": "Workflow prerequisites missing"
           }
         }
       }

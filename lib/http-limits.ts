@@ -1,9 +1,8 @@
 export class HttpLimitError extends Error {
-  constructor(
-    public readonly status: 400 | 413 | 415,
-    message: string,
-  ) {
+  readonly status: 400 | 413 | 415;
+  constructor(status: 400 | 413 | 415, message: string) {
     super(message);
+    this.status = status;
     this.name = "HttpLimitError";
   }
 }

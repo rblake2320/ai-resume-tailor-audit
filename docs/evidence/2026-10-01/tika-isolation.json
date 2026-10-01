@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-01T22:30:10.658044+00:00",
+  "status": "Worked",
+  "readOnlyRoot": true,
+  "droppedCapabilities": [
+    "ALL"
+  ],
+  "memoryBytes": 1073741824,
+  "user": "10001:10001",
+  "parserNetworkInternal": true,
+  "parserDefaultGateway": "",
+  "hostDataMounts": [
+    "/config/tika.json"
+  ],
+  "image": "apache/tika:4.1.0@sha256:06bcdbd09aca073293e5a171ad161418cc93c91d58d9e4e205064eade84889d4"
+}

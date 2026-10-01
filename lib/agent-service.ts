@@ -1,14 +1,16 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { withFileLock } from "./file-lock.ts";
 import { appendAuthenticatedAudit, assertAgentAuditConfigured, verifyAuthenticatedAudit, type AgentAuditEntry } from "./agent-audit.ts";
+import { reviewedWorkspaceSnapshot, type WorkspaceSnapshot } from "./workspace-sync.ts";
 
 export const AGENT_OPERATIONS = [
   "jobs.import", "jobs.search", "jobs.get", "jobs.compare", "jobs.dismiss", "matches.score",
   "applications.prepare", "applications.review", "applications.approve", "applications.open_handoff",
   "applications.mark_submitted", "applications.record_response", "applications.schedule_followup", "analytics.summary",
+  "workspace.read", "workspace.publish",
 ] as const;
 export type AgentOperation = typeof AGENT_OPERATIONS[number];
 
@@ -22,7 +24,7 @@ export type AgentRequest = z.input<typeof AgentRequestSchema>;
 type StoredJob = { id: string; title: string; company: string; description: string; url: string; dismissed: boolean; importedAt: string };
 type StoredApplication = { id: string; jobId: string; state: "prepared" | "approved" | "handoff_opened" | "submitted"; packet: Record<string, unknown>; approvedAt: string | null; submittedAt: string | null; /** First outward disclosure; consumes one unit of daily quota. */ disclosedAt?: string | null; responses: unknown[]; followUps: string[] };
 export type AuditEntry = AgentAuditEntry;
-type Store = { version: 1; jobs: StoredJob[]; applications: StoredApplication[]; audit: AuditEntry[] };
+type Store = { version: 1; jobs: StoredJob[]; applications: StoredApplication[]; audit: AuditEntry[]; workspace?: WorkspaceSnapshot };
 const emptyStore = (): Store => ({ version: 1, jobs: [], applications: [], audit: [] });
 export const UNAUTHENTICATED_DENIALS_PER_UTC_DAY = 32;
 
@@ -35,7 +37,15 @@ const storePath = () => {
   return configured;
 };
 async function loadStore(): Promise<Store> { try { const store = JSON.parse(await readFile(storePath(), "utf8")) as Store; verifyAuthenticatedAudit(store.audit); return store; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return emptyStore(); throw error; } }
-async function saveStore(store: Store) { const target = storePath(); await mkdir(path.dirname(target), { recursive: true }); const temp = `${target}.${process.pid}.${randomUUID()}.tmp`; await writeFile(temp, JSON.stringify(store, null, 2), { encoding: "utf8", mode: 0o600 }); await rename(temp, target); }
+async function saveStore(store: Store) {
+  const target = storePath();
+  await mkdir(path.dirname(target), { recursive: true });
+  const temp = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  const handle = await open(temp, "wx", 0o600);
+  try { await handle.writeFile(JSON.stringify(store, null, 2), "utf8"); await handle.sync(); }
+  finally { await handle.close(); }
+  await rename(temp, target);
+}
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 function addAudit(store: Store, entry: Omit<AuditEntry, "id" | "at" | "previousMac" | "mac">, now = new Date().toISOString()) {
   store.audit.push(appendAuthenticatedAudit(store.audit, { id: randomUUID(), at: now, ...entry }));
@@ -51,6 +61,7 @@ const text = (value: unknown, name: string, minimum = 1) => { if (typeof value !
  */
 const PII_OPERATIONS: readonly AgentOperation[] = [
   "applications.prepare", "applications.review", "applications.open_handoff", "applications.mark_submitted",
+  "workspace.read", "workspace.publish",
 ];
 
 function secretsMatch(supplied: unknown, expected: string) {
@@ -61,7 +72,7 @@ function secretsMatch(supplied: unknown, expected: string) {
 }
 
 function decision(operation: AgentOperation, request: z.output<typeof AgentRequestSchema>) {
-  if (operation === "applications.approve") {
+  if (operation === "applications.approve" || operation === "workspace.publish") {
     const secret = process.env.RESUME_FOUNDRY_HUMAN_APPROVAL_SECRET;
     if (!secret || !secretsMatch(request.humanApprovalSecret, secret)) return { allowed: false, reason: "Explicit human approval secret is required." };
   }
@@ -99,6 +110,13 @@ async function executeAgentOperationInner(raw: AgentRequest) {
     if (!permission.allowed) throw new Error(permission.reason);
     const input = request.input;
     switch (request.operation) {
+      case "workspace.read": result = store.workspace ?? { records: [], revision: null, updatedAt: null }; break;
+      case "workspace.publish": {
+        if (input.expectedRevision !== (store.workspace?.revision ?? null)) throw new Error("Agent workspace changed. Reload and review before publishing.");
+        store.workspace = reviewedWorkspaceSnapshot(input.records, now);
+        result = { revision: store.workspace.revision, updatedAt: now, count: store.workspace.records.length };
+        break;
+      }
       case "jobs.import": { const job: StoredJob = { id: randomUUID(), title: text(input.title, "title"), company: text(input.company, "company"), description: text(input.description, "description", 20), url: typeof input.url === "string" ? input.url : "", dismissed: false, importedAt: now }; store.jobs.push(job); result = job; resultId = job.id; break; }
       case "jobs.search": { const query = String(input.query ?? "").toLowerCase(); result = store.jobs.filter((job) => !job.dismissed && `${job.title} ${job.company} ${job.description}`.toLowerCase().includes(query)); break; }
       case "jobs.get": { result = store.jobs.find((job) => job.id === input.id) ?? null; break; }

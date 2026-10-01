@@ -1,0 +1,14 @@
+[
+  {"text":"Applicants must have three years of Python experience.","expected":"mandatory"},
+  {"text":"A bachelor's degree in computer science is required.","expected":"mandatory"},
+  {"text":"Minimum qualification: active nursing license.","expected":"mandatory"},
+  {"text":"AWS certification is preferred but not required.","expected":"preferred"},
+  {"text":"Nice to have: experience with Kubernetes.","expected":"preferred"},
+  {"text":"Bonus points for prior work in financial services.","expected":"preferred"},
+  {"text":"You will review code and maintain automated tests.","expected":"responsibility"},
+  {"text":"Responsibilities include supporting customers and documenting releases.","expected":"responsibility"},
+  {"text":"In this role, design and build accessible web interfaces.","expected":"responsibility"},
+  {"text":"This position is hybrid, with two days per week in the Austin office.","expected":"logistics"},
+  {"text":"Salary range: $100,000 to $130,000 annually.","expected":"logistics"},
+  {"text":"Travel is required up to 20 percent of working time.","expected":"logistics"}
+]
