@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fetchPilotOrigin, closePilotOriginConnections } from "./pilot-origin-fetch.mjs";
 
 const directory = path.resolve(".resume-foundry", "pilot", "operator");
 const config = JSON.parse(await readFile("pilot/wrangler.jsonc", "utf8"));
@@ -10,9 +11,10 @@ const origins = log.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/gu);
 const origin = origins?.at(-1);
 if (!origin) throw new Error("Start the dedicated tester tunnel before deployment.");
 const freeAi = process.argv.includes("--free-ai");
-const health = await fetch(`${origin}/api/capabilities`, { headers: { "x-resume-pilot-origin": owner.ORIGIN_SECRET }, signal: AbortSignal.timeout(10_000) });
+const health = await fetchPilotOrigin(`${origin}/api/capabilities`, { headers: { "x-resume-pilot-origin": owner.ORIGIN_SECRET }, signal: AbortSignal.timeout(10_000) });
 if (!health.ok) throw new Error("The protected pilot origin could not be verified.");
 const capabilities = await health.json();
+await closePilotOriginConnections();
 if (capabilities.mode !== "invite-only-tester-pilot" || capabilities.generationEnabled !== freeAi) throw new Error("Gateway and origin pilot settings do not match.");
 config.main = path.resolve("pilot", "src", "worker.js");
 config.vars = { ...config.vars, ORIGIN_URL: origin, PILOT_AI_ENABLED: freeAi ? "true" : "false", PILOT_AI_PROVIDER: "ollama" };

@@ -19,10 +19,8 @@ for ($attempt = 0; $attempt -lt 20; $attempt++) {
 }
 if (-not $tikaReady) { throw 'Pinned Apache Tika did not become ready. Inspect the dedicated Docker container logs.' }
 function Test-PilotOrigin([string] $Url) {
-    try {
-        $caps = Invoke-RestMethod -Uri "$Url/api/capabilities" -Headers $originHeaders -TimeoutSec 5
-        return ($caps.mode -eq 'invite-only-tester-pilot' -and $caps.generationEnabled -eq $true)
-    } catch { return $false }
+    & node scripts/pilot-origin-health.mjs $Url
+    return ($LASTEXITCODE -eq 0)
 }
 # Read-only check of the existing model service. This never launches Ollama or pulls weights.
 try { $models = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 5 } catch { throw 'The existing local Ollama service is unavailable. Start it yourself, then retry.' }
@@ -55,16 +53,34 @@ if (-not $tunnelUrl -or -not (Test-PilotOrigin $tunnelUrl)) {
         $ownedTunnelId = 0
         if (-not [int]::TryParse((Get-Content -LiteralPath $tunnelPidFile -Raw).Trim(), [ref]$ownedTunnelId)) { throw 'Invalid dedicated tunnel PID receipt.' }
         $ownedTunnel = Get-CimInstance Win32_Process -Filter "ProcessId=$ownedTunnelId"
-        if ($ownedTunnel) {
-            if ($ownedTunnel.Name -ne 'cloudflared.exe' -or -not $ownedTunnel.CommandLine.Contains('http://127.0.0.1:3102') -or -not $ownedTunnel.CommandLine.Contains($tunnelLog)) { throw 'Dedicated tunnel PID ownership could not be verified. No process was stopped.' }
-            Stop-Process -Id $ownedTunnelId -ErrorAction Stop
-            Wait-Process -Id $ownedTunnelId -Timeout 10 -ErrorAction SilentlyContinue
+        if ($ownedTunnel -and $ownedTunnel.Name -ne 'cloudflared.exe') {
+            # Windows may recycle a saved PID after reboot. Preserve that receipt
+            # and leave the unrelated process untouched before creating our tunnel.
+            Move-Item -LiteralPath $tunnelPidFile -Destination "$tunnelPidFile.$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()).stale"
+            Write-Output 'Preserved a recycled tunnel PID receipt; unrelated process left running.'
+        } elseif ($ownedTunnel) {
+            if (-not $ownedTunnel.CommandLine -or -not $ownedTunnel.CommandLine.Contains('http://127.0.0.1:3102') -or -not $ownedTunnel.CommandLine.Contains($tunnelLog)) { throw 'Dedicated tunnel PID ownership could not be verified. No process was stopped.' }
+            $identityFile = Join-Path $pilotRoot 'tunnel.identity.json'
+            if (-not (Test-Path -LiteralPath $identityFile)) { throw 'Tunnel birth identity receipt is missing. No process was stopped.' }
+            $identity = Get-Content -LiteralPath $identityFile -Raw | ConvertFrom-Json
+            $freshTunnel = Get-CimInstance Win32_Process -Filter "ProcessId=$ownedTunnelId"
+            if (-not $freshTunnel -or $identity.pid -ne $ownedTunnelId -or $identity.birth -ne $freshTunnel.CreationDate.ToUniversalTime().ToString('o') -or $identity.executable -ne $freshTunnel.ExecutablePath -or $freshTunnel.CommandLine -ne $ownedTunnel.CommandLine) { throw 'Tunnel birth/executable identity changed. No process was stopped.' }
+            $processHandle = Get-Process -Id $ownedTunnelId -ErrorAction Stop
+            try {
+                $null = $processHandle.Handle # Pin this process instance before checking birth or stopping it.
+                if ($processHandle.StartTime.ToUniversalTime().Ticks.ToString() -ne $identity.processStartTicks) { throw 'Tunnel process identity changed before stop.' }
+                $processHandle.Kill()
+                if (-not $processHandle.WaitForExit(10000)) { throw 'Owned tunnel did not exit within ten seconds.' }
+            } finally { $processHandle.Dispose() }
         }
     }
     if (Test-Path -LiteralPath $tunnelLog) { Move-Item -LiteralPath $tunnelLog -Destination "$tunnelLog.$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()).previous" }
     $cloudflaredPath = (Get-Command cloudflared -ErrorAction Stop).Source
     $tunnel = Start-Process -FilePath $cloudflaredPath -ArgumentList @('tunnel','--url','http://127.0.0.1:3102','--protocol','http2','--no-autoupdate','--logfile',$tunnelLog) -WindowStyle Hidden -RedirectStandardOutput (Join-Path $pilotRoot 'tunnel-output.log') -RedirectStandardError (Join-Path $pilotRoot 'tunnel-error.log') -PassThru
     Set-Content -LiteralPath (Join-Path $pilotRoot 'tunnel.pid') -Value $tunnel.Id
+    $createdTunnel = Get-CimInstance Win32_Process -Filter "ProcessId=$($tunnel.Id)"
+    if (-not $createdTunnel -or -not $createdTunnel.ExecutablePath) { throw 'New tunnel birth identity could not be recorded.' }
+    @{ pid = $tunnel.Id; birth = $createdTunnel.CreationDate.ToUniversalTime().ToString('o'); executable = $createdTunnel.ExecutablePath; processStartTicks = $tunnel.StartTime.ToUniversalTime().Ticks.ToString() } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $pilotRoot 'tunnel.identity.json') -Encoding UTF8
     $ready = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         $tunnelUrl = Get-PilotTunnel

@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-28T04:17:19Z",
+  "url": "https://resume-foundry-private-pilot.rblake2320.workers.dev",
+  "checks": [
+    {
+      "scenario": "tracking-off-by-default",
+      "status": "Worked"
+    },
+    {
+      "scenario": "hosted-acceptance",
+      "status": "Failed",
+      "error": "Locator expected to be visible\nActual value: <element(s) not found> \nCall log:\n  - Expect \"to_be_visible\" with timeout 190000ms\n  - waiting for get_by_role(\"button\", name=\".docx\", exact=True).first\n"
+    }
+  ]
+}

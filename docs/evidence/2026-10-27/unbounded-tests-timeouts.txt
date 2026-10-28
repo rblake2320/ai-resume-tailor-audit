@@ -1,0 +1,46 @@
+
+> ai-resume-tailor@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.12 C:/Users/techai/ai-resume-tailor-review-20260930
+
+ ❯ lib/agent-audit.test.ts (7 tests | 1 failed) 7194ms
+     × durably bounds unauthenticated denial growth while retaining the first denials 5050ms
+ ❯ lib/windows-sensitive-path-acl.test.ts (17 tests | 1 failed) 24494ms
+     × does not count an inherit-only administrator ACE as effective full control 5029ms
+
+ Test Files  2 failed | 71 passed (73)
+      Tests  2 failed | 627 passed (629)
+   Start at  23:14:54
+   Duration  24.78s (transform 7.16s, setup 0ms, import 18.19s, tests 81.35s, environment 7.38s)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/agent-audit.test.ts > authenticated, tamper-evident agent audit > durably bounds unauthenticated denial growth while retaining the first denials
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ lib/agent-audit.test.ts:56:3
+     54|   });
+     55|
+     56|   it("durably bounds unauthenticated denial growth while retaining the…
+       |   ^
+     57|     for (let index = 0; index < UNAUTHENTICATED_DENIALS_PER_UTC_DAY + …
+     58|       const response = await POST(new Request("http://localhost/api/ag…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  lib/windows-sensitive-path-acl.test.ts > Windows sensitive-path ACL startup boundary > does not count an inherit-only administrator ACE as effective full control
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ lib/windows-sensitive-path-acl.test.ts:327:41
+    325|   );
+    326|
+    327|   it.runIf(process.platform === "win32")(
+       |                                         ^
+    328|     "does not count an inherit-only administrator ACE as effective ful…
+    329|     async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
