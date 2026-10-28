@@ -11,7 +11,7 @@ const steps = [
   ["Build your evidence base", "Paste or upload your master resume and add useful background. Resume Foundry saves this working profile in your browser and never invents missing experience."],
   ["Bring in a real job", "Paste a posting, import supported job data, or fetch an allowed public job URL. Review the title, employer, requirements, and source before using it."],
   ["Choose your privacy level", "Protect mode masks detected personal details before generation and restores them locally afterward. Review mode shows detections first. Exact mode sends the text you entered."],
-  ["Forge and review", "The configured Anthropic model drafts an evidence-linked resume and cover letter. Inspect the requirement map, unsupported gaps, wording changes, and ATS checks before accepting anything."],
+  ["Forge and review", "The configured AI model drafts an evidence-linked resume and cover letter. Inspect the requirement map, unsupported gaps, wording changes, and ATS checks before accepting anything."],
   ["Export and track", "Download or copy the reviewed documents, preserve the exact application packet, and record submission, interview, offer, rejection, and follow-up events."],
   ["Keep the long view", "Save points protect active work. The encrypted Career Ledger can retain projects, learning, work, and attestations that may become relevant years later."],
 ] as const;

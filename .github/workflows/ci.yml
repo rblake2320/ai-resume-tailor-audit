@@ -15,7 +15,11 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -25,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24"
+          node-version: "24.17.0"
           cache: npm
 
       - name: Install dependencies
@@ -43,5 +47,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install pilot gateway dependencies
+        run: npm ci --prefix pilot
+
+      - name: Test pilot gateway on actual workerd and local D1
+        run: npm test --prefix pilot
+
       - name: Security audit
         run: npm audit --audit-level=high
+
+      - name: Pilot dependency security audit
+        run: npm audit --prefix pilot --audit-level=high
+
+      - name: Actual Apache Tika container extraction
+        if: runner.os == 'Linux'
+        run: |
+          npm run tika:start
+          node -e "for(let n=0;n<60;n++){try{if((await fetch('http://127.0.0.1:9998/health')).ok)break;}catch{}if(n===59)process.exit(1);await new Promise(r=>setTimeout(r,500));}"
+          npm run test:tika:live

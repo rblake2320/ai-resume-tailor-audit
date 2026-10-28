@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_MODEL, resolveModel } from "./anthropic-model";
+import { DEFAULT_MODEL, resolveModel, resolveOutputBudget } from "./anthropic-model";
+
+describe("deployment output budget", () => {
+  it("has a bounded default and rejects invalid deployment limits", () => {
+    expect(resolveOutputBudget({})).toBe(16_000);
+    expect(resolveOutputBudget({ RESUME_FOUNDRY_MAX_OUTPUT_TOKENS: "4096" })).toBe(4096);
+    for (const value of ["0", "-1", "1.5", "Infinity", "64001", "garbage"]) expect(() => resolveOutputBudget({ RESUME_FOUNDRY_MAX_OUTPUT_TOKENS: value })).toThrow(/integer/);
+  });
+});
 
 describe("Anthropic model resolution", () => {
   it("ignores ANTHROPIC_MODEL so a CLI alias cannot hijack the production route", () => {

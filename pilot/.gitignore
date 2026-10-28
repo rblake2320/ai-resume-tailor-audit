@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+.dev.vars*
+owner-secrets*
+local-test-results/
+*.log

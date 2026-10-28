@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "resume-foundry-private-pilot",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "observability": { "enabled": false },
+  "vars": {
+    "PILOT_AI_ENABLED": "false",
+    "PILOT_AI_PER_TESTER_PER_DAY": "3",
+    "PILOT_AI_GLOBAL_PER_DAY": "10"
+  },
+  "triggers": { "crons": ["17 3 * * *"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "resume-foundry-private-pilot", "database_id": "291599a0-04e8-4787-93c3-734eef66d2cd", "migrations_dir": "migrations" }]
+}

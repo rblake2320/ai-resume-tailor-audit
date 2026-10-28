@@ -22,5 +22,6 @@ export async function POST(request: Request) {
   const jar = await cookies();
   jar.delete("rf_google_connection");
   jar.delete("rf_google_oauth");
+  jar.delete("rf_google_action_review");
   return NextResponse.json({ connected: false });
 }

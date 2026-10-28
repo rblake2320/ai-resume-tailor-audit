@@ -1,0 +1,99 @@
+
+ RUN  v4.1.11 C:/Users/techai/ai-resume-tailor-review-20260930
+
+ ❯ lib/security-review-boundaries.test.ts (4 tests | 4 failed) 17ms
+     × rejects inherited property names as OAuth features 3ms
+     × rejects malformed OAuth token types and expired token responses 12ms
+     × bounds provider response bytes before importing jobs 1ms
+     × requires provider request deadline and rejects redirect-following 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/security-review-boundaries.test.ts > independent security-team external boundaries > rejects inherited property names as OAuth features
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ lib/security-review-boundaries.test.ts:11:50
+      9|   it("rejects inherited property names as OAuth features", () => {
+     10|     for (const feature of ["constructor", "toString", "__proto__"]) {
+     11|       expect(() => parseGoogleFeatures(feature)).toThrow(/supported/);
+       |                                                  ^
+     12|     }
+     13|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  lib/security-review-boundaries.test.ts > independent security-team external boundaries > rejects malformed OAuth token types and expired token responses
+AssertionError: promise resolved "{ access_token: 1, …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "access_token": 1,
++   "expires_in": 3600,
++   "obtainedAt": 1790793114153,
++   "refresh_token": undefined,
++   "scope": "https://www.googleapis.com/auth/gmail.compose",
++   "token_type": "Bearer",
+  }
+
+ ❯ lib/security-review-boundaries.test.ts:18:82
+     16|     for (const patch of [{ access_token: 1 }, { expires_in: -1 }, { ex…
+     17|       const request = vi.fn(async () => Response.json({ ...valid, ...p…
+     18|       await expect(exchangeGoogleCode(config, "synthetic", transaction…
+       |                                                                                  ^
+     19|     }
+     20|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  lib/security-review-boundaries.test.ts > independent security-team external boundaries > bounds provider response bytes before importing jobs
+AssertionError: promise resolved "[]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[]
+
+ ❯ lib/security-review-boundaries.test.ts:23:56
+     21|   it("bounds provider response bytes before importing jobs", async () …
+     22|     const request = vi.fn(async () => new Response('{"jobs":[]}', { he…
+     23|     await expect(fetchGreenhouse("synthetic", request)).rejects.toThro…
+       |                                                        ^
+     24|   });
+     25|   it("requires provider request deadline and rejects redirect-followin…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  lib/security-review-boundaries.test.ts > independent security-team external boundaries > requires provider request deadline and rejects redirect-following
+AssertionError: expected undefined to be an instance of AbortSignal
+ ❯ lib/security-review-boundaries.test.ts:27:28
+     25|   it("requires provider request deadline and rejects redirect-followin…
+     26|     const request = vi.fn(async (_url: string | URL | Request, init?: …
+     27|       expect(init?.signal).toBeInstanceOf(AbortSignal);
+       |                            ^
+     28|       expect(init?.redirect).toBe("error");
+     29|       return Response.json({ jobs: [] });
+ ❯ fetchJson lib/job-connectors.ts:17:28
+ ❯ fetchGreenhouse lib/job-connectors.ts:28:25
+ ❯ lib/security-review-boundaries.test.ts:31:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  13:31:53
+   Duration  242ms (transform 46ms, setup 0ms, import 113ms, tests 17ms, environment 0ms)
+

@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-10-01T16:14:29.572701+00:00",
+  "status": "Worked",
+  "scenario": "expired-quick-tunnel-replacement-preserves-public-url-and-invites",
+  "initialFailure": "Cloudflare origin reported Unauthorized: Tunnel not found",
+  "repairs": [
+    "Verify dedicated PID ownership before stop and locked log rotation",
+    "Use installed cloudflared http2 flags",
+    "Confirm D1 read health after transient API 7403"
+  ],
+  "receivingOutcome": "Actual public generation, DOCX, saved job, checksummed packet, owner feedback readback and deletion passed after recovery",
+  "publicUrl": "https://resume-foundry-private-pilot.rblake2320.workers.dev",
+  "paidCalls": 0
+}

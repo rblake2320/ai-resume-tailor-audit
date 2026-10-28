@@ -1,5 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import type { LookupFunction } from "node:net";
+import { Agent } from "undici";
 
 // Server-side SSRF guard. The previous check regex-matched the hostname string,
 // so numeric/alternate encodings (e.g. http://2130706433 == 127.0.0.1),
@@ -141,8 +143,43 @@ export async function safeFetch(
     let candidate: URL;
     try { candidate = new URL(current); } catch { throw new SsrfError("invalid_url"); }
     validateUrl?.(candidate);
-    const { url } = await assertPublicUrl(current);
-    const res = await fetch(url, { ...init, redirect: "manual" });
+    const { url, ips } = await assertPublicUrl(current);
+    // DNS validation and connection must use the same addresses: resolving a
+    // second time allows an attacker to change DNS to a private address. Keep
+    // the original URL so HTTP Host, TLS SNI and certificate checks still use
+    // the requested hostname, while the socket lookup can only return the
+    // already-validated address set. A separate agent is used for every hop.
+    const hostname = url.hostname.replace(/^\[/, "").replace(/\]$/, "");
+    const addresses = ips.map((address) => ({ address, family: isIP(address) }));
+    const pinnedLookup: LookupFunction = (host, options, callback) => {
+      if (host.toLowerCase() !== hostname.toLowerCase()) {
+        callback(new SsrfError("dns_hostname_changed"), "", 0);
+        return;
+      }
+      const family = options.family;
+      const matching = addresses.filter((address) => !family || address.family === family);
+      if (matching.length === 0) {
+        callback(new SsrfError("dns_address_family"), "", 0);
+      } else if (options.all) {
+        callback(null, matching);
+      } else {
+        callback(null, matching[0].address, matching[0].family);
+      }
+    };
+    const dispatcher = new Agent({ connect: { lookup: pinnedLookup }, connections: 1 });
+    let res: Response;
+    try {
+      // Node fetch accepts an Undici dispatcher; standard DOM RequestInit does
+      // not describe this server-only option. It always overrides caller data.
+      const request: RequestInit & { dispatcher: Agent } = { ...init, redirect: "manual", dispatcher };
+      res = await fetch(url, request);
+      // Graceful close waits for the response body to finish or be cancelled.
+      // Do not await here: callers still need to read the streaming response.
+      void dispatcher.close().catch(() => dispatcher.destroy());
+    } catch (error) {
+      await dispatcher.destroy();
+      throw error;
+    }
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get("location");
       if (!location) return res;

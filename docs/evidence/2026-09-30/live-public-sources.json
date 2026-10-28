@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-10-01T04:21:59.090778+00:00",
+  "scenario": "live-public-Greenhouse-browser-import-two-pages-select-to-tailor",
+  "status": "Worked",
+  "board": "anthropic",
+  "savedJobs": 40,
+  "uniqueSourceIds": 40,
+  "selectedDescriptionChars": 10363,
+  "modelCalls": 0,
+  "employerWrites": 0,
+  "browserErrors": []
+}

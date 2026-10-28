@@ -102,6 +102,15 @@ describe("labor-market path intelligence", () => {
     await expect(fetchBlsSeries(["CES0000000001"], { startYear: 2026, endYear: 2026, fetcher: vi.fn().mockResolvedValue(jsonResponse({ ...official, Results: { series: [{ seriesID: "CES0000000001", data: [{ year: "2026", period: "M01", value: "NaN", footnotes: [] }] }] } })) })).rejects.toThrow(/data/i);
   });
 
+  it("retains official BLS missing-value gaps and refuses blank or nonnumeric values", async () => {
+    const response = (value: string) => jsonResponse({ status: "REQUEST_SUCCEEDED", message: [], Results: { series: [{ seriesID: "LNS14000000", data: [{ year: "2025", period: "M10", value, footnotes: [{}] }] }] } });
+    const result = await fetchBlsSeries(["LNS14000000"], { startYear: 2025, endYear: 2025, fetcher: vi.fn().mockResolvedValue(response("-")) });
+    expect(result[0].observations[0]).toEqual({ year: 2025, period: "M10", value: null, footnotes: [{}] });
+    for (const value of ["", " ", "NaN", "Infinity", "0x10", "unavailable"]) {
+      await expect(fetchBlsSeries(["LNS14000000"], { startYear: 2025, endYear: 2025, fetcher: vi.fn().mockResolvedValue(response(value)) })).rejects.toThrow();
+    }
+  });
+
   it("enforces BLS registered 50/20 and unregistered 25/10 request limits", async () => {
     const ids = (count: number) => Array.from({ length: count }, (_, index) => `SERIES${String(index).padStart(2, "0")}`);
     await expect(fetchBlsSeries(ids(26), { startYear: 2017, endYear: 2026, fetcher: vi.fn() })).rejects.toThrow(/25/);

@@ -1,0 +1,8 @@
+{
+  "observedAt": "2026-10-01T22:24:04.881991+00:00",
+  "scenario": "real-tika-legacy-doc",
+  "status": "Worked",
+  "textChars": 684,
+  "hasSample": true,
+  "source": "https://raw.githubusercontent.com/apache/tika/4.1.0/tika-parsers/tika-parsers-standard/tika-parsers-standard-modules/tika-parser-microsoft-module/src/test/resources/test-documents/testWORD.doc"
+}

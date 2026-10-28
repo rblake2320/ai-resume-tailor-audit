@@ -1,4 +1,5 @@
 import { CareerPathRecordSchema, type CareerPathRecord } from "./labor-market";
+import { scopedLocalStorage } from "./browser-scope";
 
 export const CAREER_PATH_RECORDS_KEY = "rf:career-path-records:v1";
 const RECORD_LIMIT = 20;
@@ -8,7 +9,7 @@ const byteLength = (value: string) => new TextEncoder().encode(value).byteLength
 
 function browserStorage(): Storage | null {
   if (typeof window === "undefined") return null;
-  try { return window.localStorage; } catch { return null; }
+  try { return scopedLocalStorage(); } catch { return null; }
 }
 
 export function loadCareerPathRecords(): CareerPathRecord[] {

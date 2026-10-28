@@ -1,0 +1,59 @@
+{
+  "observedAt": "2026-10-01T22:29:22.809Z",
+  "parser": "Apache Tika 4.1.0",
+  "transport": "actual loopback gateway to isolated Docker parser",
+  "paidCalls": 0,
+  "checks": [
+    {
+      "scenario": "real-tika-docx",
+      "status": "Worked",
+      "durationMs": 3735,
+      "inputBytes": 9509,
+      "textChars": 100
+    },
+    {
+      "scenario": "real-tika-odt",
+      "status": "Worked",
+      "durationMs": 26,
+      "inputBytes": 1172,
+      "textChars": 100
+    },
+    {
+      "scenario": "real-tika-rtf",
+      "status": "Worked",
+      "durationMs": 83,
+      "inputBytes": 153,
+      "textChars": 100
+    },
+    {
+      "scenario": "real-tika-pdf",
+      "status": "Worked",
+      "durationMs": 235,
+      "inputBytes": 676,
+      "textChars": 100
+    },
+    {
+      "scenario": "disguised-zip",
+      "status": "Worked",
+      "rejected": true
+    },
+    {
+      "scenario": "malformed-pdf",
+      "status": "Worked",
+      "rejected": true
+    },
+    {
+      "scenario": "real-tika-expanded-document-output-limit",
+      "status": "Worked",
+      "rejected": true
+    },
+    {
+      "scenario": "real-tika-xml-external-entity-no-file-disclosure",
+      "status": "Worked"
+    },
+    {
+      "scenario": "private-parser-config-and-batch-endpoints-denied",
+      "status": "Worked"
+    }
+  ]
+}

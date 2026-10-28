@@ -102,7 +102,7 @@ export function CareerPathPlanner() {
         <label className="text-xs text-ink-300">End year<input type="number" min="1900" max="2200" value={blsEndYear} onChange={(event) => setBlsEndYear(event.target.value)} className="mt-1 block w-full rounded border border-ink-700 bg-ink-950 p-2 text-xs" /></label>
         <ToolButton disabled={working || parseLines(blsSeriesIds).length === 0} onClick={() => void lookupBlsSeries()}>Load observations</ToolButton>
       </div>
-      {observations.map((series) => <div key={series.seriesId} className="mt-2 rounded bg-ink-950 p-2 text-[10px] text-ink-400"><strong className="text-paper">{series.seriesId}</strong> · {series.observations.length} observations · latest period {series.asOfPeriod ?? "not reported"} · retrieved {new Date(series.retrievedAt).toLocaleString()}<br />{series.geography}<br />{series.uncertainty}</div>)}
+      {observations.map((series) => <div key={series.seriesId} className="mt-2 rounded bg-ink-950 p-2 text-[10px] text-ink-400"><strong className="text-paper">{series.seriesId}</strong> · {series.observations.length} periods · {series.observations.filter((row) => row.value === null).length} missing values (not zero) · latest period {series.asOfPeriod ?? "not reported"} · retrieved {new Date(series.retrievedAt).toLocaleString()}<br />{series.geography}<br />{series.uncertainty}</div>)}
     </details>
 
     <div className="mt-3 grid gap-2 lg:grid-cols-2">

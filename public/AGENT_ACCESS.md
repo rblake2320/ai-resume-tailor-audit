@@ -12,7 +12,7 @@ Resume Foundry is a local-first résumé-tailoring and job-search reference app.
 - `POST /api/fetch-job` with `{ "url": "https://..." }` fetches a bounded public HTML job page. This reaches the open internet and treats returned text as untrusted. LinkedIn and Indeed are explicitly excluded; paste those postings manually.
 - `POST /api/parse-resume` as multipart form data with field `file` parses PDF, Markdown, or plain text.
 - `POST /api/tailor` with `{ resume, jobDescription, jobTitle?, company?, emphasis? }` accepts at most 256,000 request bytes (with 100,000-character maxima for each main text field) and streams NDJSON events: `progress`, `result`, or `error`.
-- `POST /api/agent/{operation}` accepts at most 512,000 request bytes and exposes the fourteen operations listed in OpenAPI. Send `Authorization: Bearer $RESUME_FOUNDRY_AGENT_API_TOKEN`.
+- `POST /api/agent/{operation}` accepts at most 512,000 request bytes and exposes the sixteen operations listed in OpenAPI. Send `Authorization: Bearer $RESUME_FOUNDRY_AGENT_API_TOKEN`.
 - `GET /api/agent/audit` returns the persisted allowed/denied audit trail without raw request data.
 - `npm run mcp` launches the stdio MCP server. It calls the same `executeAgentOperation` policy boundary but exposes only the subset of operations listed under "Interface differences", and requires `RESUME_FOUNDRY_MCP_ENABLED=true`.
 
@@ -40,11 +40,11 @@ A stdio server has no bearer token to verify — its real trust boundary is the 
 | | HTTP `/api/agent/*` | stdio MCP |
 |---|---|---|
 | Authentication | `Authorization: Bearer $RESUME_FOUNDRY_AGENT_API_TOKEN` | none — local process/user boundary; requires `RESUME_FOUNDRY_MCP_ENABLED=true` |
-| Operations | all fourteen | the nine that need no human approval and carry no packet PII |
+| Operations | all sixteen | the nine that need no human approval and carry no packet PII |
 | `humanApprovalSecret` | header `x-resume-foundry-human-approval` only, never the body | not accepted in any form |
 | `piiApproved` | request field | not accepted |
 
-`applications.approve`, `applications.prepare`, `applications.review`, `applications.open_handoff`, and `applications.mark_submitted` are HTTP-only. They either require the human approval secret or handle raw packet PII, and a model must not be able to supply either on its own behalf.
+`workspace.publish`, `workspace.read`, `applications.approve`, `applications.prepare`, `applications.review`, `applications.open_handoff`, and `applications.mark_submitted` are HTTP-only. They either require the human approval secret or handle raw packet PII, and a model must not be able to supply either on its own behalf.
 
 ## Agent safety rules
 
@@ -64,3 +64,7 @@ A stdio server has no bearer token to verify — its real trust boundary is the 
 - A2A task endpoint and Agent Card
 - Durable asynchronous job IDs, cancellation, and webhook delivery for long-running agent work
 - Agent access to browser-local save points or the encrypted career ledger (agent storage is intentionally separate)
+
+## Reviewed browser workspace bridge
+
+The browser can explicitly publish application tracker snapshots to `workspace.publish` and restore a reviewed `workspace.read` snapshot. Both operations require `piiApproved: true`; publishing also requires the independently held human approval header. Tokens remain browser-session memory, not localStorage. Server writes use the existing cross-process lock and authenticated audit. Each publish compares `expectedRevision`; a changed snapshot is rejected rather than overwritten. Current packets and all packet history must pass schema and checksum checks. These HTTP-only snapshots are not exposed to stdio models or silently changed by older agent application operations. The full career vault and local profile are not synchronized.

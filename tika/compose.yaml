@@ -1,0 +1,37 @@
+services:
+  parser:
+    image: apache/tika:4.1.0@sha256:06bcdbd09aca073293e5a171ad161418cc93c91d58d9e4e205064eade84889d4
+    container_name: resume-foundry-tika
+    command: ["-c", "/config/tika.json"]
+    user: "10001:10001"
+    volumes: ["./config.json:/config/tika.json:ro"]
+    read_only: true
+    tmpfs: ["/tmp:size=268435456,mode=1777,noexec,nosuid"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128
+    restart: unless-stopped
+    networks: [isolated]
+  gateway:
+    image: nginx:1.30-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+    container_name: resume-foundry-tika-gateway
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    user: "101:101"
+    ports: ["127.0.0.1:9998:8080"]
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    read_only: true
+    tmpfs: ["/tmp:size=16777216,mode=1777,noexec,nosuid"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 32
+    restart: unless-stopped
+    depends_on: [parser]
+    networks: [isolated, frontend]
+networks:
+  isolated:
+    internal: true
+  frontend: {}

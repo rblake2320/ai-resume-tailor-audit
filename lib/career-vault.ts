@@ -1,4 +1,5 @@
 import { EncryptedCareerBackupSchema, exportEncryptedCareerLedger, importEncryptedCareerLedger, migrateCareerLedger, type CareerLedger } from "./career-ledger";
+import { scopedDatabaseName } from "./browser-scope";
 
 const DB_NAME = "resume-foundry-career-vault";
 const DB_VERSION = 1;
@@ -8,7 +9,7 @@ const ACTIVE = "active";
 function openVault(): Promise<IDBDatabase> {
   if (typeof indexedDB === "undefined") return Promise.reject(new Error("Encrypted career vault storage is unavailable in this browser."));
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(scopedDatabaseName(DB_NAME), DB_VERSION);
     request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains(STORE)) request.result.createObjectStore(STORE); };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("Career vault could not be opened."));
@@ -64,7 +65,7 @@ export async function saveCareerLedger(ledger: CareerLedger, passphrase: string)
 export async function deleteCareerLedger(): Promise<void> {
   if (typeof indexedDB === "undefined") return;
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.deleteDatabase(DB_NAME);
+    const request = indexedDB.deleteDatabase(scopedDatabaseName(DB_NAME));
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error ?? new Error("Career vault deletion failed."));
     request.onblocked = () => reject(new Error("Career vault deletion was blocked by another open tab."));

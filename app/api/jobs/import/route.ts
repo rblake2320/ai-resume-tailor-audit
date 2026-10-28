@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { fetchGreenhouse, fetchLever, fetchUsaJobs, parseForwardedJobAlert } from "@/lib/job-connectors";
+import { fetchGreenhousePage, fetchLever, fetchUsaJobs, parseForwardedJobAlert } from "@/lib/job-connectors";
 import { HttpLimitError, readJsonBody } from "@/lib/http-limits";
 import { enforcePublicRateLimit } from "@/lib/durable-rate-limit";
 
 export const runtime = "nodejs";
+export const maxDuration = 120;
 export const JOB_IMPORT_BODY_MAX_BYTES = 1_100_000;
 const RequestSchema = z.discriminatedUnion("source", [
-  z.strictObject({ source: z.literal("greenhouse"), query: z.string().min(1).max(100) }),
+  z.strictObject({ source: z.literal("greenhouse"), query: z.string().min(1).max(100), offset: z.number().int().min(0).max(10_000).optional() }),
   z.strictObject({ source: z.literal("lever"), query: z.string().min(1).max(100), maxPages: z.number().int().min(1).max(20).optional() }),
   z.strictObject({ source: z.literal("usajobs"), query: z.string().min(1).max(300), maxPages: z.number().int().min(1).max(20).optional() }),
   z.strictObject({ source: z.literal("email"), payload: z.string().min(100).max(1_000_000) }),
@@ -28,8 +29,11 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid connector request." }, { status: 400 });
   try {
     const value = parsed.data;
-    const jobs = value.source === "greenhouse" ? await fetchGreenhouse(value.query)
-      : value.source === "lever" ? await fetchLever(value.query, { maxPages: value.maxPages })
+    if (value.source === "greenhouse") {
+      const page = await fetchGreenhousePage(value.query, { offset: value.offset });
+      return NextResponse.json({ ...page, count: page.jobs.length });
+    }
+    const jobs = value.source === "lever" ? await fetchLever(value.query, { maxPages: value.maxPages })
       : value.source === "usajobs" ? await fetchUsaJobs(value.query, { apiKey: process.env.USAJOBS_API_KEY ?? "", userAgent: process.env.USAJOBS_USER_AGENT ?? "" }, { maxPages: value.maxPages })
       : parseForwardedJobAlert(value.payload);
     return NextResponse.json({ jobs, count: jobs.length });

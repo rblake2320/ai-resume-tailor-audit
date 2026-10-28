@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-10-01T16:13:30Z",
+  "url": "https://resume-foundry-private-pilot.rblake2320.workers.dev",
+  "checks": [
+    {
+      "scenario": "tracking-off-by-default",
+      "status": "Worked"
+    },
+    {
+      "scenario": "real-hosted-generation",
+      "status": "Worked",
+      "durationMs": 12406,
+      "provider": "local-ollama",
+      "paidCalls": 0
+    },
+    {
+      "scenario": "real-docx-download",
+      "status": "Worked",
+      "bytes": 9832
+    },
+    {
+      "scenario": "saved-job-and-checksummed-application-packet",
+      "status": "Worked"
+    },
+    {
+      "scenario": "owner-feedback-and-usage-readback-without-resume-content",
+      "status": "Worked",
+      "events": 5,
+      "feedback": 1
+    },
+    {
+      "scenario": "withdrawal-deletes-shared-data",
+      "status": "Worked"
+    },
+    {
+      "scenario": "shared-browser-tester-isolation-and-owner-access-denial",
+      "status": "Worked"
+    },
+    {
+      "scenario": "mobile-390-layout",
+      "status": "Worked",
+      "browserErrors": []
+    }
+  ]
+}

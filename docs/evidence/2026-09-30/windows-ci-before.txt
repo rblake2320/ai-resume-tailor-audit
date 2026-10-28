@@ -1,0 +1,655 @@
+verify (windows-latest)	Test	﻿2026-09-30T18:56:47.3746459Z ##[group]Run npm test
+verify (windows-latest)	Test	2026-09-30T18:56:47.3746938Z ^[[36;1mnpm test^[[0m
+verify (windows-latest)	Test	2026-09-30T18:56:47.3829072Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+verify (windows-latest)	Test	2026-09-30T18:56:47.3829455Z ##[endgroup]
+verify (windows-latest)	Test	2026-09-30T18:56:48.0484334Z 
+verify (windows-latest)	Test	2026-09-30T18:56:48.0484947Z > ai-resume-tailor@1.0.0 test
+verify (windows-latest)	Test	2026-09-30T18:56:48.0485286Z > vitest run
+verify (windows-latest)	Test	2026-09-30T18:56:48.0485423Z 
+verify (windows-latest)	Test	2026-09-30T18:56:48.4456646Z 
+verify (windows-latest)	Test	2026-09-30T18:56:48.4503049Z ^[[1m^[[30m^[[46m RUN ^[[49m^[[39m^[[22m ^[[36mv4.1.11 ^[[39m^[[90mD:/a/ai-resume-tailor-audit/ai-resume-tailor-audit^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:48.4511800Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.1390899Z  ^[[32m✓^[[39m lib/submission-connectors.test.ts ^[[2m(^[[22m^[[2m24 tests^[[22m^[[2m)^[[22m^[[32m 106^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:49.1718834Z  ^[[32m✓^[[39m lib/schema.test.ts ^[[2m(^[[22m^[[2m99 tests^[[22m^[[2m)^[[22m^[[32m 131^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:49.6012560Z  ^[[32m✓^[[39m lib/evidence-segmentation.test.ts ^[[2m(^[[22m^[[2m78 tests^[[22m^[[2m)^[[22m^[[32m 48^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:49.8953004Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.8996621Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9002902Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.9962337Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.9965432Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9966760Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9967660Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9968131Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.9970252Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.9973904Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9974433Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.9975846Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.9978950Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9979514Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.9980890Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.9983810Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9984387Z 
+verify (windows-latest)	Test	2026-09-30T18:56:49.9985821Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:49.9987453Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:49.9987988Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.0227045Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:50.0229181Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0231703Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0232791Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0233805Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0234746Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0245201Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0245650Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.0513521Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:50.0516110Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0517315Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0517784Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.0701855Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mprotect mode sends the outbound request without the explicit name or contact data
+verify (windows-latest)	Test	2026-09-30T18:56:50.0703872Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0704661Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.0733698Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.0735490Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.0736239Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1021804Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1023936Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1024798Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1027933Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1030016Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1030692Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1032197Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1040182Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1040858Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1043385Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1045106Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1045633Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1358929Z  ^[[32m✓^[[39m lib/labor-market-product.test.ts ^[[2m(^[[22m^[[2m13 tests^[[22m^[[2m)^[[22m^[[32m 71^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:50.1411694Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1414803Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1416793Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1417621Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1418248Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1553330Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1555555Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1556055Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1568362Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1570815Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1572710Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1849483Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1851302Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1852233Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1853109Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1854062Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1854919Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1859030Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1860399Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.1861896Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.1863037Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1863597Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.1863868Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2014681Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends nothing until the user chooses protected or exact transmission
+verify (windows-latest)	Test	2026-09-30T18:56:50.2016443Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2016778Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2039103Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2041189Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2041748Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2763676Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2776580Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2780118Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2782601Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2783979Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2793287Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2795272Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2795954Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2797655Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2813784Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2822054Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2823733Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2837951Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2839146Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2847018Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2848966Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2849662Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2934512Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2936923Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2937531Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.2951025Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.2952939Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.2953753Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3235574Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.3240468Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3241391Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3242242Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3242924Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3243410Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3243889Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3244171Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3244970Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.3245936Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3246475Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3246741Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3351473Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mreview mode sends exact text only after the explicit one-time choice
+verify (windows-latest)	Test	2026-09-30T18:56:50.3353402Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3353950Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3368964Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3370001Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3370343Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3927434Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3929125Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3930850Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3932693Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3934538Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3935935Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3937505Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3938015Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3938872Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3940558Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3941057Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3942029Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3943342Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3943651Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.3944385Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.3945276Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.3945572Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4070559Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.4072174Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4072694Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4170620Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.4172354Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4173314Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4174180Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4174980Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4175777Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4176578Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4177028Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4178310Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.4179901Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4181058Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4181535Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4285924Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mExact mode directly sends the exact text without opening review
+verify (windows-latest)	Test	2026-09-30T18:56:50.4290092Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4290622Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4303675Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4305395Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4305918Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4803659Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4805368Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4806341Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4807208Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4807660Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4808895Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4810416Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4812487Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4813718Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4815250Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4817315Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4818608Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4821139Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4821603Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.4822670Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.4827411Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.4827758Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5021891Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.5023580Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5024495Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5025334Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5026179Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5026975Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5027814Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5028257Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5151363Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.5153079Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5153997Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5154879Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5156107Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5156587Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5281080Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mdiscards an in-flight result when a bound input changes
+verify (windows-latest)	Test	2026-09-30T18:56:50.5282729Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5283272Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5291015Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5292601Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5292921Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5774229Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5777558Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5778549Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5779396Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5779869Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5781264Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5782968Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5783926Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5785343Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5787053Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5787571Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5788931Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5792548Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5793094Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5794448Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5796630Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5797147Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5944394Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.5946129Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5947028Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5947883Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5948695Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5949488Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5950638Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.5951069Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.5963282Z  ^[[32m✓^[[39m lib/labor-market.test.ts ^[[2m(^[[22m^[[2m8 tests^[[22m^[[2m)^[[22m^[[32m 103^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:50.6128083Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.6130610Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6131687Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6132635Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6133580Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6134196Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.6510048Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.6511951Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6513063Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6513983Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6514810Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6516709Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6518034Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6520630Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.6557924Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.6560131Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6561161Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6562123Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.6685346Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores late analysis events from a stream that continues after input invalidation
+verify (windows-latest)	Test	2026-09-30T18:56:50.6687038Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6687538Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.6692982Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.6694982Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.6695482Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7076258Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7078432Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7079404Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7080270Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7080735Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7082057Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7085639Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7086196Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7087493Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7089170Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7089690Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7090989Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7092600Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7093140Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7094438Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7096061Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7096938Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7220702Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7223138Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7224199Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7225126Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7226047Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7226946Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7227818Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7228462Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7327719Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7330093Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7333426Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7334123Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7379449Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late thinking event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7381784Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7382266Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7392037Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7393406Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7393764Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7825996Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7829098Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7830230Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7831241Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7832357Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7834328Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7836013Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7836554Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7837837Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7839410Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7841446Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7842758Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7843906Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7844227Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7845333Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7846882Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7847399Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.7986764Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.7991379Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7995768Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.7999891Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8002808Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8003777Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8004728Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8005354Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8087532Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8089474Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8090928Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8091574Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8145763Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late progress event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8149217Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8150155Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8161780Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8166900Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8167540Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8699313Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8706114Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8707654Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8708522Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8709011Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8710584Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8711940Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8712486Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8713819Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8715347Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8715826Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8720556Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8722359Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8722930Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8724244Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8726368Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8726812Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8874417Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.8876194Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8876789Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8877295Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8877791Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8878293Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8878779Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.8879044Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.8996618Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9000857Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9002185Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9002607Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9100469Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late error event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9103963Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9111769Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9121623Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9123635Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9124331Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9562943Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9565425Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9566357Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9579426Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9579928Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9581286Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9582315Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9582633Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9583402Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9584324Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9584650Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9585394Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9586883Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9589481Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9599426Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9601016Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9601499Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9719668Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9721428Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9722545Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9723598Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9724527Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9725527Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9726526Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9727012Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9864589Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9865941Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9867070Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9867817Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9916569Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mignores a late result event when cancellation is ignored by the stream
+verify (windows-latest)	Test	2026-09-30T18:56:50.9918312Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9929581Z 
+verify (windows-latest)	Test	2026-09-30T18:56:50.9932791Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:50.9952568Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:50.9953927Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0338826Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0340768Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0342001Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0343339Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0343825Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0348842Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0350496Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0351046Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0352358Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0353984Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0354485Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0355866Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0357840Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0358367Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0359695Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0361304Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0361799Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0461306Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0462447Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0463024Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0463551Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0464033Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0464493Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0464962Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0465237Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0469187Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0470975Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0471933Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0472423Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0590327Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mtimes out immediately in the UI and ignores a late result when abort is ignored
+verify (windows-latest)	Test	2026-09-30T18:56:51.0592815Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0593386Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.0598622Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.0600782Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.0601758Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1055480Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1057331Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1058668Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1059482Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1059930Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1061158Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1062716Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1063266Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1064538Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1066132Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1066667Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1067922Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1069886Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1070397Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1071664Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1073239Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1073778Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1075047Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1076571Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1077089Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1078350Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1079934Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1080468Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1194611Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mmakes erase-all reachable when a profile exists without history
+verify (windows-latest)	Test	2026-09-30T18:56:51.1196123Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1196628Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1209219Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1211328Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1211905Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1569992Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1572081Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1573226Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1574253Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1574947Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1576552Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1582805Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1583505Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1585065Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1587193Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1587858Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1589411Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1591214Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1591885Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1593430Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1595239Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1596235Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1674845Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1676603Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1677414Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1687461Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1689226Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1689776Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1872393Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1874594Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1875139Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.1996030Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mfocuses and contains the review dialog, cancels with Escape, and restores Forge focus
+verify (windows-latest)	Test	2026-09-30T18:56:51.1998079Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.1998835Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2000592Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2002500Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2003174Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2379281Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2415735Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2416855Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2417674Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2418117Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2419439Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2420979Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2422040Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2423280Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2424775Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2425237Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2426388Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2428045Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2428523Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2429686Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2431135Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2431618Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2493975Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2574279Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2575985Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2580970Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2583128Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2583614Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2780422Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2781548Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2782137Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2782819Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2783415Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2783803Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2851901Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2853744Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2854650Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2855744Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2856581Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2857427Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2858261Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2859079Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2859888Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2860703Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2861508Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2862624Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2863474Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2864293Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2865129Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2865992Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2867264Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2868328Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2869175Z The current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2869606Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2871632Z ^[[90mstderr^[[2m | lib/pii-outbound-flow.test.ts^[[2m > ^[[22m^[[2mreal browser outbound PII flow^[[2m > ^[[22m^[[2mclears visible PII even when encrypted-vault deletion reports a failure
+verify (windows-latest)	Test	2026-09-30T18:56:51.2873751Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+verify (windows-latest)	Test	2026-09-30T18:56:51.2874283Z 
+verify (windows-latest)	Test	2026-09-30T18:56:51.2883626Z  ^[[32m✓^[[39m lib/pii-outbound-flow.test.ts ^[[2m(^[[22m^[[2m14 tests^[[22m^[[2m)^[[22m^[[33m 1400^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:51.9562880Z  ^[[32m✓^[[39m lib/career-ledger.test.ts ^[[2m(^[[22m^[[2m12 tests^[[22m^[[2m)^[[22m^[[33m 378^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.2662196Z  ^[[32m✓^[[39m lib/durable-rate-limit.test.ts ^[[2m(^[[22m^[[2m15 tests^[[22m^[[2m)^[[22m^[[33m 2111^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.2663360Z      ^[[33m^[[2m✓^[[22m^[[39m allows exactly one winner across real OS processes ^[[33m 404^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.2664475Z      ^[[33m^[[2m✓^[[22m^[[39m fills the maximum supported window with bounded synchronous work ^[[33m 1612^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.4388005Z  ^[[32m✓^[[39m lib/submission-attempts.test.ts ^[[2m(^[[22m^[[2m15 tests^[[22m^[[2m)^[[22m^[[33m 3425^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.4389814Z      ^[[33m^[[2m✓^[[22m^[[39m records before I/O, blocks an unsigned retry, and requires a new signed exact acknowledgement ^[[33m 537^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.4391250Z      ^[[33m^[[2m✓^[[22m^[[39m allows exactly one transport across real contending processes ^[[33m 1111^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.8076649Z      ^[[33m^[[2m✓^[[22m^[[39m never ages out pending state and requires explicit operator recovery ^[[33m 490^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.8078183Z  ^[[32m✓^[[39m lib/storage.test.ts ^[[2m(^[[22m^[[2m18 tests^[[22m^[[2m)^[[22m^[[32m 78^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:54.8144393Z  ^[[32m✓^[[39m lib/pii.test.ts ^[[2m(^[[22m^[[2m21 tests^[[22m^[[2m)^[[22m^[[32m 43^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:55.1963269Z  ^[[32m✓^[[39m lib/sensitive-attestation.test.ts ^[[2m(^[[22m^[[2m8 tests^[[22m^[[2m)^[[22m^[[32m 46^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:55.6948271Z  ^[[32m✓^[[39m lib/network-routes.test.ts ^[[2m(^[[22m^[[2m9 tests^[[22m^[[2m)^[[22m^[[32m 54^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:56.2270994Z  ^[[32m✓^[[39m lib/html.test.ts ^[[2m(^[[22m^[[2m21 tests^[[22m^[[2m)^[[22m^[[32m 276^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:56.8887074Z  ^[[32m✓^[[39m lib/agent-audit.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[33m 1186^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:56.8889632Z      ^[[33m^[[2m✓^[[22m^[[39m durably bounds unauthenticated denial growth while retaining the first denials ^[[33m 666^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:57.1694331Z  ^[[32m✓^[[39m lib/ats.test.ts ^[[2m(^[[22m^[[2m26 tests^[[22m^[[2m)^[[22m^[[32m 27^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:57.2603372Z  ^[[32m✓^[[39m lib/agent-service.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[33m 672^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:57.8735325Z  ^[[32m✓^[[39m lib/tailor-route.test.ts ^[[2m(^[[22m^[[2m11 tests^[[22m^[[2m)^[[22m^[[32m 84^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:58.2089189Z  ^[[32m✓^[[39m lib/mcp-server.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[33m 507^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:58.2091047Z      ^[[33m^[[2m✓^[[22m^[[39m starts under native Node type stripping ^[[33m 438^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:56:58.3165749Z  ^[[32m✓^[[39m lib/applications.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 39^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.0903336Z  ^[[32m✓^[[39m lib/agent-store-concurrency.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[33m 1401^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.0905739Z      ^[[33m^[[2m✓^[[22m^[[39m enforces the daily limit across concurrent independent processes ^[[33m 684^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.0913109Z      ^[[33m^[[2m✓^[[22m^[[39m loses no audit entry when independent processes write concurrently ^[[33m 714^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.2900156Z  ^[[32m✓^[[39m lib/nonce-store.test.ts ^[[2m(^[[22m^[[2m10 tests^[[22m^[[2m)^[[22m^[[33m 1779^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.2901756Z      ^[[33m^[[2m✓^[[22m^[[39m consumes a nonce exactly once across concurrent independent processes ^[[33m 1756^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:00.3920631Z  ^[[32m✓^[[39m lib/http-limits.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 51^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:01.3745801Z  ^[[32m✓^[[39m lib/career-vault.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[33m 553^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:01.4683143Z  ^[[32m✓^[[39m lib/result-view.browser.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 181^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:01.7787660Z  ^[[32m✓^[[39m lib/labor-market-storage.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 40^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:01.9667717Z  ^[[32m✓^[[39m lib/ssrf-transport.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 107^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:02.4425797Z  ^[[32m✓^[[39m lib/tailor-stream.test.ts ^[[2m(^[[22m^[[2m12 tests^[[22m^[[2m)^[[22m^[[32m 44^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:02.5734096Z  ^[[32m✓^[[39m lib/public-rate-limit-routes.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 85^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:02.8017834Z  ^[[32m✓^[[39m lib/ssrf-pinning.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 54^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:03.0026785Z  ^[[32m✓^[[39m lib/job-inbox.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 26^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:03.3354158Z  ^[[32m✓^[[39m lib/submission-ledger.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 65^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:03.3969925Z  ^[[32m✓^[[39m lib/job-connectors.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 122^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:03.7484941Z  ^[[32m✓^[[39m lib/google-oauth.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 63^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:03.8531444Z  ^[[32m✓^[[39m lib/ssrf.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 20^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7057507Z  ^[[31m❯^[[39m lib/windows-sensitive-path-acl.test.ts ^[[2m(^[[22m^[[2m17 tests^[[22m^[[2m | ^[[22m^[[31m1 failed^[[39m^[[2m)^[[22m^[[33m 15285^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7059148Z      ^[[32m✓^[[39m does nothing when no sensitive server-side store is configured^[[32m 5^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7060377Z      ^[[32m✓^[[39m does not claim that NTFS ACLs protect non-Windows deployments^[[32m 1^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7061781Z      ^[[32m✓^[[39m fails closed in Windows production until apply or verify is explicitly selected^[[32m 2^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7062643Z      ^[[32m✓^[[39m allows development to opt out without making a security claim^[[32m 0^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7063803Z      ^[[32m✓^[[39m fails closed when NODE_ENV is unset and ACL enforcement is off^[[32m 1^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7065042Z      ^[[32m✓^[[39m rejects relative paths and filesystem-root parent directories^[[32m 1^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7066411Z      ^[[32m✓^[[39m deduplicates shared directories and applies before verifying the result^[[32m 8^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7068021Z      ^[[32m✓^[[39m checks an existing sensitive file as well as its containing directory^[[32m 4^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7069132Z      ^[[32m✓^[[39m fails closed when verification reports an unexpected principal^[[32m 2^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7070125Z ^[[31m     ^[[31m×^[[31m applies and independently verifies an ACL only inside a disposable temporary directory^[[39m^[[33m 5028^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7071024Z      ^[[33m^[[2m✓^[[22m^[[39m rejects a configured directory reached through a junction ^[[33m 769^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7071868Z      ^[[33m^[[2m✓^[[22m^[[39m rejects a junction in an ancestor and a reparse point inside a configured tree ^[[33m 888^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7072767Z      ^[[33m^[[2m✓^[[22m^[[39m rejects a missing directory below a junction before creating anything through it ^[[33m 401^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7073907Z      ^[[33m^[[2m✓^[[22m^[[39m detects and repairs a permissive ACL on an existing child ^[[33m 2414^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7074672Z      ^[[33m^[[2m✓^[[22m^[[39m does not report secure when the owner has an explicit deny rule ^[[33m 2277^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7075494Z      ^[[33m^[[2m✓^[[22m^[[39m does not count an inherit-only administrator ACE as effective full control ^[[33m 1825^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.7077323Z      ^[[33m^[[2m✓^[[22m^[[39m requires Local System as well as owner and Administrators to have full control ^[[33m 1658^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.8589625Z  ^[[32m✓^[[39m lib/file-lock.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[33m 851^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:04.8592235Z      ^[[33m^[[2m✓^[[22m^[[39m never reclaims a slow live owner and serialises three real processes ^[[33m 848^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.0723062Z  ^[[32m✓^[[39m lib/security-review-boundaries.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 47^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.0932955Z  ^[[32m✓^[[39m lib/submission-openapi.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 5^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.4501117Z  ^[[32m✓^[[39m lib/ui-export-regression.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 70^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.5467824Z  ^[[32m✓^[[39m lib/agent-route.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 50^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.7558094Z  ^[[32m✓^[[39m lib/markdown.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:05.8662263Z  ^[[32m✓^[[39m lib/agent-contract.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.0731162Z  ^[[32m✓^[[39m lib/security-headers.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 10^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.0921777Z  ^[[32m✓^[[39m lib/anthropic-model.test.ts ^[[2m(^[[22m^[[2m4 tests^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.2895077Z  ^[[32m✓^[[39m lib/canonical-json.test.ts ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 16^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.2950085Z  ^[[32m✓^[[39m lib/deployment-runbook.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.5199466Z  ^[[32m✓^[[39m lib/handoff.test.ts ^[[2m(^[[22m^[[2m2 tests^[[22m^[[2m)^[[22m^[[32m 10^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.6253058Z  ^[[32m✓^[[39m lib/storage-clear-independence.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 6^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.7259265Z  ^[[32m✓^[[39m lib/prompts.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 4^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:06.9344480Z  ^[[32m✓^[[39m lib/workflow-policy.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:07.0065812Z  ^[[32m✓^[[39m lib/career-path-ui.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 14^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:07.3307160Z  ^[[32m✓^[[39m lib/node-strip-compat.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 203^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2406330Z  ^[[32m✓^[[39m lib/provider-http.security.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 15122^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2408034Z      ^[[33m^[[2m✓^[[22m^[[39m aborts an actual upstream that never returns headers at the 15 second deadline ^[[33m 15015^[[2mms^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2459123Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2459868Z ^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m^[[1m^[[41m Failed Tests 1 ^[[49m^[[22m^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2460278Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2464372Z ^[[41m^[[1m FAIL ^[[22m^[[49m lib/windows-sensitive-path-acl.test.ts^[[2m > ^[[22mWindows sensitive-path ACL startup boundary^[[2m > ^[[22mapplies and independently verifies an ACL only inside a disposable temporary directory
+verify (windows-latest)	Test	2026-09-30T18:57:19.2470171Z ^[[31m^[[1mError^[[22m: Test timed out in 5000ms.
+verify (windows-latest)	Test	2026-09-30T18:57:19.2471411Z If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2472865Z ^[[36m ^[[2m❯^[[22m lib/windows-sensitive-path-acl.test.ts:^[[2m194:41^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2546077Z     ^[[90m192|^[[39m   })^[[33m;^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2546828Z     ^[[90m193|^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2547795Z     ^[[90m194|^[[39m   it^[[33m.^[[39m^[[34mrunIf^[[39m(process^[[33m.^[[39mplatform ^[[33m===^[[39m ^[[32m"win32"^[[39m)(
+verify (windows-latest)	Test	2026-09-30T18:57:19.2548514Z     ^[[90m   |^[[39m                                         ^[[31m^^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2549090Z     ^[[90m195|^[[39m     "applies and independently verifies an ACL only inside a disposabl…
+verify (windows-latest)	Test	2026-09-30T18:57:19.2549625Z     ^[[90m196|^[[39m     ^[[35masync^[[39m () ^[[33m=>^[[39m {
+verify (windows-latest)	Test	2026-09-30T18:57:19.2550048Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2550280Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯^[[22m^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2550496Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2551375Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2558454Z ^[[2m Test Files ^[[22m ^[[1m^[[31m1 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m53 passed^[[39m^[[22m^[[90m (54)^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2562097Z ^[[2m      Tests ^[[22m ^[[1m^[[31m1 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m553 passed^[[39m^[[22m^[[90m (554)^[[39m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2562993Z ^[[2m   Start at ^[[22m 18:56:48
+verify (windows-latest)	Test	2026-09-30T18:57:19.2564881Z ^[[2m   Duration ^[[22m 30.77s^[[2m (transform 1.42s, setup 0ms, import 8.09s, tests 47.10s, environment 1.36s)^[[22m
+verify (windows-latest)	Test	2026-09-30T18:57:19.2566743Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2583574Z 
+verify (windows-latest)	Test	2026-09-30T18:57:19.2609458Z ##[error]Error: Test timed out in 5000ms.
+verify (windows-latest)	Test	If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+verify (windows-latest)	Test	 ❯ lib/windows-sensitive-path-acl.test.ts:194:41
+verify (windows-latest)	Test	
+verify (windows-latest)	Test	
+verify (windows-latest)	Test	2026-09-30T18:57:19.3607578Z ##[error]Process completed with exit code 1.

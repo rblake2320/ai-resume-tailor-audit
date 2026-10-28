@@ -1,0 +1,7 @@
+{
+  "scenario": "app-specific-Anthropic-free-models-authentication",
+  "status": "Worked",
+  "httpStatus": 200,
+  "configuredModelAvailable": true,
+  "generationExecuted": false
+}

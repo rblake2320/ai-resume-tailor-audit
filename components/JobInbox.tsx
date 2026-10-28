@@ -6,6 +6,7 @@ import type { JobPostingSnapshot } from "@/lib/schema";
 import { deleteJobSnapshot, loadJobInbox, saveJobInbox } from "@/lib/storage";
 import { ToolButton } from "@/components/ui";
 import { SourceConnectors } from "@/components/SourceConnectors";
+import { trackPilotEvent } from "@/lib/pilot-telemetry";
 
 export function JobInbox({ current, onSelect }: { current: JobImportInput; onSelect: (job: JobPostingSnapshot) => void }) {
   const [jobs, setJobs] = useState<JobPostingSnapshot[]>(() => loadJobInbox());
@@ -14,8 +15,10 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
 
   useEffect(() => {
     const cleared = () => { setJobs([]); setMessage("Job Inbox erased from this browser."); };
+    const imported = () => { setJobs(loadJobInbox()); setMessage("Imported Google job alert added to Job Inbox."); };
     window.addEventListener("resume-foundry:data-cleared", cleared);
-    return () => window.removeEventListener("resume-foundry:data-cleared", cleared);
+    window.addEventListener("resume-foundry:jobs-imported", imported);
+    return () => { window.removeEventListener("resume-foundry:data-cleared", cleared); window.removeEventListener("resume-foundry:jobs-imported", imported); };
   }, []);
 
   async function addInputs(inputs: JobImportInput[]) {
@@ -32,6 +35,7 @@ export function JobInbox({ current, onSelect }: { current: JobImportInput; onSel
     try { saveJobInbox(next); setJobs(next); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Job Inbox could not be saved."); return; }
     setMessage(`${added} imported · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} skipped${rejected ? ` · ${rejected} invalid` : ""}`);
+    if (added > 0) trackPilotEvent(inputs.length === 1 ? "job_saved" : "job_imported", { count: added });
   }
 
   async function importFile(file: File) {

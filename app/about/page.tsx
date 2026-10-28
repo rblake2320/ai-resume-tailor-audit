@@ -36,7 +36,7 @@ export default function AboutPage() {
         <section className="mt-10 space-y-3 border-t border-ink-700 pt-8" aria-labelledby="privacy-heading">
           <h2 id="privacy-heading" className="font-display text-2xl font-semibold text-paper">Privacy and operating boundary</h2>
           <p className="max-w-3xl text-sm leading-6 text-ink-300">
-            The workshop profile, active session, save points, and run history are browser-local. Tailoring sends the selected resume and job text to the deployment’s configured Anthropic API. Optional integrations have their own explicit configuration and consent boundaries. Browser storage is convenient, but long-term records should also be exported and backed up by the user.
+            The workshop profile, active session, save points, and run history are browser-local. Tailoring sends the selected resume and job text to the deployment’s configured AI processor. Optional integrations have their own explicit configuration and consent boundaries. Browser storage is convenient, but long-term records should also be exported and backed up by the user.
           </p>
         </section>
 

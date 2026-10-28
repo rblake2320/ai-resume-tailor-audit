@@ -1,4 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
+import { providerFetch, providerJson } from "./provider-http.ts";
 
 export type GoogleFeature = "email_alerts" | "email_drafts" | "calendar_events";
 export const GOOGLE_SCOPES: Record<GoogleFeature, string> = {
@@ -22,7 +24,7 @@ export function googleOAuthConfig(env: Partial<Record<string, string | undefined
 
 export function parseGoogleFeatures(value: string | null): GoogleFeature[] {
   const requested = [...new Set((value ?? "").split(",").filter(Boolean))];
-  if (!requested.length || requested.some((entry) => !(entry in GOOGLE_SCOPES))) throw new Error("Choose at least one supported Google connection feature.");
+  if (!requested.length || requested.some((entry) => !Object.hasOwn(GOOGLE_SCOPES, entry))) throw new Error("Choose at least one supported Google connection feature.");
   return requested as GoogleFeature[];
 }
 
@@ -62,12 +64,22 @@ export function openConnection<T>(sealed: string, key: Buffer): T {
 
 export async function exchangeGoogleCode(config: GoogleOAuthConfig, code: string, transaction: OAuthTransaction,
   request: typeof fetch = fetch): Promise<GoogleTokenSet> {
-  const response = await request("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+  const response = await providerFetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: config.clientId, client_secret: config.clientSecret, code, code_verifier: transaction.verifier,
-      grant_type: "authorization_code", redirect_uri: config.redirectUri }) });
-  if (!response.ok) throw new Error(`Google token exchange failed (${response.status}).`);
-  const value = await response.json() as Partial<GoogleTokenSet>;
-  if (!value.access_token || !value.expires_in || !value.scope || value.token_type !== "Bearer") throw new Error("Google returned an incomplete token response.");
+      grant_type: "authorization_code", redirect_uri: config.redirectUri }) }, request);
+  if (!response.ok) {
+    await response.body?.cancel("Google token exchange rejected").catch(() => undefined);
+    throw new Error(`Google token exchange failed (${response.status}).`);
+  }
+  const parsed = z.object({
+    access_token: z.string().trim().min(1).max(16_384),
+    refresh_token: z.string().trim().min(1).max(16_384).optional(),
+    expires_in: z.number().int().positive().max(604_800),
+    scope: z.string().trim().min(1).max(16_384),
+    token_type: z.literal("Bearer"),
+  }).safeParse(await providerJson(response, 64 * 1024));
+  if (!parsed.success) throw new Error("Google returned an invalid token response.");
+  const value = parsed.data;
   const granted = new Set(value.scope.split(" ")); const expected = transaction.features.map((feature) => GOOGLE_SCOPES[feature]);
   if (expected.some((scope) => !granted.has(scope))) throw new Error("Google did not grant every requested scope.");
   return { access_token: value.access_token, refresh_token: value.refresh_token, expires_in: value.expires_in,

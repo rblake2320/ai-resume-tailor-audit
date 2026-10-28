@@ -1,0 +1,138 @@
+
+ RUN  v4.1.11 C:/Users/techai/ai-resume-tailor-review-20260930
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts (6 tests | 5 failed) 55ms
+     × executes real local GET form → multipart resume upload → ordered native apply and retains provider ID 46ms
+     × enforces live required screening fields before upload even when target.requiredFields omits them 4ms
+     × rejects invalid option values before uploading any personal data 1ms
+     × never automatically retries a rate-limited file upload 1ms
+     × requires a real created application ID instead of promoting any HTTP success 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  docs/evidence/2026-09-30/lever-baseline-regression.test.ts > Lever native authenticated provider contract > executes real local GET form → multipart resume upload → ordered native apply and retains provider ID
+AssertionError: expected [ { method: 'POST', …(1) } ] to deeply equal [ { method: 'GET', …(1) }, …(2) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "method": "GET",
+-     "path": "/v1/postings/synthetic-posting/apply",
+-   },
+-   {
+-     "method": "POST",
+-     "path": "/v1/uploads",
+-   },
+-   {
+      "method": "POST",
+      "path": "/v1/postings/synthetic-posting/apply",
+    },
+  ]
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts:80:24
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  docs/evidence/2026-09-30/lever-baseline-regression.test.ts > Lever native authenticated provider contract > enforces live required screening fields before upload even when target.requiredFields omits them
+AssertionError: promise resolved "{ provider: 'lever', …(3) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "accepted": true,
++   "applicationId": "local-packet-1",
++   "provider": "lever",
++   "status": 200,
+  }
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts:101:108
+     99|   it("enforces live required screening fields before upload even when …
+    100|     const fetcher = vi.fn().mockResolvedValue(Response.json({ data: fo…
+    101|     await expect(submitLever({ apiKey: "synthetic", receipt: receipt()…
+       |                                                                                                            ^
+    102|     expect(fetcher).toHaveBeenCalledOnce();
+    103|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  docs/evidence/2026-09-30/lever-baseline-regression.test.ts > Lever native authenticated provider contract > rejects invalid option values before uploading any personal data
+AssertionError: promise resolved "{ provider: 'lever', …(3) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "accepted": true,
++   "applicationId": "local-packet-1",
++   "provider": "lever",
++   "status": 200,
+  }
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts:108:115
+    106|     const fetcher = vi.fn().mockResolvedValue(Response.json({ data: fo…
+    107|     const invalid = { customQuestions: [{ id: "screening-fixture", fie…
+    108|     await expect(submitLever({ apiKey: "synthetic", receipt: receipt(i…
+       |                                                                                                                   ^
+    109|     expect(fetcher).toHaveBeenCalledOnce();
+    110|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  docs/evidence/2026-09-30/lever-baseline-regression.test.ts > Lever native authenticated provider contract > never automatically retries a rate-limited file upload
+AssertionError: promise resolved "{ provider: 'lever', …(3) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "accepted": true,
++   "applicationId": "local-packet-1",
++   "provider": "lever",
++   "status": 200,
+  }
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts:114:117
+    112|   it("never automatically retries a rate-limited file upload", async (…
+    113|     const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ data…
+    114|     await expect(submitLever({ apiKey: "synthetic", receipt: receipt(s…
+       |                                                                                                                     ^
+    115|     expect(fetcher).toHaveBeenCalledTimes(2);
+    116|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  docs/evidence/2026-09-30/lever-baseline-regression.test.ts > Lever native authenticated provider contract > requires a real created application ID instead of promoting any HTTP success
+AssertionError: promise resolved "{ provider: 'lever', …(3) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "accepted": true,
++   "applicationId": "local-packet-1",
++   "provider": "lever",
++   "status": 200,
+  }
+
+ ❯ docs/evidence/2026-09-30/lever-baseline-regression.test.ts:120:117
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+   Start at  23:07:56
+   Duration  409ms (transform 61ms, setup 0ms, import 146ms, tests 55ms, environment 0ms)

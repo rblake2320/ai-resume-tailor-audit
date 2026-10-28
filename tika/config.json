@@ -1,0 +1,10 @@
+{
+  "server": { "endpoints": ["tika", "version"], "allowPipes": false, "allowPerRequestConfig": false, "maxRequestSizeBytes": 10485760 },
+  "pipes": { "numClients": 1, "maxWaitForClientMillis": 1000, "forkedJvmArgs": ["-Xmx256m", "-XX:ActiveProcessorCount=1"] },
+  "content-handler-factory": { "basic-content-handler-factory": { "type": "TEXT", "writeLimit": 100000, "throwOnWriteLimitReached": true } },
+  "parse-context": {
+    "pages": { "text": "EXTRACT" },
+    "timeout-limits": { "totalTaskTimeoutMillis": 15000, "progressTimeoutMillis": 10000 },
+    "exception-reporting": { "level": "REDACTED" }
+  }
+}

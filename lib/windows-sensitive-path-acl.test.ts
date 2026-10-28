@@ -213,6 +213,9 @@ describe("Windows sensitive-path ACL startup boundary", () => {
         runWindowsAclScript({ targetPath: file, mode: "apply", kind: "file" }),
       ).resolves.toMatchObject({ secure: true });
     },
+    // Three real PowerShell launches include cold process startup on Windows
+    // hosted runners. Bound the scenario without weakening ACL assertions.
+    20_000,
   );
 
   it.runIf(process.platform === "win32")(

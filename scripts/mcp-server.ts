@@ -27,6 +27,8 @@ const HTTP_ONLY_OPERATIONS: readonly AgentOperation[] = [
   "applications.review",
   "applications.open_handoff",
   "applications.mark_submitted",
+  "workspace.read",
+  "workspace.publish",
 ];
 
 export const MCP_OPERATIONS = AGENT_OPERATIONS.filter((operation) => !HTTP_ONLY_OPERATIONS.includes(operation));

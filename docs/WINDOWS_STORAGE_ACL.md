@@ -35,6 +35,8 @@ Before `apply` creates a missing directory, a separate component-by-component pr
 
 `verify` performs only steps 4 and 5.
 
+Configured roots and separately configured files must be owned by the service identity and have inheritance disabled. Descendants may be owned by the service identity, Local System, or Administrators: Windows can assign Administrators ownership to files created by elevated processes. Those identities already require effective full control, including permission to change ACLs and ownership. This descendant ownership allowance adds no trusted principal. Every descendant still rejects other allowed principals, any deny rule, missing effective full control for any required identity, and reparse points. Verifying that same descendant as a configured file applies the stricter service-owner requirement.
+
 ## Security boundary and limits
 
 - This blocks access by other ordinary local users. It cannot stop Local System or an administrator, who are deliberately retained and can take ownership on Windows regardless.

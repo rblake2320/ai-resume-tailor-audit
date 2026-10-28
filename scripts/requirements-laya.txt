@@ -1,0 +1,2 @@
+# Optional operator tool, separate from the web server. Install in a dedicated venv.
+laya==0.3.20
